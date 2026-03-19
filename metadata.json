@@ -1,0 +1,5 @@
+{
+  "name": "rebuilt cc",
+  "description": "A futuristic, offline, single-player race against AI bots through a series of challenging mini-events. Features seeded randomness for deterministic replays, strategic power-ups, and multiple bot personalities.",
+  "requestFramePermissions": []
+}

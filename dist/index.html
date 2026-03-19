@@ -1,0 +1,341 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5, user-scalable=yes" />
+    <meta name="theme-color" content="#0a0f2c" />
+    <meta name="description" content="Conflux Circuit: High-speed algorithmic racing. Race solo or challenge others online in fast-paced event-based circuits." />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="format-detection" content="telephone=no" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23050814'/><text x='50' y='65' font-size='50' text-anchor='middle' fill='%2300f0ff'>%E2%9A%A1</text></svg>" />
+    <link rel="manifest" href="/assets/manifest-C6XaSJ2j.json" />
+    <meta property="og:title" content="Conflux Circuit" />
+    <meta property="og:description" content="High-speed algorithmic racing. Race solo or challenge others online in fast-paced event-based circuits." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://confluxcircuit.com" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Conflux Circuit" />
+    <meta name="twitter:description" content="High-speed algorithmic racing. Race solo or online." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <title>Conflux Circuit</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'cosmic-blue': 'rgb(var(--cosmic-blue-rgb) / <alpha-value>)',
+                        'star-purple': 'rgb(var(--star-purple-rgb) / <alpha-value>)',
+                        'nebula-pink': 'rgb(var(--nebula-pink-rgb) / <alpha-value>)',
+                        'galaxy-cyan': 'rgb(var(--galaxy-cyan-rgb) / <alpha-value>)',
+                        'hyper-green': 'rgb(var(--hyper-green-rgb) / <alpha-value>)',
+                        'solar-orange': 'rgb(var(--solar-orange-rgb) / <alpha-value>)',
+                    },
+                    fontFamily: {
+                        'sans': ['"Inter"', 'system-ui', 'sans-serif'],
+                        'mono': ['"JetBrains Mono"', 'monospace'],
+                    },
+                    keyframes: {
+                        pulse: {
+                            '0%, 100%': { transform: 'scale(1)', opacity: '1' },
+                            '50%': { transform: 'scale(1.05)', opacity: '0.8' },
+                        },
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideInUp: {
+                           '0%': { transform: 'translateY(20px)', opacity: '0' },
+                           '100%': { transform: 'translateY(0)', opacity: '1' },
+                        },
+                        blurIn: {
+                           '0%': { filter: 'blur(12px)', opacity: '0' },
+                           '100%': { filter: 'blur(0)', opacity: '1' },
+                        },
+                         shake: {
+                            '10%, 90%': { transform: 'translate3d(-1px, 0, 0)' },
+                            '20%, 80%': { transform: 'translate3d(2px, 0, 0)' },
+                            '30%, 50%, 70%': { transform: 'translate3d(-4px, 0, 0)' },
+                            '40%, 60%': { transform: 'translate3d(4px, 0, 0)' },
+                        },
+                        'subtle-pan': {
+                            '0%': { transform: 'translateX(0) translateY(0)' },
+                            '50%': { transform: 'translateX(5px) translateY(10px)' },
+                            '100%': { transform: 'translateX(0) translateY(0)' },
+                        },
+                        shimmer: {
+                            '0%': { backgroundPosition: '200% 0', opacity: 0.7 },
+                            '100%': { backgroundPosition: '-200% 0', opacity: 0.7 },
+                        },
+                        swirl: {
+                            'from': { transform: 'rotate(0deg) scale(1.4)', opacity: 0.4 },
+                            'to': { transform: 'rotate(360deg) scale(1.4)', opacity: 0 },
+                        },
+                        'ice-crack-anim': {
+                            '0%, 100%': { opacity: 0.9, transform: 'scale(1)' },
+                            '50%': { opacity: 1, transform: 'scale(1.05)' },
+                        },
+                        'pulse-glow': {
+                            '0%, 100%': { boxShadow: '0 0 10px 3px var(--nebula-pink)' },
+                            '50%': { boxShadow: '0 0 20px 8px var(--nebula-pink)' },
+                        },
+                    },
+                    animation: {
+                        pulse: 'pulse 2s ease-in-out infinite',
+                        'fade-in': 'fadeIn 0.4s ease-out forwards',
+                        'slide-in-up': 'slideInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'blur-in': 'blurIn 0.6s ease-out forwards',
+                        'shake': 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both',
+                        'subtle-pan': 'subtle-pan 60s ease-in-out infinite',
+                        'shimmer': 'shimmer 3s linear infinite',
+                        'swirl': 'swirl 4s linear infinite',
+                        'ice-crack-anim': 'ice-crack-anim 2s ease-in-out infinite',
+                        'pulse-glow': 'pulse-glow 1.2s ease-in-out infinite',
+                    },
+                    backdropBlur: {
+                        'xs': '2px',
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;700&display=swap&font-display=swap');
+        :root {
+            --cosmic-blue: #050814;
+            --cosmic-blue-rgb: 5 8 20;
+            --star-purple: #3a2b8c;
+            --star-purple-rgb: 58 43 140;
+            --nebula-pink: #ff2a75;
+            --nebula-pink-rgb: 255 42 117;
+            --galaxy-cyan: #00f0ff;
+            --galaxy-cyan-rgb: 0 240 255;
+            --hyper-green: #39ff14;
+            --hyper-green-rgb: 57 255 20;
+            --solar-orange: #ff5e00;
+            --solar-orange-rgb: 255 94 0;
+            --void-black: #020205;
+            --ice-crack-svg: url("data:image/svg+xml,%3csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M50,0 L50,100 M0,50 L100,50 M25,25 L75,75 M25,75 L75,25' stroke='rgba(200,225,255,0.8)' stroke-width='2'/%3e%3cpath d='M50,50 L10,80 L20,70 L40,60 L50,50 L90,20 L80,30 L60,40 L50,50' stroke='rgba(200,225,255,0.6)' stroke-width='1.5' fill='none'/%3e%3c/svg%3e");
+            scroll-behavior: smooth;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--void-black);
+            color: #e0e0e0;
+            overflow: hidden; /* Prevent scrollbars from starfield */
+        }
+        /* CRT Scanlines Overlay */
+        body::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 9999;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+        .glass-panel {
+            background: linear-gradient(135deg, rgba(5, 8, 20, 0.85), rgba(15, 20, 40, 0.75));
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(0, 240, 255, 0.05);
+            border-radius: 0.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+        /* Cyberpunk corner accents */
+        .glass-panel::before, .glass-panel::after {
+            content: '';
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border: 2px solid var(--galaxy-cyan);
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        .glass-panel::before { top: 0; left: 0; border-right: none; border-bottom: none; }
+        .glass-panel::after { bottom: 0; right: 0; border-left: none; border-top: none; }
+        .text-glow {
+            text-shadow: 0 0 15px currentColor, 0 0 30px currentColor;
+        }
+        .font-display {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: rgba(5, 8, 20, 0.5); }
+        ::-webkit-scrollbar-thumb { background: var(--galaxy-cyan); border-radius: 0px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--nebula-pink); }
+        /* Range Input Styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            width: 100%;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 16px;
+            width: 8px;
+            background: var(--galaxy-cyan);
+            margin-top: -6px;
+            box-shadow: 0 0 10px var(--galaxy-cyan);
+            cursor: pointer;
+            border-radius: 0;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 2px;
+            cursor: pointer;
+            background: rgba(0, 240, 255, 0.2);
+        }
+        .prose h3 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.25rem;
+            line-height: 1.75rem;
+            font-weight: 700;
+            color: var(--galaxy-cyan);
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .prose p { line-height: 1.6; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; color: #a0aab5; }
+        .prose br { content: ""; display: block; margin-bottom: 0.5rem; }
+        /* Glitch Animation */
+        @keyframes glitch-anim {
+            0% { clip-path: inset(10% 0 80% 0); transform: translate(-2px, 1px); }
+            20% { clip-path: inset(40% 0 20% 0); transform: translate(2px, -1px); }
+            40% { clip-path: inset(80% 0 5% 0); transform: translate(-2px, 2px); }
+            60% { clip-path: inset(15% 0 60% 0); transform: translate(2px, -2px); }
+            80% { clip-path: inset(60% 0 10% 0); transform: translate(-1px, 1px); }
+            100% { clip-path: inset(30% 0 50% 0); transform: translate(1px, -1px); }
+        }
+        .glitch-effect {
+            position: relative;
+        }
+        .glitch-effect::before, .glitch-effect::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--void-black);
+        }
+        .glitch-effect::before {
+            left: 2px;
+            text-shadow: -1px 0 red;
+            animation: glitch-anim 2s infinite linear alternate-reverse;
+        }
+        .glitch-effect::after {
+            left: -2px;
+            text-shadow: -1px 0 blue;
+            animation: glitch-anim 3s infinite linear alternate-reverse;
+        }
+    </style>
+    <style>
+      /* High-contrast mode toggled by adding 'hc' class to <html> */
+      html.hc:root {
+        --cosmic-blue: #000000;
+        --star-purple: #ffffff;
+      }
+      html.hc .glass-panel { background-color: rgba(0,0,0,0.8); border-color: rgba(255,255,255,0.9); }
+      html.hc .text-gray-400 { color: #e5e7eb; }
+
+      /* Color-blind safety mode */
+      html.cb:root {
+        --nebula-pink: var(--solar-orange); /* Swaps pink with orange */
+        --solar-orange: #d64f8a;
+      }
+
+      /* Starfield Background */
+      @keyframes move-stars {
+        from { transform: translateY(0); }
+        to { transform: translateY(-2000px); }
+      }
+      #starfield {
+        position: fixed;
+        width: 100%;
+        height: 300%; /* Make it tall enough to scroll */
+        top: 0;
+        left: 0;
+        z-index: -10;
+        background-color: var(--cosmic-blue);
+      }
+      .stars {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      .stars { background: transparent url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2000 2000"><circle cx="200" cy="300" r="1.5" fill="white"/><circle cx="500" cy="700" r="1" fill="white"/><circle cx="900" cy="200" r="1.2" fill="white"/><circle cx="1200" cy="900" r="1" fill="white"/><circle cx="1500" cy="600" r="1.8" fill="white"/><circle cx="1800" cy="1100" r="1.1" fill="white"/><circle cx="300" cy="1300" r="1.3" fill="white"/><circle cx="800" cy="1700" r="1" fill="white"/><circle cx="1300" cy="1500" r="1.5" fill="white"/><circle cx="1700" cy="200" r="1" fill="white"/></svg>') 0 0 repeat; }
+      .stars.stars1 { animation: move-stars 150s linear infinite; }
+      .stars.stars2 { animation: move-stars 100s linear infinite; opacity: 0.6; }
+      .stars.stars3 { animation: move-stars 50s linear infinite; opacity: 0.4; }
+      #nebula-canvas {
+        position: fixed;
+        top: -10px;
+        left: -10px;
+        width: calc(100% + 20px);
+        height: calc(100% + 20px);
+        z-index: -20;
+        opacity: 0.4;
+        animation: subtle-pan 60s ease-in-out infinite;
+      }
+      .bg-shield-gradient {
+          background: linear-gradient(90deg, transparent, var(--galaxy-cyan), transparent);
+          background-size: 200% 100%;
+      }
+      .bg-ice-crack {
+          background-image: var(--ice-crack-svg);
+          background-size: cover;
+          mix-blend-mode: screen;
+      }
+      .bg-swirl {
+          background: radial-gradient(circle, transparent 40%, var(--star-purple) 100%);
+      }
+      .animation-delay-500 { animation-delay: 0.5s; }
+      .animation-reverse { animation-direction: reverse; }
+    </style>
+<style>
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+</style>
+  <script type="module" crossorigin src="/assets/index-CDCy1Huo.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/vendor-react-DbAvZM3X.js">
+  <link rel="modulepreload" crossorigin href="/assets/vendor-colyseus-CY9X0cYx.js">
+  <link rel="modulepreload" crossorigin href="/assets/vendor-firebase-ARGe-Fpy.js">
+  <link rel="stylesheet" crossorigin href="/assets/index-C5twgoZg.css">
+</head>
+<body class="bg-cosmic-blue antialiased no-overscroll">
+    <canvas id="nebula-canvas"></canvas>
+    <div id="starfield">
+        <div class="stars stars1"></div>
+        <div class="stars stars2"></div>
+        <div class="stars stars3"></div>
+    </div>
+    <a href="#main-content" class="skip-nav">Skip to main content</a>
+    <div id="root"></div>
+</body>
+</html>
