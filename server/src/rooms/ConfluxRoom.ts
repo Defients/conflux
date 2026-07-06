@@ -11,11 +11,13 @@ import {
   GameState, GameSettings, Player, EventResult, Tile, PowerUp,
   ChassisId, BotPersonality, AnomalyId, SharedEventDescriptor,
   RoomConfig, MatchPhase, EventTelemetry, LobbyPlayer,
+  PilotSkills, ChassisLoadout, TeamId,
 } from '../../../shared/types';
 import {
   PLAYER_COLORS, BOT_NAMES, CHASSIS_DEFINITIONS, ANOMALY_DEFINITIONS,
   GAUNTLET_CONFIG, MAX_ROOM_PLAYERS, EVENT_RESULT_TIMEOUT_MS,
   RECONNECT_GRACE_PERIOD_MS, ROOM_CODE_LENGTH,
+  RECONNECT_GRACE_PERIOD_V5_MS, MAX_RECONNECT_ATTEMPTS_V5,
 } from '../../../shared/constants';
 import { SeededRNG } from '../../../shared/seededRNG';
 import { generateRun } from '../../../shared/pathGenerator';
@@ -32,6 +34,8 @@ import { EVENT_DESCRIPTORS, STAR_COMPUTERS } from '../eventDescriptors';
 import { ServerEventValidator } from '../validation/eventValidator';
 import { ClientRateLimiter, RATE_LIMITS } from '../validation/rateLimiter';
 import { computeMatchSummary, applyMatchSummaryToProfile } from '../../../shared/matchSummary';
+import { computeMultiPlayerRatingChanges, applyRatingChange, createDefaultRankInfo } from '../../../shared/rankSystem';
+import { applySkillEffects, applyLoadoutEffects, assignTeams } from '../../../shared/gameSetup';
 import { generateContracts } from '../../../shared/contractService';
 import { getProfile, saveProfile } from '../services/profileRepository';
 import { writeLeaderboardEntry } from '../services/leaderboardRepository';
@@ -51,6 +55,13 @@ interface RoomPlayer {
   playerId: number; // in-game player ID
   reconnectToken?: string;
   userId?: string; // Firebase Auth UID
+  // v5.0 fields
+  teamId?: TeamId;
+  rating?: number;
+  skillNodeIds?: string[];
+  moduleIds?: string[];
+  rttMs?: number;
+  reconnectAttempts?: number;
 }
 
 interface ConfluxRoomState {
@@ -244,6 +255,12 @@ export class ConfluxRoom extends Room {
       isConnected: true,
       playerId,
       userId: options.userId,
+      // v5.0 fields
+      rating: options.rating,
+      teamId: options.teamId,
+      skillNodeIds: options.skillNodeIds,
+      moduleIds: options.moduleIds,
+      reconnectAttempts: 0,
     };
 
     if (roomPlayer.isHost) {
@@ -302,9 +319,15 @@ export class ConfluxRoom extends Room {
       });
 
       if (!consented) {
+        const attempts = (player.reconnectAttempts ?? 0) + 1;
+        player.reconnectAttempts = attempts;
+        if (attempts > MAX_RECONNECT_ATTEMPTS_V5) {
+          this.handlePlayerAbandoned(client.sessionId);
+          return;
+        }
         try {
-          // Wait for reconnection
-          await this.allowReconnection(client, RECONNECT_GRACE_PERIOD_MS / 1000);
+          // Wait for reconnection (v5.0: extended grace period)
+          await this.allowReconnection(client, RECONNECT_GRACE_PERIOD_V5_MS / 1000);
 
           // Reconnected!
           player.isConnected = true;
@@ -637,6 +660,7 @@ export class ConfluxRoom extends Room {
 
     // Broadcast countdown
     this.broadcast(ServerMessages.COUNTDOWN, { tileIndex: 0 });
+    this.broadcast(ServerMessages.START_COUNTDOWN, { durationMs: 3500, tileIndex: 0 });
 
     // Start first tile after countdown delay
     this.clock.setTimeout(() => {
@@ -675,6 +699,30 @@ export class ConfluxRoom extends Room {
       // Apply Chassis effects
       if (roomPlayer.chassisId === ChassisId.Aegis) {
         players[players.length - 1].powerUps.push('Shield');
+      }
+
+      // v5.0: Apply skill and loadout effects
+      if (roomPlayer.skillNodeIds && roomPlayer.skillNodeIds.length > 0) {
+        const skills: PilotSkills = {
+          speed: {}, tech: {}, endurance: {}, availableCP: 0,
+        };
+        for (const id of roomPlayer.skillNodeIds) {
+          if (id.startsWith('speed-')) skills.speed[id] = true;
+          else if (id.startsWith('tech-')) skills.tech[id] = true;
+          else if (id.startsWith('endurance-')) skills.endurance[id] = true;
+        }
+        players[players.length - 1] = applySkillEffects(players[players.length - 1], skills);
+      }
+      if (roomPlayer.moduleIds && roomPlayer.moduleIds.length > 0) {
+        const loadout: ChassisLoadout = {
+          chassisId: roomPlayer.chassisId,
+          modules: {},
+        };
+        const slotKeys = ['core', 'thrusters', 'shielding'] as const;
+        roomPlayer.moduleIds.forEach((mid, i) => {
+          if (i < 3) loadout.modules[slotKeys[i]] = mid;
+        });
+        players[players.length - 1] = applyLoadoutEffects(players[players.length - 1], loadout);
       }
     }
 
@@ -965,6 +1013,10 @@ export class ConfluxRoom extends Room {
     this.broadcast(ServerMessages.COUNTDOWN, {
       tileIndex: this.roomState.gameState?.currentTileIndex ?? 0,
     });
+    this.broadcast(ServerMessages.START_COUNTDOWN, {
+      durationMs: 3500,
+      tileIndex: this.roomState.gameState?.currentTileIndex ?? 0,
+    });
 
     this.clock.setTimeout(() => {
       this.startTile();
@@ -1031,6 +1083,23 @@ export class ConfluxRoom extends Room {
         if (!updatedProfile) {
           console.log(`[Room ${roomCode}] Match ${summary.matchId} already applied for ${roomPlayer.userId}.`);
           return;
+        }
+
+        // v5.0: Compute ranked rating changes if this was a ranked match
+        if (roomPlayer.rating) {
+          const allPlayers = gs.players.map(p => {
+            const rp = [...this.roomState.players.values()].find(r => r.playerId === p.id);
+            return { playerId: p.id, rating: rp?.rating ?? 1000, placement: sortedPlayers.indexOf(p) };
+          });
+          const ratingChanges = computeMultiPlayerRatingChanges(allPlayers);
+          const myChange = ratingChanges.get(roomPlayer.playerId) ?? 0;
+          if (myChange !== 0) {
+            summary.ratingChange = myChange;
+            if (!updatedProfile.rank) updatedProfile.rank = createDefaultRankInfo();
+            updatedProfile.rank = applyRatingChange(updatedProfile.rank, myChange, myChange > 0);
+            summary.newRating = updatedProfile.rank.rating;
+            summary.newTier = updatedProfile.rank.tier;
+          }
         }
 
         await saveProfile(roomPlayer.userId!, updatedProfile);
@@ -1147,6 +1216,9 @@ export class ConfluxRoom extends Room {
       isReady: p.isReady,
       isHost: p.isHost,
       isConnected: p.isConnected,
+      // v5.0 fields
+      rating: p.rating,
+      teamId: p.teamId,
     }));
 
     // Update metadata with current phase and privacy for room discovery

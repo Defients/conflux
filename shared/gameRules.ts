@@ -21,6 +21,7 @@ import {
 import { SeededRNG } from './seededRNG';
 import { generateRun } from './pathGenerator';
 import { getRivalBanter } from './rivalBanter';
+import { applySkillEffects, applyLoadoutEffects } from './gameSetup';
 
 // --- Types ---
 
@@ -74,6 +75,15 @@ const applyDebuff = (player: Player, status: PlayerStatus, settings: GameSetting
     // Glass Cannon penalty
     if (chassis === ChassisId.GlassCannon) {
         finalStatus.duration += 1;
+    }
+
+    // v5.0: Debuff resistance from skills/loadout (reduce duration)
+    // Check for player-level debuff resistance markers
+    if (player._debuffResistance && finalStatus.duration > 0) {
+        finalStatus.duration = Math.max(0, finalStatus.duration - player._debuffResistance);
+        if (finalStatus.duration === 0) {
+            return { player, effect: !player.isBot ? { type: 'TOAST', message: 'Debuff resisted!', variant: 'success' } : undefined };
+        }
     }
 
     return { 
@@ -151,14 +161,14 @@ export const GameRules = {
                 }
 
                 updatedPlayer.powerUps = [...updatedPlayer.powerUps, award];
-                updatedPlayer.energy += result.stars;
+                updatedPlayer.energy += result.stars + (updatedPlayer._energyPerStarBonus ?? 0);
                 
                 if (!p.isBot || p.isRival) {
                     effects.push({ type: 'SOUND', sound: 'powerup-get' });
                     if (!p.isBot) effects.push({ type: 'TOAST', message: `Acquired ${award}`, variant: 'info' });
                 }
             } else {
-                updatedPlayer.energy += result.stars;
+                updatedPlayer.energy += result.stars + (updatedPlayer._energyPerStarBonus ?? 0);
             }
 
             updatedPlayer.tileHistory = [...updatedPlayer.tileHistory, { tileIndex: state.currentTileIndex, stars: result.stars }];
@@ -185,6 +195,11 @@ export const GameRules = {
                 moveMult *= 0.5;
             } else if (state.activeAnomaly?.id === 'WARP_DRIVE') {
                 moveMult *= 2.0;
+            }
+            
+            // v5.0: Movement bonus from loadout modules
+            if (updatedPlayer._movementBonus && result.stars > 0) {
+                moveMult *= (1 + updatedPlayer._movementBonus);
             }
             
             // Momentum Activation

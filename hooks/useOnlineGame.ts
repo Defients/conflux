@@ -14,6 +14,7 @@ import {
 } from '../types';
 import { TileStartPayload, TileResultsPayload, RaceFinishedPayload, InterventionPayload, MatchSummaryPayload } from '../shared/protocol';
 import { MatchSummary } from '../shared/matchSummary';
+import { ConnectionQuality } from '../shared/types';
 
 export type GameMode = 'local' | 'online';
 
@@ -58,6 +59,23 @@ export interface OnlineGameHook {
   matchSummary: MatchSummary | null;
   interventionData: InterventionPayload | null;
 
+  // v5.0: Queue state
+  queueState: { queueSize: number; message: string } | null;
+  isQueuing: boolean;
+  joinQueue: (config: RoomConfig, queueType?: 'ranked' | 'unranked') => Promise<void>;
+  leaveQueue: () => Promise<void>;
+
+  // v5.0: Connection quality
+  connectionQuality: ConnectionQuality;
+  rttMs: number;
+
+  // v5.0: Reconnect progress
+  reconnectAttempts: number;
+
+  // v5.0: Spectator mode
+  isSpectator: boolean;
+  spectateRoom: (roomId: string) => Promise<void>;
+
   // Online actions
   createRoom: (config: RoomConfig) => Promise<void>;
   joinRoom: (roomCode: string, config: RoomConfig) => Promise<void>;
@@ -90,6 +108,13 @@ export function useOnlineGame(): OnlineGameHook {
   const [raceFinished, setRaceFinished] = useState<RaceFinishedPayload | null>(null);
   const [matchSummary, setMatchSummary] = useState<MatchSummary | null>(null);
   const [interventionData, setInterventionData] = useState<InterventionPayload | null>(null);
+  // v5.0 state
+  const [queueState, setQueueState] = useState<{ queueSize: number; message: string } | null>(null);
+  const [isQueuing, setIsQueuing] = useState(false);
+  const [connectionQuality, setConnectionQuality] = useState<ConnectionQuality>('critical');
+  const [rttMs, setRttMs] = useState(0);
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const [isSpectator, setIsSpectator] = useState(false);
 
   // Register network event handlers
   useEffect(() => {
@@ -189,6 +214,45 @@ export function useOnlineGame(): OnlineGameHook {
       onPlayerBanned: (message) => {
         setError(message);
       },
+
+      // v5.0 handlers
+      onStartCountdown: (data) => {
+        console.log(`[useOnlineGame] Countdown: ${data.durationMs}ms for tile ${data.tileIndex}`);
+      },
+
+      onQueueStatus: (data) => {
+        setQueueState(data);
+      },
+
+      onMatchFound: (data) => {
+        setIsQueuing(false);
+        setQueueState(null);
+        console.log(`[useOnlineGame] Match found: ${data.roomCode}`);
+      },
+
+      onQueueTimeout: (data) => {
+        setIsQueuing(false);
+        setQueueState(null);
+        setError(data.message);
+      },
+
+      onTournamentUpdate: (data) => {
+        console.log('[useOnlineGame] Tournament update:', data);
+      },
+
+      onTournamentMatchReady: (data) => {
+        console.log(`[useOnlineGame] Tournament match ready: ${data.matchId}`);
+      },
+
+      onSpectatorMode: (data) => {
+        setIsSpectator(true);
+        console.log(`[useOnlineGame] Spectator mode: ${data.roomCode}`);
+      },
+
+      onConnectionQualityChange: (quality) => {
+        setConnectionQuality(quality);
+        setRttMs(networkService.rttMs);
+      },
     };
 
     const unsub = networkService.setHandlers(handlers);
@@ -241,6 +305,34 @@ export function useOnlineGame(): OnlineGameHook {
     setMatchPhase('disconnected');
   }, []);
 
+  // v5.0: Queue actions
+  const joinQueue = useCallback(async (config: RoomConfig, queueType: 'ranked' | 'unranked' = 'unranked') => {
+    setError(null);
+    setIsQueuing(true);
+    try {
+      await networkService.joinQueue(config, queueType);
+    } catch (err) {
+      setIsQueuing(false);
+      setError(err instanceof Error ? err.message : 'Failed to join queue');
+    }
+  }, []);
+
+  const leaveQueue = useCallback(async () => {
+    await networkService.leaveQueue();
+    setIsQueuing(false);
+    setQueueState(null);
+  }, []);
+
+  // v5.0: Spectate room
+  const spectateRoom = useCallback(async (roomId: string) => {
+    setError(null);
+    try {
+      await networkService.spectateRoom(roomId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to spectate room');
+    }
+  }, []);
+
   const clearError = useCallback(() => setError(null), []);
 
   return {
@@ -259,6 +351,17 @@ export function useOnlineGame(): OnlineGameHook {
     raceFinished,
     matchSummary,
     interventionData,
+
+    // v5.0 fields
+    queueState,
+    isQueuing,
+    joinQueue,
+    leaveQueue,
+    connectionQuality,
+    rttMs,
+    reconnectAttempts,
+    isSpectator,
+    spectateRoom,
 
     createRoom,
     joinRoom,

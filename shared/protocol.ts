@@ -136,6 +136,7 @@ export interface MatchSummaryPayload {
 export const ClientMessages = {
   READY: 'room:ready',
   START: 'room:start',
+  CANCEL_START: 'room:cancelStart',
   UPDATE_SETTINGS: 'room:updateSettings',
   SUBMIT_EVENT_RESULT: 'game:submitEventResult',
   USE_POWER_UP: 'game:usePowerUp',
@@ -147,6 +148,12 @@ export const ClientMessages = {
   TOGGLE_PRIVATE: 'room:togglePrivate',
   KICK_PLAYER: 'room:kickPlayer',
   BAN_PLAYER: 'room:banPlayer',
+  // v5.0 Matchmaking
+  JOIN_QUEUE: 'queue:join',
+  LEAVE_QUEUE: 'queue:leave',
+  // v5.0 Tournament
+  JOIN_TOURNAMENT: 'tournament:join',
+  LEAVE_TOURNAMENT: 'tournament:leave',
 } as const;
 
 export const ServerMessages = {
@@ -164,4 +171,13 @@ export const ServerMessages = {
   SPECTATOR_MODE: 'room:spectatorMode',
   PLAYER_KICKED: 'room:playerKicked',
   PLAYER_BANNED: 'room:playerBanned',
+  // v5.0 Matchmaking
+  QUEUE_STATUS: 'queue:status',
+  MATCH_FOUND: 'queue:matchFound',
+  QUEUE_TIMEOUT: 'queue:timeout',
+  // v5.0 Tournament
+  TOURNAMENT_UPDATE: 'tournament:update',
+  TOURNAMENT_MATCH_READY: 'tournament:matchReady',
+  // v5.0 Start countdown
+  START_COUNTDOWN: 'room:startCountdown',
 } as const;

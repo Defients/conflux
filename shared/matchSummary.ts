@@ -11,11 +11,13 @@
 import {
   GameState, PilotProfile, AccoladeId, ChassisId, CorporationId,
   Contract, ContractObjective, Player, Tile, PerformanceDimension,
+  EventMastery, RankInfo, TeamId,
 } from './types';
 import {
   CP_AWARD_RULES, CP_STREAK_MULTIPLIER,
 } from './constants';
 import { SeededRNG } from './seededRNG';
+import { computeMultiPlayerRatingChanges, applyRatingChange, ratingToTier, createDefaultRankInfo } from './rankSystem';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -85,6 +87,18 @@ export interface MatchSummary {
   // ─── Daily challenge ────────────────────────────────────────────────
   dailyPersonalBest: number | null; // null if not a daily
   dailyIsNewBest: boolean;
+
+  // ─── v5.0: Event mastery updates ────────────────────────────────────
+  eventMasteryUpdates: { eventId: string; mastery: EventMastery }[];
+
+  // ─── v5.0: Ranked rating change ─────────────────────────────────────
+  ratingChange: number | null;
+  newRating: number | null;
+  newTier: RankInfo['tier'] | null;
+
+  // ─── v5.0: Team mode ────────────────────────────────────────────────
+  teamId?: TeamId;
+  teamPlacement?: number;
 }
 
 // ─── Input types ────────────────────────────────────────────────────────────
@@ -167,6 +181,10 @@ export function computeMatchSummary(input: MatchSummaryInput): MatchSummary {
       gauntletNewHighScore: isNewHigh,
       dailyPersonalBest: null,
       dailyIsNewBest: false,
+      eventMasteryUpdates: [],
+      ratingChange: null,
+      newRating: null,
+      newTier: null,
     };
   }
 
@@ -295,6 +313,11 @@ export function computeMatchSummary(input: MatchSummaryInput): MatchSummary {
     gauntletNewHighScore: false,
     dailyPersonalBest,
     dailyIsNewBest,
+    eventMasteryUpdates: computeEventMastery(gameState, humanPlayer, profile),
+    ratingChange: null,
+    newRating: null,
+    newTier: null,
+    teamId: humanPlayer.teamId,
   };
 }
 
@@ -370,6 +393,21 @@ export function applyMatchSummaryToProfile(
     }
   }
 
+  // ─── v5.0: Event Mastery ────────────────────────────────────────────
+  if (summary.eventMasteryUpdates.length > 0) {
+    if (!updated.eventMastery) updated.eventMastery = {};
+    for (const update of summary.eventMasteryUpdates) {
+      updated.eventMastery[update.eventId] = update.mastery;
+    }
+  }
+
+  // ─── v5.0: Ranked Rating ────────────────────────────────────────────
+  if (summary.ratingChange !== null && summary.newRating !== null) {
+    if (!updated.rank) updated.rank = createDefaultRankInfo();
+    const won = summary.ratingChange > 0;
+    updated.rank = applyRatingChange(updated.rank, summary.ratingChange, won);
+  }
+
   return updated;
 }
 
@@ -428,6 +466,46 @@ function emptyCpBreakdown(): CpBreakdown {
   };
 }
 
+function computeEventMastery(
+  gameState: GameState,
+  humanPlayer: Player,
+  profile: PilotProfile,
+): { eventId: string; mastery: EventMastery }[] {
+  const updates: { eventId: string; mastery: EventMastery }[] = [];
+  const existingMastery = profile.eventMastery ?? {};
+
+  for (const history of humanPlayer.tileHistory) {
+    const tile = gameState.run[history.tileIndex];
+    if (!tile) continue;
+    const eventId = tile.eventId;
+    const current: EventMastery = existingMastery[eventId] ?? {
+      eventId,
+      totalPlays: 0,
+      totalStars: 0,
+      bestMetric: 0,
+      masteryLevel: 0,
+    };
+
+    const newTotalPlays = current.totalPlays + 1;
+    const newTotalStars = current.totalStars + history.stars;
+    const avgStars = newTotalStars / newTotalPlays;
+    const newMasteryLevel = Math.min(5, Math.floor(avgStars * 1.5));
+
+    updates.push({
+      eventId,
+      mastery: {
+        eventId,
+        totalPlays: newTotalPlays,
+        totalStars: newTotalStars,
+        bestMetric: current.bestMetric,
+        masteryLevel: newMasteryLevel,
+      },
+    });
+  }
+
+  return updates;
+}
+
 function createEmptySummary(
   matchId: string, mode: MatchMode, timestamp: number, seed: string,
   runLength: number, isGauntlet: boolean, isDaily: boolean,
@@ -441,5 +519,7 @@ function createEmptySummary(
     contractOutcomes: [],
     gauntletTilesSurvived: null, gauntletNewHighScore: false,
     dailyPersonalBest: null, dailyIsNewBest: false,
+    eventMasteryUpdates: [],
+    ratingChange: null, newRating: null, newTier: null,
   };
 }

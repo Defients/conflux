@@ -13,6 +13,7 @@ export const RivalTauntOverlay: React.FC<RivalTauntOverlayProps> = ({ message })
       const timer = setTimeout(() => setVisible(false), 3000);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [message]);
 
   if (!visible || !message) return null;

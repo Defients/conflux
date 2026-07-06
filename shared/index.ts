@@ -10,6 +10,8 @@ export * from './constants';
 export * from './seededRNG';
 export * from './pathGenerator';
 export * from './gameRules';
+export * from './gameSetup';
+export * from './rankSystem';
 export * from './rivalBanter';
 export * from './protocol';
 export * from './botMind';

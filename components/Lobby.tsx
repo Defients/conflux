@@ -5,6 +5,7 @@ import { useSound } from '../hooks/useSound';
 import { getDailySeed, getWeeklySeed, getWeeklyPreset } from '../shared/dailyChallengeService';
 import { CHASSIS_DEFINITIONS } from '../constants';
 import { saveProfile } from '../services/profileService';
+import { RankBadge } from './RankBadge';
 
 interface LobbyProps {
   profile: PilotProfile;
@@ -17,6 +18,11 @@ interface LobbyProps {
   onGoToLeaderboard?: () => void;
   onGoToMatchHistory?: () => void;
   onSwitchPilot?: () => void;
+  // v5.0 navigation
+  onGoToModeSelect?: () => void;
+  onGoToSkillTree?: () => void;
+  onGoToHangar?: () => void;
+  onGoToSettings?: () => void;
 }
 
 const defaultSettings: Omit<GameSettings, 'seed' | 'selectedChassis'> = {
@@ -85,7 +91,7 @@ const Toggle = ({ label, checked, onChange, id }: { label: string, checked: bool
   </div>
 );
 
-export const Lobby: React.FC<LobbyProps> = ({ profile, setProfile, onStartGame, onStartGauntlet, onGoToEventList, onGoToAccolades, onGoToOnline, onGoToLeaderboard, onGoToMatchHistory, onSwitchPilot }) => {
+export const Lobby: React.FC<LobbyProps> = ({ profile, setProfile, onStartGame, onStartGauntlet, onGoToEventList, onGoToAccolades, onGoToOnline, onGoToLeaderboard, onGoToMatchHistory, onSwitchPilot, onGoToModeSelect, onGoToSkillTree, onGoToHangar, onGoToSettings }) => {
     const [settings, setSettings] = useState<GameSettings>(() => {
         const loaded = loadSettings();
         const chassis = loaded.selectedChassis && profile.unlockedChassis.includes(loaded.selectedChassis)
@@ -247,9 +253,13 @@ export const Lobby: React.FC<LobbyProps> = ({ profile, setProfile, onStartGame, 
                         </div>
                         <div>
                             <div className="text-xl sm:text-2xl font-bold text-white leading-none mb-1">{profile.name}</div>
-                            <div className="text-xs text-hyper-green font-mono bg-hyper-green/10 px-2 py-0.5 rounded inline-block">
+                            {profile.rank ? (
+                              <RankBadge rank={profile.rank} size="small" showRating showRecord />
+                            ) : (
+                              <div className="text-xs text-hyper-green font-mono bg-hyper-green/10 px-2 py-0.5 rounded inline-block">
                                 RANK: {profile.winStreak > 5 ? 'ELITE' : profile.winStreak > 2 ? 'VETERAN' : 'ROOKIE'}
-                            </div>
+                              </div>
+                            )}
                         </div>
                     </div>
 
@@ -282,6 +292,18 @@ export const Lobby: React.FC<LobbyProps> = ({ profile, setProfile, onStartGame, 
                     </div>
                     <button onClick={() => onSwitchPilot?.()} className="w-full mt-2 py-3 sm:py-2 text-sm bg-white/5 active:bg-white/15 sm:hover:bg-white/10 border border-white/10 rounded transition-colors text-gray-300" aria-label="Switch pilot profile">
                       Switch Pilot
+                    </button>
+                    {/* v5.0: Skill Tree, Hangar, Settings */}
+                    <div className="flex gap-2 mt-2">
+                        <button onClick={() => onGoToSkillTree?.()} className="flex-1 py-3 sm:py-2 text-sm bg-white/5 active:bg-white/15 sm:hover:bg-white/10 border border-white/10 rounded transition-colors text-gray-300" aria-label="Skill Tree">
+                          🌳 Skills
+                        </button>
+                        <button onClick={() => onGoToHangar?.()} className="flex-1 py-3 sm:py-2 text-sm bg-white/5 active:bg-white/15 sm:hover:bg-white/10 border border-white/10 rounded transition-colors text-gray-300" aria-label="Hangar">
+                          🛠️ Hangar
+                        </button>
+                    </div>
+                    <button onClick={() => onGoToSettings?.()} className="w-full mt-2 py-3 sm:py-2 text-sm bg-white/5 active:bg-white/15 sm:hover:bg-white/10 border border-white/10 rounded transition-colors text-gray-300" aria-label="Settings">
+                      ⚙️ Settings
                     </button>
                 </div>
 

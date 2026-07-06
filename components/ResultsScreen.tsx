@@ -5,6 +5,8 @@ import { encodeSettings } from '../services/shareService';
 import { useSound } from '../hooks/useSound';
 import { getDailySeed } from '../shared/dailyChallengeService';
 import { ACCOLADE_DEFINITIONS, CORPORATION_DEFINITIONS } from '../constants';
+import { RankBadge } from './RankBadge';
+import { ratingToTier } from '../shared/rankSystem';
 
 
 interface ResultsScreenProps {
@@ -211,6 +213,32 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({ profile, gameState
                         <div className="text-xs uppercase font-bold mb-1 opacity-70">{rivalDefeated ? 'Victory vs Rival' : 'Defeat vs Rival'}</div>
                         <div className="text-lg font-bold">{rival.name}</div>
                         <div className="text-sm mt-1">New Streak: <span className="text-white font-mono">{newWinStreak}</span></div>
+                    </div>
+                )}
+
+                {/* v5.0: Ranked rating change */}
+                {matchSummary?.ratingChange != null && matchSummary.ratingChange !== 0 && (
+                    <div className={`p-4 rounded border ${matchSummary.ratingChange > 0 ? 'bg-hyper-green/10 border-hyper-green/30' : 'bg-red-500/10 border-red-500/30'}`}>
+                        <div className="text-xs uppercase font-bold mb-1 opacity-70">Ranked Rating</div>
+                        <div className="flex items-center justify-between">
+                            <span className={`text-2xl font-black ${matchSummary.ratingChange > 0 ? 'text-hyper-green' : 'text-red-400'}`}>
+                                {matchSummary.ratingChange > 0 ? '+' : ''}{matchSummary.ratingChange} RP
+                            </span>
+                            {matchSummary.newRating != null && (
+                                <RankBadge
+                                    rank={{
+                                        rating: matchSummary.newRating,
+                                        tier: matchSummary.newTier ?? ratingToTier(matchSummary.newRating),
+                                        wins: profile.rank?.wins ?? 0,
+                                        losses: profile.rank?.losses ?? 0,
+                                        peakRating: profile.rank?.peakRating ?? matchSummary.newRating,
+                                    }}
+                                    size="medium"
+                                    showRating
+                                    showRecord
+                                />
+                            )}
+                        </div>
                     </div>
                 )}
             </div>

@@ -140,7 +140,7 @@ export const EventRunner: React.FC<EventRunnerProps> = ({ gameState, onTileCompl
 
   // Cosmic Storm Anomaly Effect
   useEffect(() => {
-    if (isPaused) return;
+    if (isPaused) return undefined;
     if (activeAnomaly?.id === 'COSMIC_STORM' && !isEventOver) {
         const stormInterval = setInterval(() => {
             if (Math.random() < 0.1) { // 10% chance every second
@@ -152,12 +152,18 @@ export const EventRunner: React.FC<EventRunnerProps> = ({ gameState, onTileCompl
         }, 1000);
         return () => clearInterval(stormInterval);
     }
+    return undefined;
   }, [activeAnomaly, isEventOver, players, gameState.overdrivingPlayerIds, onActivateOverdrive, isPaused]);
 
 
   const EventComponent = event.Component;
   // Memoize the event component to avoid re-renders from parent state changes unrelated to the game loop
   const MemoizedEventComponent = useMemo(() => React.memo(EventComponent), [EventComponent]);
+  const LazyFallback = useMemo(() => () => (
+    <div className="flex items-center justify-center h-full text-gray-400 text-sm animate-pulse">
+      Loading event…
+    </div>
+  ), []);
 
   if (!humanPlayer) return <div className="flex items-center justify-center h-screen text-gray-500">No human player found.</div>;
 
@@ -216,6 +222,7 @@ export const EventRunner: React.FC<EventRunnerProps> = ({ gameState, onTileCompl
         <div 
           className={`flex-grow w-full relative rounded-xl overflow-hidden glass-panel transition-all duration-300 border border-white/5 shadow-2xl ${isPlayerOverdriving ? 'ring-2 ring-nebula-pink shadow-nebula-pink/20' : ''} ${isDataCorrupted ? 'animate-pulse' : ''}`}
         >
+          <React.Suspense fallback={<LazyFallback />}>
           <MemoizedEventComponent
             tile={currentTile}
             event={event}
@@ -225,6 +232,7 @@ export const EventRunner: React.FC<EventRunnerProps> = ({ gameState, onTileCompl
             isOverdriving={isPlayerOverdriving}
             isPaused={isPaused}
           />
+          </React.Suspense>
         </div>
 
         {/* Bottom Controls & Track */}

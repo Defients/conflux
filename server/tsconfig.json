@@ -20,10 +20,13 @@
     "../shared/seededRNG.ts",
     "../shared/pathGenerator.ts",
     "../shared/gameRules.ts",
+    "../shared/gameSetup.ts",
+    "../shared/rankSystem.ts",
     "../shared/botMind.ts",
     "../shared/protocol.ts",
     "../shared/matchSummary.ts",
-    "../shared/contractService.ts"
+    "../shared/contractService.ts",
+    "../shared/dailyChallengeService.ts"
   ],
   "exclude": ["node_modules", "dist"]
 }

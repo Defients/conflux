@@ -1,50 +1,56 @@
 
+import React from 'react';
 import { GameEvent } from '../types';
-import { ReactionTap } from './ReactionTap';
-import { TypeBurst } from './TypeBurst';
-import { EventStub } from './EventStub';
-import { SliderPrecision } from './SliderPrecision';
-import { PatternRecall } from './PatternRecall';
-import { EvadeGrid } from './EvadeGrid';
-import { JumpBar } from './JumpBar';
-import { WireLink } from './WireLink';
-import { FindPixel } from './FindPixel';
-import { TargetPractice } from './TargetPractice';
-import { RhythmTap } from './RhythmTap';
-import { SequenceSort } from './SequenceSort';
-import { AsteroidDodge } from './AsteroidDodge';
-import { PathTracer } from './PathTracer';
-import { CodeBreaker } from './CodeBreaker';
-import { QuickMath } from './QuickMath';
-import { QuickQuiz } from './QuickQuiz';
-import { MemoryFlip } from './MemoryFlip';
-import { AimFlick } from './AimFlick';
-import { MazeMicro } from './MazeMicro';
-import { ColorMath } from './ColorMath';
-import { AngleNudge } from './AngleNudge';
-import { TypeRacerSnippet } from './TypeRacerSnippet';
-import { SnapshotMemory } from './SnapshotMemory';
-import { BurstClicks } from './BurstClicks';
-import { SprintMash } from './SprintMash';
-import { GhostTrajectory } from './GhostTrajectory';
-import { EmojiCipher } from './EmojiCipher';
-import { AudioBeat } from './AudioBeat';
-import { SystemPurge } from './SystemPurge';
-import { BalanceBeam } from './BalanceBeam';
-import { WhackAMole } from './WhackAMole';
-import { StopTheClock } from './StopTheClock';
-import { WordStorm } from './WordStorm';
-import { AnagramRush } from './AnagramRush';
-import { DialLock } from './DialLock';
-import { PixelPush } from './PixelPush';
-import { MirrorDraw } from './MirrorDraw';
-import { NumberStack } from './NumberStack';
-import { SymbolMatch } from './SymbolMatch';
-import { DrumEcho } from './DrumEcho';
-import { WaveRide } from './WaveRide';
-import { ColorSort } from './ColorSort';
-import { FlowConnect } from './FlowConnect';
-import { LogicGates } from './LogicGates';
+
+// v5.0: Lazy-load all event components for code splitting
+const ReactionTap = React.lazy(() => import('./ReactionTap').then(m => ({ default: m.ReactionTap })));
+const TypeBurst = React.lazy(() => import('./TypeBurst').then(m => ({ default: m.TypeBurst })));
+const EventStub = React.lazy(() => import('./EventStub').then(m => ({ default: m.EventStub })));
+const SliderPrecision = React.lazy(() => import('./SliderPrecision').then(m => ({ default: m.SliderPrecision })));
+const PatternRecall = React.lazy(() => import('./PatternRecall').then(m => ({ default: m.PatternRecall })));
+const EvadeGrid = React.lazy(() => import('./EvadeGrid').then(m => ({ default: m.EvadeGrid })));
+const JumpBar = React.lazy(() => import('./JumpBar').then(m => ({ default: m.JumpBar })));
+const WireLink = React.lazy(() => import('./WireLink').then(m => ({ default: m.WireLink })));
+const FindPixel = React.lazy(() => import('./FindPixel').then(m => ({ default: m.FindPixel })));
+const TargetPractice = React.lazy(() => import('./TargetPractice').then(m => ({ default: m.TargetPractice })));
+const RhythmTap = React.lazy(() => import('./RhythmTap').then(m => ({ default: m.RhythmTap })));
+const SequenceSort = React.lazy(() => import('./SequenceSort').then(m => ({ default: m.SequenceSort })));
+const AsteroidDodge = React.lazy(() => import('./AsteroidDodge').then(m => ({ default: m.AsteroidDodge })));
+const PathTracer = React.lazy(() => import('./PathTracer').then(m => ({ default: m.PathTracer })));
+const CodeBreaker = React.lazy(() => import('./CodeBreaker').then(m => ({ default: m.CodeBreaker })));
+const QuickMath = React.lazy(() => import('./QuickMath').then(m => ({ default: m.QuickMath })));
+const QuickQuiz = React.lazy(() => import('./QuickQuiz').then(m => ({ default: m.QuickQuiz })));
+const MemoryFlip = React.lazy(() => import('./MemoryFlip').then(m => ({ default: m.MemoryFlip })));
+const AimFlick = React.lazy(() => import('./AimFlick').then(m => ({ default: m.AimFlick })));
+const MazeMicro = React.lazy(() => import('./MazeMicro').then(m => ({ default: m.MazeMicro })));
+const ColorMath = React.lazy(() => import('./ColorMath').then(m => ({ default: m.ColorMath })));
+const AngleNudge = React.lazy(() => import('./AngleNudge').then(m => ({ default: m.AngleNudge })));
+const TypeRacerSnippet = React.lazy(() => import('./TypeRacerSnippet').then(m => ({ default: m.TypeRacerSnippet })));
+const SnapshotMemory = React.lazy(() => import('./SnapshotMemory').then(m => ({ default: m.SnapshotMemory })));
+const BurstClicks = React.lazy(() => import('./BurstClicks').then(m => ({ default: m.BurstClicks })));
+const SprintMash = React.lazy(() => import('./SprintMash').then(m => ({ default: m.SprintMash })));
+const GhostTrajectory = React.lazy(() => import('./GhostTrajectory').then(m => ({ default: m.GhostTrajectory })));
+const EmojiCipher = React.lazy(() => import('./EmojiCipher').then(m => ({ default: m.EmojiCipher })));
+const AudioBeat = React.lazy(() => import('./AudioBeat').then(m => ({ default: m.AudioBeat })));
+const SystemPurge = React.lazy(() => import('./SystemPurge').then(m => ({ default: m.SystemPurge })));
+const BalanceBeam = React.lazy(() => import('./BalanceBeam').then(m => ({ default: m.BalanceBeam })));
+const WhackAMole = React.lazy(() => import('./WhackAMole').then(m => ({ default: m.WhackAMole })));
+const StopTheClock = React.lazy(() => import('./StopTheClock').then(m => ({ default: m.StopTheClock })));
+const WordStorm = React.lazy(() => import('./WordStorm').then(m => ({ default: m.WordStorm })));
+const AnagramRush = React.lazy(() => import('./AnagramRush').then(m => ({ default: m.AnagramRush })));
+const DialLock = React.lazy(() => import('./DialLock').then(m => ({ default: m.DialLock })));
+const PixelPush = React.lazy(() => import('./PixelPush').then(m => ({ default: m.PixelPush })));
+const MirrorDraw = React.lazy(() => import('./MirrorDraw').then(m => ({ default: m.MirrorDraw })));
+const NumberStack = React.lazy(() => import('./NumberStack').then(m => ({ default: m.NumberStack })));
+const SymbolMatch = React.lazy(() => import('./SymbolMatch').then(m => ({ default: m.SymbolMatch })));
+const DrumEcho = React.lazy(() => import('./DrumEcho').then(m => ({ default: m.DrumEcho })));
+const WaveRide = React.lazy(() => import('./WaveRide').then(m => ({ default: m.WaveRide })));
+const ColorSort = React.lazy(() => import('./ColorSort').then(m => ({ default: m.ColorSort })));
+const FlowConnect = React.lazy(() => import('./FlowConnect').then(m => ({ default: m.FlowConnect })));
+const LogicGates = React.lazy(() => import('./LogicGates').then(m => ({ default: m.LogicGates })));
+const TiltMaze = React.lazy(() => import('./TiltMaze').then(m => ({ default: m.TiltMaze })));
+const ChordMemory = React.lazy(() => import('./ChordMemory').then(m => ({ default: m.ChordMemory })));
+const WordScramble = React.lazy(() => import('./WordScramble').then(m => ({ default: m.WordScramble })));
 
 export const eventRegistry: GameEvent[] = [
   // --- Fully Implemented Events ---
@@ -836,6 +842,57 @@ export const eventRegistry: GameEvent[] = [
       const accuracy = correct / total;
       if (accuracy >= 0.9) return 3;
       if (accuracy >= 0.6) return 2;
+      return 1;
+    },
+    isStub: false,
+  },
+  {
+    id: 'tilt-maze',
+    displayName: 'Tilt Maze',
+    instructions: 'Navigate the ball through the maze to the exit. Tilt with arrow keys or mouse movement!',
+    interactionHint: 'Arrow Keys / Mouse',
+    scoringHint: 'Fastest Exit Time',
+    durationSec: (d) => d === 1 ? 25 : d === 2 ? 20 : 15,
+    performanceDimension: 'precision',
+    Component: TiltMaze,
+    getStars: (result) => {
+      const timeSec = result.primaryMetric;
+      if (timeSec <= 10) return 3;
+      if (timeSec <= 18) return 2;
+      return 1;
+    },
+    isStub: false,
+  },
+  {
+    id: 'chord-memory',
+    displayName: 'Chord Memory',
+    instructions: 'Watch the sequence of colored notes light up, then replay them in order. The sequence grows!',
+    interactionHint: 'Click Colored Pads',
+    scoringHint: 'Longest Correct Sequence',
+    durationSec: (d, a) => (a ? 15 : 12) + d * 2,
+    performanceDimension: 'memory',
+    Component: ChordMemory,
+    getStars: (result) => {
+      const correct = result.primaryMetric;
+      if (correct >= 7) return 3;
+      if (correct >= 4) return 2;
+      return 1;
+    },
+    isStub: false,
+  },
+  {
+    id: 'word-scramble',
+    displayName: 'Word Scramble',
+    instructions: 'Unscramble the jumbled cyberpunk words as fast as you can!',
+    interactionHint: 'Type + Enter',
+    scoringHint: 'Most Words Solved',
+    durationSec: (d) => 15 + d * 5,
+    performanceDimension: 'typing',
+    Component: WordScramble,
+    getStars: (result) => {
+      const solved = result.primaryMetric;
+      if (solved >= 5) return 3;
+      if (solved >= 3) return 2;
       return 1;
     },
     isStub: false,

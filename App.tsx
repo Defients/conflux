@@ -1,7 +1,7 @@
 
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { GameScreen, GameSettings, GameState, GameEvent, PilotProfile, EventTelemetry, PowerUp, EventResult } from './types';
+import { GameScreen, GameSettings, GameState, GameEvent, PilotProfile, EventTelemetry, PowerUp, EventResult, ChassisId } from './types';
 import { MatchSummary, computeMatchSummary, applyMatchSummaryToProfile } from './shared/matchSummary';
 import { useGameEngine } from './hooks/useGameEngine';
 import { useOnlineGame } from './hooks/useOnlineGame';
@@ -32,9 +32,20 @@ import { WelcomePopup, hasSeenWelcome } from './components/WelcomePopup';
 import { generateContracts } from './shared/contractService';
 import { getDailySeed, getDailyPersonalBest, saveDailyPersonalBest } from './shared/dailyChallengeService';
 import { Contract } from './types';
+import { ModeSelector, GameModeSelection } from './components/ModeSelector';
+import { SkillTreeScreen } from './components/SkillTreeScreen';
+import { HangarScreen } from './components/HangarScreen';
+import { SettingsScreen, loadSettings, saveSettings, GameSettings as UGameSettings } from './components/SettingsScreen';
+import { OnboardingFlow } from './components/OnboardingFlow';
+import { TournamentScreen, TournamentBracket } from './components/TournamentScreen';
+import { RankBadge } from './components/RankBadge';
+import { ConnectionIndicator } from './components/ConnectionIndicator';
+import { useConnectionStatus } from './hooks/useConnectionStatus';
+import { useOnlineScreenSync } from './hooks/useOnlineScreenSync';
+import { SpectatorOverlay } from './components/SpectatorOverlay';
 
-/** Extended screen enum for online-specific screens. */
-type AppScreen = GameScreen | 'ONLINE_LOBBY';
+/** Extended screen enum for online-specific and v5.0 screens. */
+type AppScreen = GameScreen | 'ONLINE_LOBBY' | 'MODE_SELECT' | 'SKILL_TREE' | 'HANGAR' | 'SETTINGS' | 'ONBOARDING' | 'TOURNAMENT';
 
 const App: React.FC = () => {
   const [screen, setScreen] = useState<AppScreen>(GameScreen.Lobby);
@@ -73,6 +84,15 @@ const App: React.FC = () => {
   const [savedProfiles, setSavedProfiles] = useState(() => listProfiles());
   const [showWelcome, setShowWelcome] = useState(false);
   const [pendingRoomCode, setPendingRoomCode] = useState<string | undefined>(undefined);
+  // v5.0 state
+  const [uiSettings, setUiSettings] = useState<UGameSettings>(() => loadSettings());
+  const [tournamentBracket, setTournamentBracket] = useState<TournamentBracket | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const connectionStatus = useConnectionStatus();
+  const { leaveSpectator } = useOnlineScreenSync({
+    online: onlineGame,
+    setScreen: (s) => setScreen(s as AppScreen),
+  });
 
   // Parse ?room= URL param for auto-join
   useEffect(() => {
@@ -116,6 +136,7 @@ const App: React.FC = () => {
       const timer = setTimeout(() => setIsShaking(false), 500);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [effectTrigger, gameState?.settings.uiEffects]);
 
   const handleProfileCreated = useCallback((data: { name: string, avatarId: string }) => {
@@ -342,6 +363,106 @@ const App: React.FC = () => {
     setScreen('ONLINE_LOBBY' as AppScreen);
   }, [onlineGame]);
 
+  // v5.0: Navigation handlers
+  const handleGoToModeSelect = useCallback(() => {
+    setScreen('MODE_SELECT');
+  }, []);
+
+  const handleModeSelect = useCallback((mode: GameModeSelection) => {
+    switch (mode) {
+      case 'local':
+        setScreen(GameScreen.Lobby);
+        break;
+      case 'online':
+        onlineGame.setMode('online');
+        setScreen('ONLINE_LOBBY' as AppScreen);
+        break;
+      case 'ranked':
+        onlineGame.setMode('online');
+        setScreen('ONLINE_LOBBY' as AppScreen);
+        break;
+      case 'tournament':
+        setScreen('TOURNAMENT');
+        break;
+      case 'ghost':
+        setScreen(GameScreen.Lobby);
+        break;
+    }
+  }, [onlineGame]);
+
+  const handleGoToSkillTree = useCallback(() => {
+    setScreen('SKILL_TREE');
+  }, []);
+
+  const handleGoToHangar = useCallback(() => {
+    setScreen('HANGAR');
+  }, []);
+
+  const handleGoToSettings = useCallback(() => {
+    setScreen('SETTINGS');
+  }, []);
+
+  const handleSaveSettings = useCallback((settings: UGameSettings) => {
+    setUiSettings(settings);
+    saveSettings(settings);
+  }, []);
+
+  const handleSkillUnlock = useCallback((branch: 'speed' | 'tech' | 'endurance', nodeId: string, cost: number) => {
+    if (!profile) return;
+    if ((profile.skills?.availableCP ?? 0) < cost) return;
+    const updated = { ...profile };
+    if (!updated.skills) updated.skills = { speed: {}, tech: {}, endurance: {}, availableCP: 0 };
+    const newSkills = { ...updated.skills, availableCP: updated.skills.availableCP - cost };
+    newSkills[branch] = { ...newSkills[branch], [nodeId]: true };
+    updated.skills = newSkills;
+    handleUpdateProfile(updated);
+    syncProfile(updated);
+  }, [profile, handleUpdateProfile]);
+
+  const handleEquipModule = useCallback((chassisId: ChassisId, slot: 'core' | 'thrusters' | 'shielding', moduleId: string | null) => {
+    if (!profile) return;
+    const updated = { ...profile };
+    if (!updated.loadouts) updated.loadouts = {};
+    const existing = updated.loadouts[chassisId] ?? { chassisId, modules: {} };
+    updated.loadouts[chassisId] = {
+      ...existing,
+      modules: { ...existing.modules, [slot]: moduleId ?? undefined },
+    };
+    handleUpdateProfile(updated);
+    syncProfile(updated);
+  }, [profile, handleUpdateProfile]);
+
+  const handleSelectChassis = useCallback((chassisId: ChassisId) => {
+    if (!profile) return;
+    if (!profile.unlockedChassis.includes(chassisId)) return;
+    const updated = { ...profile };
+    handleUpdateProfile(updated);
+  }, [profile, handleUpdateProfile]);
+
+  const handleOnboardingComplete = useCallback((name: string, avatarId: string, chassisId: ChassisId) => {
+    const newProfile = createProfileAccount(name, avatarId);
+    if (!newProfile.unlockedChassis.includes(chassisId)) {
+      newProfile.unlockedChassis = [...newProfile.unlockedChassis, chassisId];
+    }
+    saveProfile(newProfile);
+    syncProfile(newProfile);
+    setProfile(newProfile);
+    setSavedProfiles(listProfiles());
+    setShowOnboarding(false);
+    setScreen(GameScreen.Lobby);
+  }, []);
+
+  const handleTournamentJoinMatch = useCallback((_matchId: string, roomCode: string) => {
+    onlineGame.setMode('online');
+    setPendingRoomCode(roomCode);
+    setScreen('ONLINE_LOBBY' as AppScreen);
+  }, [onlineGame]);
+
+  const handleLeaveTournament = useCallback(() => {
+    setTournamentBracket(null);
+    setScreen(GameScreen.Lobby);
+  }, []);
+
   const handleWelcomeClose = useCallback(() => {
     setShowWelcome(false);
   }, []);
@@ -457,11 +578,32 @@ const App: React.FC = () => {
         return <PilotProfileSetup onProfileCreated={handleProfileCreated} existingProfiles={savedProfiles} onSelectProfile={handleSelectExistingProfile} onDeleteProfile={handleDeleteExistingProfile} />;
     }
 
-    const renderLobby = () => <Lobby profile={profile} setProfile={setProfile} onStartGame={handleStartGame} onStartGauntlet={handleStartGauntlet} onGoToEventList={handleGoToEventList} onGoToAccolades={handleGoToAccolades} onGoToOnline={handleGoToOnline} onGoToLeaderboard={handleGoToLeaderboard} onGoToMatchHistory={handleGoToMatchHistory} onSwitchPilot={handleSwitchPilot} />;
+    const renderLobby = () => <Lobby profile={profile} setProfile={setProfile} onStartGame={handleStartGame} onStartGauntlet={handleStartGauntlet} onGoToEventList={handleGoToEventList} onGoToAccolades={handleGoToAccolades} onGoToOnline={handleGoToOnline} onGoToLeaderboard={handleGoToLeaderboard} onGoToMatchHistory={handleGoToMatchHistory} onSwitchPilot={handleSwitchPilot} onGoToModeSelect={handleGoToModeSelect} onGoToSkillTree={handleGoToSkillTree} onGoToHangar={handleGoToHangar} onGoToSettings={handleGoToSettings} />;
 
     switch (screen) {
       case 'ONLINE_LOBBY':
-        return <OnlineLobby profile={profile} online={onlineGame} onBack={() => { onlineGame.setMode('local'); setScreen(GameScreen.Lobby); }} pendingRoomCode={pendingRoomCode} />;
+        return (
+          <>
+            {isOnline && (
+              <div className="fixed top-2 right-2 z-40">
+                <ConnectionIndicator quality={connectionStatus.quality} rttMs={connectionStatus.rttMs} showLabel />
+              </div>
+            )}
+            <OnlineLobby profile={profile} online={onlineGame} onBack={() => { onlineGame.setMode('local'); setScreen(GameScreen.Lobby); }} pendingRoomCode={pendingRoomCode} />
+          </>
+        );
+      case 'MODE_SELECT':
+        return <ModeSelector onSelect={handleModeSelect} onBack={() => setScreen(GameScreen.Lobby)} />;
+      case 'SKILL_TREE':
+        return <SkillTreeScreen profile={profile} onUnlock={handleSkillUnlock} onBack={() => setScreen(GameScreen.Lobby)} />;
+      case 'HANGAR':
+        return <HangarScreen profile={profile} onSelectChassis={handleSelectChassis} onEquipModule={handleEquipModule} onBack={() => setScreen(GameScreen.Lobby)} />;
+      case 'SETTINGS':
+        return <SettingsScreen settings={uiSettings} onSave={handleSaveSettings} onBack={() => setScreen(GameScreen.Lobby)} />;
+      case 'TOURNAMENT':
+        return <TournamentScreen bracket={tournamentBracket} onJoinMatch={handleTournamentJoinMatch} onLeave={handleLeaveTournament} />;
+      case 'ONBOARDING':
+        return <OnboardingFlow onComplete={handleOnboardingComplete} />;
       case GameScreen.Lobby:
         return renderLobby();
       case GameScreen.Accolades:
@@ -524,6 +666,7 @@ const App: React.FC = () => {
       const timer = setTimeout(() => setShowWelcome(true), 800);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [profile]);
 
   return (
@@ -531,6 +674,12 @@ const App: React.FC = () => {
         <main id="main-content" className="w-full min-h-screen">
         {renderScreen()}
         </main>
+        {isOnline && onlineGame.isSpectator && (
+            <SpectatorOverlay
+              gameState={onlineGame.serverGameState}
+              onLeave={leaveSpectator}
+            />
+        )}
         {showWelcome && profile && (
             <WelcomePopup onClose={handleWelcomeClose} onGoOnline={handleWelcomeGoOnline} />
         )}

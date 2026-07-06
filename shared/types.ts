@@ -150,6 +150,20 @@ export interface PilotProfile {
   appliedMatchIds?: string[];
   /** Record of daily challenge seeds to best scores */
   dailyBests?: Record<string, number>;
+
+  // ─── v5.0 Progression fields ───
+  /** Pilot skill tree unlocks. */
+  skills?: PilotSkills;
+  /** Chassis module loadouts per chassis. */
+  loadouts?: Partial<Record<ChassisId, ChassisLoadout>>;
+  /** Unlocked chassis module IDs. */
+  unlockedModules?: string[];
+  /** Per-event mastery tracking. */
+  eventMastery?: Record<string, EventMastery>;
+  /** Ranked ladder info. */
+  rank?: RankInfo;
+  /** Whether onboarding flow has been completed. */
+  onboardingComplete?: boolean;
 }
 
 export interface GameSettings {
@@ -207,6 +221,20 @@ export interface Player {
   isReady?: boolean;
   /** Whether this player is currently connected (for reconnect handling). */
   isConnected?: boolean;
+
+  // ─── v5.0 fields ───
+  /** Team identifier for team race mode. */
+  teamId?: TeamId;
+  /** Whether this player is a ghost (async PvP replay). */
+  isGhost?: boolean;
+  /** Internal: debuff resistance from skills/loadout (reduces debuff duration). */
+  _debuffResistance?: number;
+  /** Internal: movement bonus from loadout modules. */
+  _movementBonus?: number;
+  /** Internal: energy per star bonus from skills. */
+  _energyPerStarBonus?: number;
+  /** Internal: overdrive cooldown reduction from skills. */
+  _overdriveCooldownReduction?: number;
 }
 
 export type TileModifier = 'BOOST_PAD' | 'POWER_SURGE' | 'STATIC_FIELD' | 'FOG_BANK' | 'SPONSORED';
@@ -313,6 +341,18 @@ export interface RoomConfig {
   chassisId: ChassisId;
   userId?: string;
   isPrivate?: boolean;
+  /** Join as spectator (can join during active matches). */
+  spectate?: boolean;
+  /** Team assignment for team race mode. */
+  teamId?: TeamId;
+  /** Queue type for matchmaking. */
+  queueType?: 'ranked' | 'unranked';
+  /** Player rating for matchmaking. */
+  rating?: number;
+  /** v5.0: Player's unlocked skill node IDs for skill effects. */
+  skillNodeIds?: string[];
+  /** v5.0: Player's equipped chassis module IDs for loadout effects. */
+  moduleIds?: string[];
 }
 
 /** Lobby-visible player entry (before match starts). */
@@ -324,6 +364,10 @@ export interface LobbyPlayer {
   isReady: boolean;
   isHost: boolean;
   isConnected: boolean;
+  /** Team identifier for team race mode. */
+  teamId?: TeamId;
+  /** Player rating for ranked display. */
+  rating?: number;
 }
 
 /** Match phase tracked by the server room. */
@@ -385,4 +429,167 @@ export interface MatchHistoryEntry {
   isGauntlet: boolean;
   rivalDefeated: boolean;
   gauntletTilesSurvived: number | null;
+  /** Rating change for ranked matches. */
+  ratingChange?: number;
+  /** Team ID for team mode matches. */
+  teamId?: TeamId;
 }
+
+// ─── v5.0: Team Race Types ────────────────────────────────────────────────────
+
+export type TeamId = 'ALPHA' | 'OMEGA';
+
+// ─── v5.0: Ghost Race Types ───────────────────────────────────────────────────
+
+export interface GhostRun {
+  ghostId: string;
+  ownerName: string;
+  ownerAvatarId: string;
+  seed: string;
+  runLength: number;
+  tileResults: { tileIndex: number; stars: number; primaryMetric: number }[];
+  submittedAt: number;
+  ownerCircuitPoints: number;
+  userId: string;
+}
+
+// ─── v5.0: Skill Tree Types ───────────────────────────────────────────────────
+
+export type SkillTreeId = 'speed' | 'tech' | 'endurance';
+
+export interface SkillNode {
+  id: string;
+  tree: SkillTreeId;
+  tier: number;
+  name: string;
+  description: string;
+  icon: string;
+  cpCost: number;
+  effect: {
+    energyPerStarBonus?: number;
+    overdriveCooldownReduction?: number;
+    shieldStart?: boolean;
+    powerUpStartChance?: number;
+    debuffResistance?: number;
+  };
+  prerequisites: string[];
+}
+
+export interface PilotSkills {
+  speed: Record<string, boolean>;
+  tech: Record<string, boolean>;
+  endurance: Record<string, boolean>;
+  availableCP: number;
+}
+
+// ─── v5.0: Chassis Customization Types ────────────────────────────────────────
+
+export type LoadoutSlot = 'core' | 'thrusters' | 'shielding';
+
+export interface ChassisModule {
+  id: string;
+  slot: LoadoutSlot;
+  name: string;
+  description: string;
+  icon: string;
+  cpCost: number;
+  effects: {
+    movementBonus?: number;
+    debuffDurationReduction?: number;
+    energyBonus?: number;
+    startWithShield?: boolean;
+    startWithPowerUp?: PowerUp;
+  };
+}
+
+export interface ChassisLoadout {
+  chassisId: ChassisId;
+  modules: { core?: string; thrusters?: string; shielding?: string };
+}
+
+// ─── v5.0: Event Mastery Types ────────────────────────────────────────────────
+
+export interface EventMastery {
+  eventId: string;
+  totalPlays: number;
+  totalStars: number;
+  bestMetric: number;
+  masteryLevel: number;
+}
+
+// ─── v5.0: Ranked Ladder Types ────────────────────────────────────────────────
+
+export type RankTier = 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
+
+export interface RankInfo {
+  rating: number;
+  tier: RankTier;
+  peakRating: number;
+  wins: number;
+  losses: number;
+}
+
+// ─── v5.0: Seasonal Modifier Types ────────────────────────────────────────────
+
+export interface SeasonalModifier {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  startWeek: number;
+  endWeek: number;
+  effect: {
+    energyMultiplier?: number;
+    disablePowerUps?: boolean;
+    anomalyChance?: number;
+    runLengthOverride?: number;
+  };
+}
+
+// ─── v5.0: Tournament Types ───────────────────────────────────────────────────
+
+export interface TournamentBracket {
+  id: string;
+  name: string;
+  size: 4 | 8 | 16;
+  rounds: TournamentRound[];
+  currentRound: number;
+  participants: TournamentParticipant[];
+  champion?: string;
+}
+
+export interface TournamentRound {
+  roundNumber: number;
+  matches: TournamentMatch[];
+  isComplete: boolean;
+}
+
+export interface TournamentMatch {
+  matchId: string;
+  participants: string[];
+  winner?: string;
+  roomCode?: string;
+  isComplete: boolean;
+}
+
+export interface TournamentParticipant {
+  id: string;
+  name: string;
+  avatarId: string;
+  userId?: string;
+  seedRank: number;
+  eliminated: boolean;
+}
+
+// ─── v5.0: Room Preset Types ──────────────────────────────────────────────────
+
+export interface RoomPreset {
+  name: string;
+  settings: Partial<GameSettings>;
+  isPrivate: boolean;
+  botConfig: { easyBots: number; intermediateBots: number };
+}
+
+// ─── v5.0: Connection Quality Types ───────────────────────────────────────────
+
+export type ConnectionQuality = 'excellent' | 'good' | 'poor' | 'critical';

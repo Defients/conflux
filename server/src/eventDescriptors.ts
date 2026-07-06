@@ -283,6 +283,21 @@ export const STAR_COMPUTERS: Record<string, StarComputer> = {
     if (accuracy >= 0.6) return 2;
     return 1;
   },
+  'tilt-maze': (pm) => {
+    if (pm <= 10) return 3;
+    if (pm <= 18) return 2;
+    return 1;
+  },
+  'chord-memory': (pm) => {
+    if (pm >= 7) return 3;
+    if (pm >= 4) return 2;
+    return 1;
+  },
+  'word-scramble': (pm) => {
+    if (pm >= 5) return 3;
+    if (pm >= 3) return 2;
+    return 1;
+  },
 };
 
 /**
@@ -334,4 +349,7 @@ export const EVENT_DESCRIPTORS: SharedEventDescriptor[] = [
   { id: 'color-sort', displayName: 'Color Sort', performanceDimension: 'logic' },
   { id: 'flow-connect', displayName: 'Flow Connect', performanceDimension: 'logic' },
   { id: 'logic-gates', displayName: 'Logic Gates', performanceDimension: 'logic' },
+  { id: 'tilt-maze', displayName: 'Tilt Maze', performanceDimension: 'precision' },
+  { id: 'chord-memory', displayName: 'Chord Memory', performanceDimension: 'memory' },
+  { id: 'word-scramble', displayName: 'Word Scramble', performanceDimension: 'typing' },
 ];

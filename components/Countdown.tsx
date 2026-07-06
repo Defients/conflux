@@ -8,6 +8,8 @@ interface CountdownProps {
   eventName: string;
   event: GameEvent;
   onComplete: () => void;
+  /** v5.0: Optional duration in ms for the countdown (default 3500ms = 3...2...1...GO). */
+  durationMs?: number;
 }
 
 const InstructionCard: React.FC<{ event: GameEvent; visible: boolean }> = ({ event, visible }) => {
@@ -47,9 +49,12 @@ const InstructionCard: React.FC<{ event: GameEvent; visible: boolean }> = ({ eve
     );
 };
 
-export const Countdown: React.FC<CountdownProps> = ({ tileNumber, eventName, event, onComplete }) => {
+export const Countdown: React.FC<CountdownProps> = ({ tileNumber, eventName, event, onComplete, durationMs }) => {
   const [count, setCount] = useState(4);
   const { playSound } = useSound();
+
+  // v5.0: If durationMs is provided, derive the tick interval from it
+  const tickInterval = durationMs ? Math.max(500, Math.floor(durationMs / 4)) : 1000;
 
   const handleSkip = useCallback(() => {
     setCount(0);
@@ -58,7 +63,7 @@ export const Countdown: React.FC<CountdownProps> = ({ tileNumber, eventName, eve
   useEffect(() => {
     if (count > 0) {
       playSound('countdown-beep');
-      const timer = setTimeout(() => setCount(count - 1), 1000);
+      const timer = setTimeout(() => setCount(count - 1), tickInterval);
       return () => clearTimeout(timer);
     } else {
       const goTimer = setTimeout(() => {
@@ -66,7 +71,7 @@ export const Countdown: React.FC<CountdownProps> = ({ tileNumber, eventName, eve
       }, 500);
       return () => clearTimeout(goTimer);
     }
-  }, [count, onComplete, playSound]);
+  }, [count, onComplete, playSound, tickInterval]);
 
   // Escape or Space to skip countdown
   useEffect(() => {

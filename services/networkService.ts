@@ -19,6 +19,7 @@ import {
   RoomCreatedPayload, RoomErrorPayload, PlayerConnectionPayload, MatchSummaryPayload,
   KickPlayerPayload, BanPlayerPayload,
 } from '../shared/protocol';
+import { ConnectionQuality } from '../shared/types';
 
 // ─── Configuration ───────────────────────────────────────────────────────────
 
@@ -61,6 +62,15 @@ export interface NetworkEventHandlers {
   onConnectionChange?: (connected: boolean) => void;
   onPlayerKicked?: (message: string) => void;
   onPlayerBanned?: (message: string) => void;
+  // v5.0 handlers
+  onStartCountdown?: (data: { durationMs: number; tileIndex: number }) => void;
+  onQueueStatus?: (data: { queueSize: number; message: string }) => void;
+  onMatchFound?: (data: { roomCode: string; message: string }) => void;
+  onQueueTimeout?: (data: { message: string }) => void;
+  onTournamentUpdate?: (data: { bracket: unknown }) => void;
+  onTournamentMatchReady?: (data: { matchId: string; roomCode: string; message: string }) => void;
+  onSpectatorMode?: (data: { roomCode: string }) => void;
+  onConnectionQualityChange?: (quality: ConnectionQuality) => void;
 }
 
 // ─── NetworkService Singleton ────────────────────────────────────────────────
@@ -75,8 +85,16 @@ class NetworkService {
   private _reconnectAttempts = 0;
   private _reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private _lastSubmittedTileIndex: number = -1;
-  private static readonly MAX_RECONNECT_ATTEMPTS = 5;
+  private static readonly MAX_RECONNECT_ATTEMPTS = 8;
   private static readonly BASE_RECONNECT_DELAY_MS = 1000;
+  // v5.0: RTT tracking
+  private _rttMs: number = 0;
+  private _pingInterval: ReturnType<typeof setInterval> | null = null;
+  private _lastPingTime: number = 0;
+  // v5.0: Cached telemetry for reconnect resilience
+  private _cachedTelemetry: EventTelemetry | null = null;
+  // v5.0: Queue room reference
+  private _queueRoom: Room | null = null;
 
   get sessionId(): string | null {
     return this._sessionId;
@@ -92,6 +110,20 @@ class NetworkService {
 
   get currentRoom(): Room | null {
     return this.room;
+  }
+
+  // v5.0: RTT getter
+  get rttMs(): number {
+    return this._rttMs;
+  }
+
+  // v5.0: Connection quality derived from RTT
+  get connectionQuality(): ConnectionQuality {
+    if (!this._isConnected) return 'critical';
+    if (this._rttMs === 0 || this._rttMs < 50) return 'excellent';
+    if (this._rttMs < 150) return 'good';
+    if (this._rttMs < 300) return 'poor';
+    return 'critical';
   }
 
   /**
@@ -204,6 +236,12 @@ class NetworkService {
       this._sessionId = this.room.sessionId;
       this._isConnected = true;
       this.handlers.onConnectionChange?.(true);
+      // v5.0: Resend cached telemetry if we have unsent results
+      if (this._cachedTelemetry) {
+        this._lastSubmittedTileIndex = -1; // Reset to allow resend
+        this.sendEventResult(this._cachedTelemetry);
+        this._cachedTelemetry = null;
+      }
       return true;
     } catch {
       this.clearReconnectData();
@@ -216,6 +254,7 @@ class NetworkService {
    */
   async leaveRoom(consented = true): Promise<void> {
     this.cancelReconnect();
+    this.stopPing();
     if (this.room) {
       try {
         await this.room.leave(consented);
@@ -257,8 +296,11 @@ class NetworkService {
     }
 
     this._isReconnecting = true;
-    const delay = NetworkService.BASE_RECONNECT_DELAY_MS * Math.pow(2, this._reconnectAttempts);
-    console.log(`[Network] Reconnect attempt ${this._reconnectAttempts + 1}/${NetworkService.MAX_RECONNECT_ATTEMPTS} in ${delay}ms`);
+    // v5.0: Exponential backoff with jitter to prevent thundering herd
+    const baseDelay = NetworkService.BASE_RECONNECT_DELAY_MS * Math.pow(2, this._reconnectAttempts);
+    const jitter = Math.random() * 0.3 * baseDelay;
+    const delay = Math.min(baseDelay + jitter, 15000);
+    console.log(`[Network] Reconnect attempt ${this._reconnectAttempts + 1}/${NetworkService.MAX_RECONNECT_ATTEMPTS} in ${delay.toFixed(0)}ms`);
 
     this._reconnectTimer = setTimeout(async () => {
       this._reconnectAttempts++;
@@ -299,6 +341,8 @@ class NetworkService {
       return;
     }
     this._lastSubmittedTileIndex = telemetry.tileIndex;
+    // v5.0: Cache telemetry for reconnect resilience
+    this._cachedTelemetry = telemetry;
     this.room?.send(ClientMessages.SUBMIT_EVENT_RESULT, telemetry);
   }
 
@@ -334,10 +378,77 @@ class NetworkService {
     this.room?.send(ClientMessages.BAN_PLAYER, { sessionId } satisfies BanPlayerPayload);
   }
 
+  // v5.0: Queue methods
+
+  async joinQueue(config: RoomConfig, queueType: 'ranked' | 'unranked' = 'unranked'): Promise<void> {
+    const client = this.ensureClient();
+    const queueRoomName = queueType === 'ranked' ? 'conflux_queue_ranked' : 'conflux_queue_unranked';
+    try {
+      this._queueRoom = await client.joinById(queueRoomName, config);
+      this.setupQueueListeners();
+    } catch {
+      // No existing queue room, create one
+      try {
+        this._queueRoom = await client.create(queueRoomName, config);
+        this.setupQueueListeners();
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to join queue';
+        this.handlers.onRoomError?.(message);
+        throw err;
+      }
+    }
+  }
+
+  async leaveQueue(): Promise<void> {
+    if (this._queueRoom) {
+      try {
+        await this._queueRoom.leave(true);
+      } catch {
+        // Queue room may already be disposed
+      }
+      this._queueRoom = null;
+    }
+  }
+
+  private setupQueueListeners() {
+    if (!this._queueRoom) return;
+    this._queueRoom.onMessage(ServerMessages.QUEUE_STATUS, (data: { queueSize: number; message: string }) => {
+      this.handlers.onQueueStatus?.(data);
+    });
+    this._queueRoom.onMessage(ServerMessages.MATCH_FOUND, (data: { roomCode: string; message: string }) => {
+      this.handlers.onMatchFound?.(data);
+      // Auto-leave queue when match found
+      this.leaveQueue().catch(() => {});
+    });
+    this._queueRoom.onMessage(ServerMessages.QUEUE_TIMEOUT, (data: { message: string }) => {
+      this.handlers.onQueueTimeout?.(data);
+    });
+  }
+
+  // v5.0: Ping/pong for RTT measurement
+  private startPing() {
+    if (this._pingInterval) clearInterval(this._pingInterval);
+    this._pingInterval = setInterval(() => {
+      if (!this.room) return;
+      this._lastPingTime = Date.now();
+      this.room.send('ping', {});
+    }, 5000);
+  }
+
+  private stopPing() {
+    if (this._pingInterval) {
+      clearInterval(this._pingInterval);
+      this._pingInterval = null;
+    }
+  }
+
   // ─── Room Listeners Setup ──────────────────────────────────────────────
 
   private setupRoomListeners() {
     if (!this.room) return;
+
+    // v5.0: Start RTT measurement
+    this.startPing();
 
     // Lobby/room state updates
     this.room.onMessage('room:state', (data) => {
@@ -385,6 +496,26 @@ class NetworkService {
       this.handlers.onCountdown?.(data);
     });
 
+    // v5.0: Start countdown with duration
+    this.room.onMessage(ServerMessages.START_COUNTDOWN, (data: { durationMs: number; tileIndex: number }) => {
+      this.handlers.onStartCountdown?.(data);
+    });
+
+    // v5.0: Spectator mode acknowledgment
+    this.room.onMessage(ServerMessages.SPECTATOR_MODE, (data: { roomCode: string }) => {
+      this.handlers.onSpectatorMode?.(data);
+    });
+
+    // v5.0: Pong for RTT measurement
+    this.room.onMessage('pong', () => {
+      if (this._lastPingTime > 0) {
+        const newRtt = Date.now() - this._lastPingTime;
+        // Smooth RTT with exponential moving average
+        this._rttMs = this._rttMs === 0 ? newRtt : Math.round(this._rttMs * 0.7 + newRtt * 0.3);
+        this.handlers.onConnectionQualityChange?.(this.connectionQuality);
+      }
+    });
+
     this.room.onMessage(ServerMessages.PLAYER_DISCONNECTED, (data: PlayerConnectionPayload) => {
       this.handlers.onPlayerDisconnected?.(data);
     });
@@ -406,6 +537,7 @@ class NetworkService {
       console.log(`[Network] Left room (code: ${code})`);
       this._isConnected = false;
       this._lastSubmittedTileIndex = -1;
+      this.stopPing();
       this.handlers.onConnectionChange?.(false);
 
       // code >= 4000 means consented leave; < 4000 means unexpected disconnect
@@ -460,6 +592,20 @@ class NetworkService {
       return data.rooms ?? [];
     } catch {
       return [];
+    }
+  }
+
+  /**
+   * v5.0: Fetch queue status from the REST endpoint.
+   */
+  async getQueueStatus(): Promise<{ ranked: number; unranked: number }> {
+    try {
+      const res = await fetch(`${HTTP_SERVER_URL}/api/queue/status`);
+      if (!res.ok) return { ranked: 0, unranked: 0 };
+      const data = await res.json();
+      return data;
+    } catch {
+      return { ranked: 0, unranked: 0 };
     }
   }
 

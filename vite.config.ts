@@ -14,10 +14,22 @@ export default defineConfig(() => {
         minify: 'esbuild' as const,
         rollupOptions: {
           output: {
-            manualChunks: {
-              'vendor-react': ['react', 'react-dom'],
-              'vendor-firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
-              'vendor-colyseus': ['colyseus.js'],
+            manualChunks(id) {
+              if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
+                return 'vendor-react';
+              }
+              if (id.includes('node_modules/firebase/')) {
+                return 'vendor-firebase';
+              }
+              if (id.includes('node_modules/colyseus')) {
+                return 'vendor-colyseus';
+              }
+              if (id.includes('/events/') && id.endsWith('.tsx')) {
+                return 'events-bundle';
+              }
+              if (id.includes('/shared/') && id.endsWith('.ts')) {
+                return 'shared-bundle';
+              }
             },
           },
         },

@@ -95,6 +95,33 @@ const normalizeProfile = (input: Partial<PilotProfile & { rivalData: Partial<Riv
         parsed.dailyBests = {};
         needsSave = true;
     }
+    // v5.0: Normalize new fields
+    if (!parsed.skills) {
+        parsed.skills = { speed: {}, tech: {}, endurance: {}, availableCP: 0 };
+        needsSave = true;
+    }
+    if (!parsed.loadouts) {
+        parsed.loadouts = {};
+        needsSave = true;
+    }
+    if (!parsed.unlockedModules) {
+        parsed.unlockedModules = [];
+        needsSave = true;
+    }
+    if (!parsed.eventMastery) {
+        parsed.eventMastery = {};
+        needsSave = true;
+    }
+    if (!parsed.rank) {
+        parsed.rank = {
+            rating: 1000,
+            tier: 'bronze',
+            wins: 0,
+            losses: 0,
+            peakRating: 1000,
+        };
+        needsSave = true;
+    }
 
     if (parsed.name && parsed.avatarId && parsed.unlockedChassis && parsed.rivalData && parsed.unlockedAccolades && parsed.sponsorships) {
         return parsed as PilotProfile;
@@ -278,5 +305,17 @@ export const createDefaultProfile = (name: string, avatarId: string): PilotProfi
         },
         appliedMatchIds: [],
         dailyBests: {},
+        // v5.0 fields
+        skills: { speed: {}, tech: {}, endurance: {}, availableCP: 0 },
+        loadouts: {},
+        unlockedModules: [],
+        eventMastery: {},
+        rank: {
+            rating: 1000,
+            tier: 'bronze',
+            wins: 0,
+            losses: 0,
+            peakRating: 1000,
+        },
     };
 };

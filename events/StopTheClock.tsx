@@ -53,6 +53,7 @@ export const StopTheClock: React.FC<EventProps> = ({ onComplete, tile, settings,
     } else if (phase === 'show' && round >= ROUNDS) {
       finishEvent();
     }
+    return undefined;
   }, [phase, round, targets, finishEvent]);
 
   useEffect(() => {
@@ -69,6 +70,7 @@ export const StopTheClock: React.FC<EventProps> = ({ onComplete, tile, settings,
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
       };
     }
+    return undefined;
   }, [phase]);
 
   const handleStop = useCallback(() => {

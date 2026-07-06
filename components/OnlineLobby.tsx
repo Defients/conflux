@@ -12,6 +12,9 @@ import { CHASSIS_DEFINITIONS } from '../constants';
 import { OnlineGameHook } from '../hooks/useOnlineGame';
 import { auth } from '../services/firebase';
 import { networkService, OpenRoomInfo } from '../services/networkService';
+import { RankBadge } from './RankBadge';
+import { ConnectionIndicator } from './ConnectionIndicator';
+import { useConnectionStatus } from '../hooks/useConnectionStatus';
 
 interface OnlineLobbyProps {
   profile: PilotProfile;
@@ -32,6 +35,7 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
   const [linkCopied, setLinkCopied] = useState(false);
   const [createPrivate, setCreatePrivate] = useState(false);
   const autoJoinAttempted = useRef(false);
+  const connectionStatus = useConnectionStatus();
 
   const {
     isConnected, isReconnecting, sessionId, error, lobbyState,
@@ -39,6 +43,8 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
     sendReady, sendStart, sendUpdateSettings,
     sendTogglePrivate, sendKickPlayer, sendBanPlayer,
     clearError,
+    // v5.0: Queue
+    isQueuing, queueState, joinQueue, leaveQueue,
   } = online;
 
   useEffect(() => {
@@ -58,6 +64,16 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
       avatarId: profile.avatarId,
       chassisId: selectedChassis,
       userId: auth?.currentUser?.uid,
+      // v5.0 fields
+      rating: profile.rank?.rating,
+      skillNodeIds: Object.entries(profile.skills?.speed ?? {})
+        .concat(Object.entries(profile.skills?.tech ?? {}))
+        .concat(Object.entries(profile.skills?.endurance ?? {}))
+        .filter(([_, v]) => v)
+        .map(([k]) => k),
+      moduleIds: profile.loadouts?.[selectedChassis]
+        ? Object.values(profile.loadouts[selectedChassis].modules).filter(Boolean) as string[]
+        : [],
     };
   };
 
@@ -117,6 +133,15 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
   const handleJoinOpenRoom = async (room: OpenRoomInfo) => {
     clearError();
     await joinRoom(room.roomCode, buildConfig());
+  };
+
+  // v5.0: Spectate an in-progress match
+  const handleSpectate = async () => {
+    if (!joinCode.trim()) return;
+    clearError();
+    if (online.spectateRoom) {
+      await online.spectateRoom(joinCode.trim().toUpperCase());
+    }
   };
 
   // ─── Not in a room yet: show create/join ─────────────────────────────
@@ -260,6 +285,65 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
               )}
             </div>
           )}
+
+          {/* v5.0: Ranked Queue */}
+          <div className="mt-4 pt-4 border-t border-white/10">
+            {isQueuing ? (
+              <div className="text-center">
+                <div className="text-sm font-bold text-galaxy-cyan animate-pulse mb-2">
+                  🔍 Searching for opponents...
+                </div>
+                {queueState && (
+                  <div className="text-xs text-gray-400 mb-3">
+                    {queueState.message} · {queueState.queueSize} in queue
+                  </div>
+                )}
+                <button
+                  onClick={() => leaveQueue()}
+                  className="w-full py-3 bg-red-500/20 border border-red-500/40 text-red-300 font-bold rounded-lg active:bg-red-500/30 transition-colors text-sm"
+                  aria-label="Cancel queue"
+                >
+                  CANCEL SEARCH
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => joinQueue(buildConfig(), 'ranked')}
+                className="w-full py-3 bg-gradient-to-r from-galaxy-cyan/20 to-star-purple/20 border border-galaxy-cyan/40 text-galaxy-cyan font-bold rounded-lg active:opacity-80 sm:hover:opacity-90 transition-all text-sm"
+                aria-label="Join ranked queue"
+              >
+                🏆 FIND RANKED MATCH
+              </button>
+            )}
+          </div>
+
+          {/* v5.0: Spectate in-progress match */}
+          <div className="mt-4 pt-4 border-t border-white/10">
+            <label className="text-xs font-bold text-galaxy-cyan uppercase tracking-widest mb-2 block">
+              👁️ Spectate a Match
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={joinCode}
+                onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                placeholder="ROOM CODE"
+                maxLength={4}
+                autoComplete="off"
+                aria-label="Enter room code to spectate"
+                className="flex-grow px-4 py-3 bg-cosmic-blue border border-star-purple/50 rounded font-mono text-lg text-white text-center tracking-[0.3em] uppercase focus:outline-none focus:border-galaxy-cyan transition-colors"
+                onKeyDown={e => { if (e.key === 'Enter' && joinCode.trim()) handleSpectate(); }}
+              />
+              <button
+                onClick={handleSpectate}
+                disabled={!joinCode.trim()}
+                className="px-4 py-3 bg-galaxy-cyan/20 border border-galaxy-cyan/40 text-galaxy-cyan font-bold rounded-lg active:opacity-80 sm:hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                aria-label="Spectate room with code"
+              >
+                WATCH
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -304,6 +388,14 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
           </button>
         </div>
 
+        {/* v5.0: Connection quality indicator */}
+        {isConnected && (
+          <div className="mb-3 flex items-center gap-2 text-xs text-gray-400">
+            <ConnectionIndicator quality={connectionStatus.quality} rttMs={connectionStatus.rttMs} showLabel />
+            <span>· {connectionStatus.quality}</span>
+          </div>
+        )}
+
         {error && (
           <div className="mb-4 p-3 bg-red-500/20 border border-red-500/40 rounded text-sm text-red-300" role="alert">
             {error}
@@ -345,6 +437,10 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
                     <div className="text-xs text-gray-500">
                       {CHASSIS_DEFINITIONS[player.chassisId]?.icon} {CHASSIS_DEFINITIONS[player.chassisId]?.name}
                     </div>
+                    {/* v5.0: Rank badge */}
+                    {player.rating != null && (
+                      <RankBadge rank={{ rating: player.rating, tier: 'bronze', wins: 0, losses: 0, peakRating: player.rating }} size="small" showRating />
+                    )}
                   </div>
                 </div>
 

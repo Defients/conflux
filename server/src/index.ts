@@ -11,6 +11,8 @@ import express from 'express';
 import cors, { CorsOptions } from 'cors';
 import http from 'http';
 import { ConfluxRoom } from './rooms/ConfluxRoom';
+import { MatchmakingRoom } from './rooms/MatchmakingRoom';
+import { TournamentRoom } from './rooms/TournamentRoom';
 
 const PORT = Number(process.env.PORT) || 2567;
 const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -47,6 +49,18 @@ app.get('/health', (_req, res) => {
 });
 
 // ─── Browse open rooms ────────────────────────────────────────────────────────
+app.get('/api/queue/status', async (_req, res) => {
+  try {
+    const rankedRooms = await matchMaker.query({ name: 'conflux_queue_ranked' });
+    const unrankedRooms = await matchMaker.query({ name: 'conflux_queue_unranked' });
+    const rankedCount = rankedRooms.reduce((sum: number, r: any) => sum + (r.clients ?? 0), 0);
+    const unrankedCount = unrankedRooms.reduce((sum: number, r: any) => sum + (r.clients ?? 0), 0);
+    res.json({ ranked: rankedCount, unranked: unrankedCount });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch queue status' });
+  }
+});
+
 app.get('/api/rooms', async (_req, res) => {
   try {
     const rooms = await matchMaker.query({ name: 'conflux_match' });
@@ -80,6 +94,13 @@ const gameServer = new Server({
 
 // Register the game room
 gameServer.define('conflux_match', ConfluxRoom);
+
+// v5.0: Register matchmaking queue rooms
+gameServer.define('conflux_queue_ranked', MatchmakingRoom, { queueType: 'ranked' });
+gameServer.define('conflux_queue_unranked', MatchmakingRoom, { queueType: 'unranked' });
+
+// v5.0: Register tournament room
+gameServer.define('conflux_tournament', TournamentRoom);
 
 gameServer.listen(PORT, '0.0.0.0').then(() => {
   console.log(`[ConfluxServer] env:     ${NODE_ENV}`);

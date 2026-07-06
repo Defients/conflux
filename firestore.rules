@@ -24,6 +24,17 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ─── v5.0: Ghost Runs ───────────────────────────────────────────────
+    // All authenticated users can read ghost runs for async PvP.
+    // Users can only submit ghost runs under their own UID.
+    match /ghosts/{ghostId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if request.auth != null
+        && resource.data.userId == request.auth.uid;
+    }
+
     // ─── Default: deny all ──────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;
