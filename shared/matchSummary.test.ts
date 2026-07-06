@@ -48,12 +48,12 @@ function makePlayer(overrides?: Partial<Player>): Player {
     powerUps: [],
     statuses: [],
     tileHistory: [
-      { tileIndex: 0, stars: 3 },
-      { tileIndex: 1, stars: 2 },
-      { tileIndex: 2, stars: 3 },
-      { tileIndex: 3, stars: 2 },
-      { tileIndex: 4, stars: 3 },
-      { tileIndex: 5, stars: 1 },
+      { tileIndex: 1, stars: 3 },
+      { tileIndex: 2, stars: 2 },
+      { tileIndex: 3, stars: 3 },
+      { tileIndex: 4, stars: 2 },
+      { tileIndex: 5, stars: 3 },
+      { tileIndex: 6, stars: 1 },
     ],
     energy: 100,
     overdriveCooldown: 0,
@@ -71,12 +71,12 @@ function makeRivalPlayer(overrides?: Partial<Player>): Player {
     color: '#d64f8a',
     position: 70,
     tileHistory: [
-      { tileIndex: 0, stars: 2 },
       { tileIndex: 1, stars: 2 },
       { tileIndex: 2, stars: 2 },
       { tileIndex: 3, stars: 2 },
       { tileIndex: 4, stars: 2 },
       { tileIndex: 5, stars: 2 },
+      { tileIndex: 6, stars: 2 },
     ],
     ...overrides,
   });
@@ -92,19 +92,19 @@ function makeBotPlayer(id: number, position: number): Player {
     color: '#4dffaf',
     position,
     tileHistory: [
-      { tileIndex: 0, stars: 1 },
       { tileIndex: 1, stars: 1 },
       { tileIndex: 2, stars: 1 },
       { tileIndex: 3, stars: 1 },
       { tileIndex: 4, stars: 1 },
       { tileIndex: 5, stars: 1 },
+      { tileIndex: 6, stars: 1 },
     ],
   });
 }
 
 function makeTiles(count: number): Tile[] {
   return Array.from({ length: count }, (_, i) => ({
-    tileIndex: i,
+    tileIndex: i + 1,
     eventId: `event-${String.fromCharCode(65 + (i % 6))}`,
     difficulty: 1,
   }));
@@ -204,18 +204,18 @@ describe('computeMatchSummary', () => {
   it('computes CP correctly (placement + stars × perStar)', () => {
     const summary = computeMatchSummary(makeInput());
     // Placement[0] = 50, total stars = 3+2+3+2+3+1 = 14, perStar = 2 => 28
-    // Base = 50 + 28 = 78, streak multiplier(2) = 1 + min(2,5)*0.05 = 1.10
-    // Total = round(78 * 1.10) = round(85.8) = 86
+    // Base = 50 + 28 = 78, streak multiplier(3) = 1 + min(3,5)*0.05 = 1.15
+    // Total = round(78 * 1.15) = round(89.7) = 90
     expect(summary.cp.placement).toBe(50);
     expect(summary.cp.stars).toBe(28);
     expect(summary.cp.baseCp).toBe(78);
-    expect(summary.cp.streakMultiplier).toBeCloseTo(1.10, 2);
-    expect(summary.cp.totalCp).toBe(86); // round(78 * 1.10) = 86
+    expect(summary.cp.streakMultiplier).toBeCloseTo(1.15, 2);
+    expect(summary.cp.totalCp).toBe(90); // round(78 * 1.15) = 90
   });
 
   it('detects farming penalty when one event dominates >50%', () => {
     const farmTiles: Tile[] = Array.from({ length: 6 }, (_, i) => ({
-      tileIndex: i,
+      tileIndex: i + 1,
       eventId: 'event-A', // All same event
       difficulty: 1,
     }));
@@ -299,12 +299,12 @@ describe('computeMatchSummary accolades', () => {
       players: [
         makePlayer({
           tileHistory: [
-            { tileIndex: 0, stars: 4 },
-            { tileIndex: 1, stars: 2 },
+            { tileIndex: 1, stars: 4 },
             { tileIndex: 2, stars: 2 },
             { tileIndex: 3, stars: 2 },
             { tileIndex: 4, stars: 2 },
             { tileIndex: 5, stars: 2 },
+            { tileIndex: 6, stars: 2 },
           ],
         }),
         makeRivalPlayer(),
@@ -321,12 +321,12 @@ describe('computeMatchSummary accolades', () => {
       players: [
         makePlayer({
           tileHistory: [
-            { tileIndex: 0, stars: 3 },
             { tileIndex: 1, stars: 3 },
             { tileIndex: 2, stars: 3 },
             { tileIndex: 3, stars: 3 },
             { tileIndex: 4, stars: 3 },
             { tileIndex: 5, stars: 3 },
+            { tileIndex: 6, stars: 3 },
           ],
         }),
         makeRivalPlayer(),

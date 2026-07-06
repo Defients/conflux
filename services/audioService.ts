@@ -79,15 +79,15 @@ class AudioService {
     window.addEventListener('touchstart', resume, { once: true });
 }
 
-    public setEnabled(enabled: boolean) {
+    public async setEnabled(enabled: boolean) {
+        this.isEnabled = enabled;
         if (enabled && !this.audioContext) {
-            this.init(true);
+            await this.init(true);
         } else if (!enabled && this.audioContext) {
             this.audioContext.close().then(() => {
                 this.audioContext = null;
             });
         }
-        this.isEnabled = enabled;
     }
 
     public playSound(sound: SoundEvent) {

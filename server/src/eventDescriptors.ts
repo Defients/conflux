@@ -192,6 +192,97 @@ export const STAR_COMPUTERS: Record<string, StarComputer> = {
     if (isCorrect) return 2;
     return 1;
   },
+  'whack-a-mole': (pm, sm) => {
+    const total = sm ?? 1;
+    if (total === 0) return 1;
+    const accuracy = pm / total;
+    if (accuracy >= 0.9) return 3;
+    if (accuracy >= 0.6) return 2;
+    return 1;
+  },
+  'stop-the-clock': (pm) => {
+    if (pm <= 50) return 3;
+    if (pm <= 150) return 2;
+    return 1;
+  },
+  'word-storm': (pm, sm) => {
+    const total = sm ?? 1;
+    if (total === 0) return 1;
+    const accuracy = pm / total;
+    if (accuracy >= 0.9) return 3;
+    if (accuracy >= 0.6) return 2;
+    return 1;
+  },
+  'anagram-rush': (pm) => {
+    if (pm >= 5) return 3;
+    if (pm >= 3) return 2;
+    return 1;
+  },
+  'dial-lock': (pm) => {
+    if (pm <= 15) return 3;
+    if (pm <= 40) return 2;
+    return 1;
+  },
+  'pixel-push': (pm) => {
+    if (pm >= 3) return 3;
+    if (pm >= 2) return 2;
+    return 1;
+  },
+  'mirror-draw': (pm) => {
+    if (pm >= 90) return 3;
+    if (pm >= 70) return 2;
+    return 1;
+  },
+  'number-stack': (pm, sm) => {
+    const total = sm ?? 1;
+    const accuracy = total > 0 ? pm / total : 0;
+    if (accuracy >= 1) return 3;
+    if (accuracy >= 0.7) return 2;
+    return 1;
+  },
+  'symbol-match': (pm, sm) => {
+    const wrong = sm ?? 99;
+    const targetCount = 4;
+    if (pm >= targetCount && wrong === 0) return 3;
+    if (pm >= targetCount - 1 && wrong <= 1) return 2;
+    return 1;
+  },
+  'drum-echo': (pm, sm) => {
+    const totalHits = sm ?? 1;
+    const maxScore = totalHits * 3;
+    if (maxScore === 0) return 1;
+    const ratio = pm / maxScore;
+    if (ratio >= 0.8) return 3;
+    if (ratio >= 0.5) return 2;
+    return 1;
+  },
+  'wave-ride': (pm) => {
+    if (pm >= 85) return 3;
+    if (pm >= 60) return 2;
+    return 1;
+  },
+  'color-sort': (pm, sm) => {
+    const total = sm ?? 1;
+    if (total === 0) return 1;
+    const accuracy = pm / total;
+    if (accuracy >= 0.95) return 3;
+    if (accuracy >= 0.75) return 2;
+    return 1;
+  },
+  'flow-connect': (pm) => {
+    if (pm >= 99999) return 1;
+    if (pm < 15000) return 3;
+    if (pm < 30000) return 2;
+    return 1;
+  },
+  'logic-gates': (pm, sm) => {
+    const total = sm ?? 1;
+    if (total === 0) return 1;
+    const accuracy = pm / total;
+    if (accuracy >= 0.9) return 3;
+    if (accuracy >= 0.6) return 2;
+    return 1;
+  },
 };
 
 /**
@@ -229,4 +320,18 @@ export const EVENT_DESCRIPTORS: SharedEventDescriptor[] = [
   { id: 'ghost-trajectory', displayName: 'Ghost Trajectory', performanceDimension: 'precision' },
   { id: 'emoji-cipher', displayName: 'Emoji Cipher', performanceDimension: 'logic' },
   { id: 'audio-beat', displayName: 'Audio Beat Match', performanceDimension: 'rhythm' },
+  { id: 'whack-a-mole', displayName: 'Whack-a-Mole', performanceDimension: 'reaction' },
+  { id: 'stop-the-clock', displayName: 'Stop the Clock', performanceDimension: 'reaction' },
+  { id: 'word-storm', displayName: 'Word Storm', performanceDimension: 'typing' },
+  { id: 'anagram-rush', displayName: 'Anagram Rush', performanceDimension: 'typing' },
+  { id: 'dial-lock', displayName: 'Dial Lock', performanceDimension: 'precision' },
+  { id: 'pixel-push', displayName: 'Pixel Push', performanceDimension: 'precision' },
+  { id: 'mirror-draw', displayName: 'Mirror Draw', performanceDimension: 'precision' },
+  { id: 'number-stack', displayName: 'Number Stack', performanceDimension: 'memory' },
+  { id: 'symbol-match', displayName: 'Symbol Match', performanceDimension: 'memory' },
+  { id: 'drum-echo', displayName: 'Drum Echo', performanceDimension: 'rhythm' },
+  { id: 'wave-ride', displayName: 'Wave Ride', performanceDimension: 'rhythm' },
+  { id: 'color-sort', displayName: 'Color Sort', performanceDimension: 'logic' },
+  { id: 'flow-connect', displayName: 'Flow Connect', performanceDimension: 'logic' },
+  { id: 'logic-gates', displayName: 'Logic Gates', performanceDimension: 'logic' },
 ];

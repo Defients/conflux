@@ -23,9 +23,11 @@ const getStatusIcon = (type: PlayerStatus['type']) => {
 
 export const PitStopScreen: React.FC<PitStopScreenProps> = ({ gameState, onAction }) => {
     const { players } = gameState;
-    const humanPlayer = players.find(p => !p.isBot)!;
+    const humanPlayer = players.find(p => !p.isBot);
     const sortedPlayers = useMemo(() => [...players].sort((a, b) => b.position - a.position), [players]);
     const { playSound } = useSound();
+    
+    if (!humanPlayer) return null;
     
     const negativeStatus = humanPlayer.statuses.find(s => s.type !== 'SHIELDED' && s.type !== 'BOOSTED');
 

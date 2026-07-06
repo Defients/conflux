@@ -420,3 +420,91 @@ Version 3.2 is a surgical UI/UX refinement pass across every component in the co
 ---
 
 *Every pixel purposeful. Every interaction frictionless. Every edge case fortified.*
+
+---
+
+# Conflux Circuit v4.0 — Firebase Integration & Server Hardening
+
+## Overview
+Version 4.0 introduces cloud-backed progression with Firebase, authoritative server hardening with rate limiting and matchmaking, and a minimal spectator mode. The shared module layer is now fully tested with unit tests for seeded RNG, path generation, contract evaluation, and match summary computation.
+
+---
+
+## New Features
+
+### Firebase Cloud Integration
+- **Anonymous authentication** — pilots get a Firebase user ID on first launch, enabling cross-device profile sync.
+- **Firestore profile persistence** — pilot profiles (CP, win streak, accolades, chassis unlocks, gauntlet records) sync to Firestore. Local-first with merge-on-sync.
+- **Cloud leaderboards** — `LeaderboardScreen` fetches rankings from Firestore. Categories: All-Time (CP), Daily (best position), Gauntlet (tiles survived). Server writes entries on match completion.
+- **Match history** — `MatchHistoryScreen` fetches past races from Firestore. Shows placement, CP earned, run length, daily/gauntlet tags, and rival outcomes. Replay seed button loads the exact race configuration.
+- **Firestore security rules** — locked-down collection access: profiles read-only by owner, leaderboards read-only by all, match history read-only by owner, server-only writes via Admin SDK.
+
+### Server Rate Limiting
+- **Token bucket per client + message type** — prevents message flooding. Each message type has configured burst and refill rates.
+- **Rate limits** applied to all client message handlers: `READY`, `START`, `UPDATE_SETTINGS`, `SUBMIT_EVENT_RESULT`, `USE_POWER_UP`, `ACTIVATE_OVERDRIVE`, `INTERVENTION_CHOICE`, `PIT_STOP_ACTION`, `REQUEST_REMATCH`.
+- **Clean up on leave** — rate limiter state is removed when a player disconnects.
+
+### Matchmaking REST Endpoint
+- **`/api/rooms`** — Express endpoint on the Colyseus server lists open rooms with metadata (room code, player count, max players, phase).
+- **Browse Open Rooms UI** — OnlineLobby includes a collapsible section to browse and join open rooms without needing a code.
+- **Phase filtering** — only rooms in the `lobby` phase are shown, ensuring players can actually join.
+
+### Minimal Spectator Mode
+- **Spectator join** — players can join active matches as observers via `ClientMessages.SPECTATE`.
+- **Spectator tracking** — `spectatorIds` set on the room state. Spectators are tracked separately from players.
+- **Non-disruptive** — spectators don't affect game logic, player count, or auto-dispose checks.
+- **Clean departure** — spectators are simply removed from the set on leave.
+
+### Shared Module Unit Tests
+- **`seededRNG.test.ts`** — 7 tests covering determinism, distribution, shuffle, and Gaussian generation.
+- **`pathGenerator.test.ts`** — 10 tests covering run length, determinism, stub exclusion, difficulty range, tile indexing, and custom event pools.
+- **`contractService.test.ts`** — 9 tests covering contract generation, evaluation, and completion checking.
+- **`matchSummary.test.ts`** — 14 tests covering standings, CP calculation, streaks, rival defeats, accolades, anti-farming, gauntlet mode, idempotency, and applied-match-ID bounds.
+- **`ConfluxRoom.test.ts`** — Server room lifecycle tests covering join, leave, ready, start, rematch, settings update, and room code generation.
+
+---
+
+## Fixed
+
+### Off-by-One Tile Lookup Bug (Critical)
+- **Files:** `shared/contractService.ts`, `shared/matchSummary.ts`
+- **Issue:** `tileHistory[].tileIndex` is 1-based (set in `pathGenerator.ts` as `i + 1`), but `gameState.run[]` is a 0-indexed array. Four locations used `gameState.run[h.tileIndex]` instead of `gameState.run[h.tileIndex - 1]`, causing:
+  - Contract `GET_STARS_IN_DIMENSION` evaluation to check the wrong tile (test failure)
+  - Sponsored tile reputation to be awarded from the wrong tile
+  - Hazard tile accolade (`HazardousDuty`) to check the wrong tile
+  - Contract evaluation in match summary to check the wrong tile
+- **Fix:** Changed all four locations to use `h.tileIndex - 1`.
+
+### Broken Replay Seed Flow
+- **Files:** `components/Lobby.tsx`, `App.tsx`
+- **Issue:** `MatchHistoryScreen` replay button set `window.location.hash = '#seed=...'`, but `loadSettings` in `Lobby.tsx` only parsed `#cc=` hashes. The replay seed was silently ignored.
+- **Fix:** Added `#seed=` hash parsing to `loadSettings`.
+
+### contractService Import Path
+- **File:** `shared/contractService.ts`
+- **Issue:** Imported from `'../types'` (root `types.ts` which imports React) instead of `'./types'` (shared `types.ts`). The server imports this module — transitive React dependency was architecturally wrong.
+- **Fix:** Changed import to `'./types'`.
+
+---
+
+## Improved
+
+### README Rewrite
+- Replaced stale AI Studio / Gemini API boilerplate with proper Conflux Circuit documentation: game modes, setup instructions, project structure, tech stack, and testing commands.
+
+### TODO.md Updated
+- Phase 3 (Firebase) and Phase 4 (Server Hardening) items marked complete. Known limitations updated to reflect current state (spectator mode and rate limiting now implemented).
+
+### OnlineLobby Error Consistency
+- In-room error message now has `role="alert"` matching the not-in-room error display.
+
+---
+
+## Validation
+- `npx vitest run` — all shared module tests pass (40 tests across 4 files)
+- `npx tsc --noEmit` — clean compilation
+- `npx vite build` — production build succeeds
+
+---
+
+*Cloud-backed. Server-hardened. Fully tested. Still no AI.*

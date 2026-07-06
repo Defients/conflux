@@ -5,7 +5,7 @@
  * Hosts the ConfluxRoom for multiplayer match lifecycle.
  */
 
-import { Server } from 'colyseus';
+import { Server, matchMaker } from 'colyseus';
 import { WebSocketTransport } from '@colyseus/ws-transport';
 import express from 'express';
 import cors, { CorsOptions } from 'cors';
@@ -44,6 +44,26 @@ app.use(express.json());
 // ─── Health check ─────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', uptime: Math.floor(process.uptime()), env: NODE_ENV });
+});
+
+// ─── Browse open rooms ────────────────────────────────────────────────────────
+app.get('/api/rooms', async (_req, res) => {
+  try {
+    const rooms = await matchMaker.query({ name: 'conflux_match' });
+    const openRooms = rooms
+      .filter((r: any) => r.metadata?.phase === 'lobby' || (!r.metadata?.phase && r.clients < r.maxClients))
+      .map((r: any) => ({
+        roomId: r.roomId,
+        roomCode: r.metadata?.roomCode ?? '',
+        playerCount: r.clients ?? 0,
+        maxPlayers: r.maxClients ?? 6,
+        phase: r.metadata?.phase ?? 'lobby',
+      }));
+    res.json({ rooms: openRooms });
+  } catch (err) {
+    console.error('[ConfluxServer] Error fetching rooms:', err);
+    res.status(500).json({ error: 'Failed to fetch rooms' });
+  }
 });
 
 const server = http.createServer(app);

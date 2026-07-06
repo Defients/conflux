@@ -1,4 +1,4 @@
-import { Contract, ContractObjective, CorporationId, GameState, ObjectiveType, PerformanceDimension } from '../types';
+import { Contract, ContractObjective, CorporationId, GameState, ObjectiveType, PerformanceDimension } from './types';
 import { SeededRNG } from './seededRNG';
 
 const OBJECTIVE_TEMPLATES: { type: ObjectiveType; generator: (rng: SeededRNG, difficulty: number) => ContractObjective }[] = [
@@ -99,7 +99,7 @@ export function evaluateContracts(contracts: Contract[], gameState: GameState, e
                 case 'GET_STARS_IN_DIMENSION':
                     if (obj.dimension) {
                         isComplete = humanPlayer.tileHistory.some((h, i) => {
-                            const tile = gameState.run[h.tileIndex];
+                            const tile = gameState.run[h.tileIndex - 1];
                             if (!tile) return false;
                             const eventDim = eventDimensionMap[tile.eventId];
                             return eventDim === obj.dimension && h.stars >= obj.targetValue;

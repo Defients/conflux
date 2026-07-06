@@ -187,17 +187,17 @@ export function computeMatchSummary(input: MatchSummaryInput): MatchSummary {
   }
 
   const baseCp = cpPlacement + cpStars;
-  const streakMultiplier = CP_STREAK_MULTIPLIER(profile.winStreak);
 
   // ─── Rival W/L + streak ────────────────────────────────────────────
   const rivalDefeated = rival ? humanPlacement < rivalPlacement : false;
   const newWinStreak = rivalDefeated ? profile.winStreak + 1 : 0;
+  const streakMultiplier = CP_STREAK_MULTIPLIER(newWinStreak);
 
   // ─── Sponsorship from sponsored tiles ──────────────────────────────
   const sponsorshipDeltas: SponsorshipDelta[] = [];
   const repRng = new SeededRNG(`rep-${settings.seed}`);
   humanPlayer.tileHistory.forEach(history => {
-    const tile = gameState.run[history.tileIndex];
+    const tile = gameState.run[history.tileIndex - 1];
     if (tile && tile.modifier === 'SPONSORED' && tile.sponsoringCorp) {
       if (history.stars >= 3) {
         const repGain = repRng.nextInt(3, 6);
@@ -253,7 +253,7 @@ export function computeMatchSummary(input: MatchSummaryInput): MatchSummary {
   if (humanPlayer.tileHistory.some(h => h.stars === 4)) checkAccolade(AccoladeId.Overdriver);
 
   const hazardTile = humanPlayer.tileHistory.find(h => {
-    const tile = gameState.run[h.tileIndex];
+    const tile = gameState.run[h.tileIndex - 1];
     return tile && tile.isHazard;
   });
   if (hazardTile && hazardTile.stars >= 3) checkAccolade(AccoladeId.HazardousDuty);
@@ -400,7 +400,7 @@ function evaluateContractsForSummary(
         case 'GET_STARS_IN_DIMENSION':
           if (obj.dimension) {
             isComplete = humanPlayer.tileHistory.some(h => {
-              const tile = gameState.run[h.tileIndex];
+              const tile = gameState.run[h.tileIndex - 1];
               if (!tile) return false;
               return eventDimensionMap[tile.eventId] === obj.dimension && h.stars >= obj.targetValue;
             });

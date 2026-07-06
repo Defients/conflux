@@ -107,9 +107,13 @@ const PlayerMarker = React.memo(({ player, isOverdriving }: { player: Player; is
 
 
 export const RaceTrackHUD: React.FC<RaceTrackHUDProps> = ({ players, run, currentTileIndex, overdrivingPlayerIds, activeAnomaly }) => {
-  const humanPlayer = players.find(p => !p.isBot)!;
+  const humanPlayer = players.find(p => !p.isBot);
   const leader = useMemo(() => [...players].sort((a,b) => b.position - a.position)[0], [players]);
-  const isWinning = leader.id === humanPlayer.id;
+  const isWinning = humanPlayer ? leader.id === humanPlayer.id : false;
+  const rank = useMemo(() => {
+    if (!humanPlayer) return 0;
+    return players.filter(p => p.position > humanPlayer.position).length + 1;
+  }, [players, humanPlayer]);
 
   let trackGradient = "from-cosmic-blue via-star-purple to-galaxy-cyan";
   let glowColor = "bg-galaxy-cyan";
@@ -125,14 +129,16 @@ export const RaceTrackHUD: React.FC<RaceTrackHUDProps> = ({ players, run, curren
       glowColor = "bg-pink-500";
   }
 
+  if (!humanPlayer) return null;
+
   return (
     <div className="glass-panel px-2 sm:px-4 py-2 sm:py-3 flex items-center gap-2 sm:gap-4 md:gap-6 relative mt-1 sm:mt-2 shadow-2xl border-t border-white/10 track-hud" role="status" aria-label="Race track status">
         
         {/* Rank Indicator — compact on mobile */}
         <div className="flex flex-col items-center justify-center min-w-[36px] sm:min-w-[60px] border-r border-white/10 pr-2 sm:pr-4">
              <div className="text-[9px] sm:text-[10px] text-gray-400 uppercase tracking-wider landscape-hide">Rank</div>
-             <div className={`text-xl sm:text-3xl font-black italic ${isWinning ? 'text-hyper-green' : 'text-white'}`} aria-label={`Rank ${players.filter(p => p.position > humanPlayer.position).length + 1} of ${players.length}`}>
-                {players.filter(p => p.position > humanPlayer.position).length + 1}
+             <div className={`text-xl sm:text-3xl font-black italic ${isWinning ? 'text-hyper-green' : 'text-white'}`} aria-label={`Rank ${rank} of ${players.length}`}>
+                {rank}
                 <span className="text-[10px] sm:text-sm opacity-50 not-italic">/{players.length}</span>
              </div>
         </div>

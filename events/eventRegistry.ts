@@ -31,6 +31,20 @@ import { EmojiCipher } from './EmojiCipher';
 import { AudioBeat } from './AudioBeat';
 import { SystemPurge } from './SystemPurge';
 import { BalanceBeam } from './BalanceBeam';
+import { WhackAMole } from './WhackAMole';
+import { StopTheClock } from './StopTheClock';
+import { WordStorm } from './WordStorm';
+import { AnagramRush } from './AnagramRush';
+import { DialLock } from './DialLock';
+import { PixelPush } from './PixelPush';
+import { MirrorDraw } from './MirrorDraw';
+import { NumberStack } from './NumberStack';
+import { SymbolMatch } from './SymbolMatch';
+import { DrumEcho } from './DrumEcho';
+import { WaveRide } from './WaveRide';
+import { ColorSort } from './ColorSort';
+import { FlowConnect } from './FlowConnect';
+import { LogicGates } from './LogicGates';
 
 export const eventRegistry: GameEvent[] = [
   // --- Fully Implemented Events ---
@@ -563,6 +577,265 @@ export const eventRegistry: GameEvent[] = [
       const timeMs = result.secondaryMetric ?? 99999;
       if (isCorrect && timeMs < 6000) return 3;
       if (isCorrect) return 2;
+      return 1;
+    },
+    isStub: false,
+  },
+  {
+    id: 'whack-a-mole',
+    displayName: 'Whack-a-Mole',
+    instructions: 'Click the moles before they retreat!',
+    interactionHint: 'Click Moles',
+    scoringHint: 'Highest Hit Rate',
+    durationSec: () => 12,
+    performanceDimension: 'reaction',
+    Component: WhackAMole,
+    getStars: (result) => {
+      const hits = result.primaryMetric;
+      const total = result.secondaryMetric ?? 1;
+      if (total === 0) return 1;
+      const accuracy = hits / total;
+      if (accuracy >= 0.9) return 3;
+      if (accuracy >= 0.6) return 2;
+      return 1;
+    },
+    isStub: false,
+  },
+  {
+    id: 'stop-the-clock',
+    displayName: 'Stop the Clock',
+    instructions: 'Stop the timer at the exact target time. 3 rounds, lowest average error wins!',
+    interactionHint: 'Click / Space to Stop',
+    scoringHint: 'Lowest Average Error',
+    durationSec: () => 15,
+    performanceDimension: 'reaction',
+    Component: StopTheClock,
+    getStars: (result) => {
+      const avgError = result.primaryMetric;
+      if (avgError <= 50) return 3;
+      if (avgError <= 150) return 2;
+      return 1;
+    },
+    isStub: false,
+  },
+  {
+    id: 'word-storm',
+    displayName: 'Word Storm',
+    instructions: 'Type the falling words to destroy them before they hit the bottom!',
+    interactionHint: 'Type Falling Words',
+    scoringHint: 'Highest Destroy Rate',
+    durationSec: (d) => 15 - d,
+    performanceDimension: 'typing',
+    Component: WordStorm,
+    getStars: (result) => {
+      const destroyed = result.primaryMetric;
+      const total = result.secondaryMetric ?? 1;
+      if (total === 0) return 1;
+      const accuracy = destroyed / total;
+      if (accuracy >= 0.9) return 3;
+      if (accuracy >= 0.6) return 2;
+      return 1;
+    },
+    isStub: false,
+  },
+  {
+    id: 'anagram-rush',
+    displayName: 'Anagram Rush',
+    instructions: 'Unscramble as many words as you can before time runs out!',
+    interactionHint: 'Type Unscrambled Word + Enter',
+    scoringHint: 'Most Words Solved',
+    durationSec: (d) => 12 + d,
+    performanceDimension: 'typing',
+    Component: AnagramRush,
+    getStars: (result) => {
+      const correct = result.primaryMetric;
+      if (correct >= 5) return 3;
+      if (correct >= 3) return 2;
+      return 1;
+    },
+    isStub: false,
+  },
+  {
+    id: 'dial-lock',
+    displayName: 'Dial Lock',
+    instructions: 'Rotate the dial to find the hidden unlock position. Warm/cold feedback guides you. 3 locks!',
+    interactionHint: 'Drag / Arrow Keys + Enter',
+    scoringHint: 'Lowest Total Angular Error',
+    durationSec: (d) => 15 + d * 5,
+    performanceDimension: 'precision',
+    Component: DialLock,
+    getStars: (result) => {
+      const totalError = result.primaryMetric;
+      if (totalError <= 15) return 3;
+      if (totalError <= 40) return 2;
+      return 1;
+    },
+    isStub: false,
+  },
+  {
+    id: 'pixel-push',
+    displayName: 'Pixel Push',
+    instructions: 'Push the block into the target zone. It has momentum — tap carefully! 3 rounds.',
+    interactionHint: 'Arrow Keys to Push',
+    scoringHint: 'Most Rounds in Zone',
+    durationSec: () => 15,
+    performanceDimension: 'precision',
+    Component: PixelPush,
+    getStars: (result) => {
+      const rounds = result.primaryMetric;
+      if (rounds >= 3) return 3;
+      if (rounds >= 2) return 2;
+      return 1;
+    },
+    isStub: false,
+  },
+  {
+    id: 'mirror-draw',
+    displayName: 'Mirror Draw',
+    instructions: 'Trace the shape — but your cursor is mirrored horizontally!',
+    interactionHint: 'Move Mouse (Mirrored)',
+    scoringHint: 'Highest Completion %',
+    durationSec: (d) => 12 + d,
+    performanceDimension: 'precision',
+    Component: MirrorDraw,
+    getStars: (result) => {
+      const completion = result.primaryMetric;
+      if (completion >= 90) return 3;
+      if (completion >= 70) return 2;
+      return 1;
+    },
+    isStub: false,
+  },
+  {
+    id: 'number-stack',
+    displayName: 'Number Stack',
+    instructions: 'Memorize the number sequence, then type it in REVERSE order!',
+    interactionHint: 'Type Numbers + Enter',
+    scoringHint: 'Perfect Reverse Recall',
+    durationSec: (d) => 10 + d * 3,
+    performanceDimension: 'memory',
+    Component: NumberStack,
+    getStars: (result) => {
+      const correct = result.primaryMetric;
+      const total = result.secondaryMetric ?? 1;
+      const accuracy = total > 0 ? correct / total : 0;
+      if (accuracy >= 1) return 3;
+      if (accuracy >= 0.7) return 2;
+      return 1;
+    },
+    isStub: false,
+  },
+  {
+    id: 'symbol-match',
+    displayName: 'Symbol Match',
+    instructions: 'Memorize the symbol set, then click only those symbols from the grid.',
+    interactionHint: 'Click Matching Symbols',
+    scoringHint: 'All Correct, No Wrong',
+    durationSec: (d, a) => (a ? 15 : 12),
+    performanceDimension: 'memory',
+    Component: SymbolMatch,
+    getStars: (result) => {
+      const correct = result.primaryMetric;
+      const wrong = result.secondaryMetric ?? 99;
+      const targetCount = 3 + 1; // minimum setCount
+      if (correct >= targetCount && wrong === 0) return 3;
+      if (correct >= targetCount - 1 && wrong <= 1) return 2;
+      return 1;
+    },
+    isStub: false,
+  },
+  {
+    id: 'drum-echo',
+    displayName: 'Drum Echo',
+    instructions: 'Watch the drum pattern, then reproduce it on the pads with the same rhythm!',
+    interactionHint: 'Click Drum Pads',
+    scoringHint: 'Highest Timing Score',
+    durationSec: (d) => 12 + d,
+    performanceDimension: 'rhythm',
+    Component: DrumEcho,
+    getStars: (result) => {
+      const score = result.primaryMetric;
+      const totalHits = result.secondaryMetric ?? 1;
+      const maxScore = totalHits * 3;
+      if (maxScore === 0) return 1;
+      const ratio = score / maxScore;
+      if (ratio >= 0.8) return 3;
+      if (ratio >= 0.5) return 2;
+      return 1;
+    },
+    isStub: false,
+  },
+  {
+    id: 'wave-ride',
+    displayName: 'Wave Ride',
+    instructions: 'Keep your marker on the scrolling sine wave. The wave shifts over time!',
+    interactionHint: 'Mouse / Arrow Keys',
+    scoringHint: 'Highest Time on Wave',
+    durationSec: (d) => 10 + d,
+    performanceDimension: 'rhythm',
+    Component: WaveRide,
+    getStars: (result) => {
+      const pct = result.primaryMetric;
+      if (pct >= 85) return 3;
+      if (pct >= 60) return 2;
+      return 1;
+    },
+    isStub: false,
+  },
+  {
+    id: 'color-sort',
+    displayName: 'Color Sort',
+    instructions: 'Click the matching colored bin to sort each falling orb. Speed up!',
+    interactionHint: 'Click Colored Bins',
+    scoringHint: 'Highest Sort Accuracy',
+    durationSec: () => 12,
+    performanceDimension: 'logic',
+    Component: ColorSort,
+    getStars: (result) => {
+      const correct = result.primaryMetric;
+      const total = result.secondaryMetric ?? 1;
+      if (total === 0) return 1;
+      const accuracy = correct / total;
+      if (accuracy >= 0.95) return 3;
+      if (accuracy >= 0.75) return 2;
+      return 1;
+    },
+    isStub: false,
+  },
+  {
+    id: 'flow-connect',
+    displayName: 'Flow Connect',
+    instructions: 'Rotate the pipe tiles to connect the source to the destination.',
+    interactionHint: 'Click Tiles to Rotate',
+    scoringHint: 'Fastest Completion Time',
+    durationSec: (d) => 20 + d * 5,
+    performanceDimension: 'logic',
+    Component: FlowConnect,
+    getStars: (result) => {
+      const timeMs = result.primaryMetric;
+      if (timeMs >= 99999) return 1;
+      if (timeMs < 15000) return 3;
+      if (timeMs < 30000) return 2;
+      return 1;
+    },
+    isStub: false,
+  },
+  {
+    id: 'logic-gates',
+    displayName: 'Logic Gates',
+    instructions: 'Determine the output of each logic gate circuit. Answer as many as you can!',
+    interactionHint: 'Click 0 or 1',
+    scoringHint: 'Highest Accuracy',
+    durationSec: (d) => 12 + d,
+    performanceDimension: 'logic',
+    Component: LogicGates,
+    getStars: (result) => {
+      const correct = result.primaryMetric;
+      const total = result.secondaryMetric ?? 1;
+      if (total === 0) return 1;
+      const accuracy = correct / total;
+      if (accuracy >= 0.9) return 3;
+      if (accuracy >= 0.6) return 2;
       return 1;
     },
     isStub: false,

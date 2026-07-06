@@ -1,0 +1,32 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Profiles ───────────────────────────────────────────────────────
+    // Users can read and write only their own profile.
+    match /profiles/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ─── Leaderboards ───────────────────────────────────────────────────
+    // Read-only for all authenticated users.
+    // Writes only via Admin SDK (server-side, bypasses rules).
+    match /leaderboards/{document=**} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // ─── Match History ──────────────────────────────────────────────────
+    // Users can read only their own match history.
+    // Writes only via Admin SDK (server-side, bypasses rules).
+    match /matchHistory/{userId}/matches/{matchId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false;
+    }
+
+    // ─── Default: deny all ──────────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

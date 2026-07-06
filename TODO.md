@@ -56,22 +56,46 @@
 ## Remaining — Phase 2 (Integration Polish)
 - [ ] Online mode end-to-end test (start server + client, create room, play through)
 
-## Remaining — Phase 3
-- [ ] Firebase project setup + config
-- [ ] Firebase Auth (anonymous auth, upgrade path)
-- [ ] Firestore profile persistence (profileService dual backend)
-- [ ] Leaderboard writes after match completion
-- [ ] Match history metadata storage
-- [ ] Firebase Hosting deployment config
+## Phase 5 — Enhancement-First Polish (Complete)
+- [x] **BUGFIX**: EventRunner `isEventOver` reset between tiles — was stuck `true` after first tile, blocking all subsequent events
+- [x] **BUGFIX**: TileResultsScreen null guard for `completedTile`/`lastTileResults` — prevented crash at edge cases (index 0, gauntlet)
+- [x] **BUGFIX**: useOnlineGame clears stale `matchSummary` on countdown — prevented previous match's summary showing during rematch
+- [x] **BUGFIX**: ReactionTap state machine now respects `isPaused` — reaction timer no longer continues during countdown pause
+- [x] **BUGFIX**: networkService saves reconnect token after successful reconnection — server may issue new token
+- [x] **BUGFIX**: EventRunner humanPlayer null guard — graceful fallback instead of crash when no human player found
+- [x] **BUGFIX**: App.tsx `handleSwitchPilot` now awaits `leaveRoom` — prevents state race between leave cleanup and profile reset
+- [x] **SECURITY**: ConfluxRoom `handleUpdateSettings` validates and clamps input (playerCount 1-6, runLength 1-20, bots ≥ 0)
+- [x] **PERF**: EventRunner bot effect uses `gameStateRef` instead of stale closure — bot decisions now use current game state
+- [x] **CODE HEALTH**: Removed stale multi-line comment in EventRunner about `onActivateOverdrive` signature change (already done)
+- [x] **CODE HEALTH**: Replaced inline `import("./types").EventResult` with proper import in App.tsx
+- [x] **CODE HEALTH**: Added clarifying comment on ConfluxRoom hardcoded 15000ms duration (server-side timeout default)
+- [x] **CODE HEALTH**: audioService `setEnabled` now async and awaits `init()` — sounds fully loaded before playback
+- [x] **A11Y**: TimerBar updates `aria-label` via direct DOM manipulation for screen reader access
+- [x] **A11Y**: WhackAMole keyboard support (number keys 1-9) and `aria-label` on mole buttons
+- [x] **A11Y**: TileResultsScreen `aria-live="polite"` for screen reader announcements
+
+## Phase 3 — Firebase Integration (Complete)
+- [x] Firebase project setup + config
+- [x] Firebase Auth (anonymous auth, upgrade path)
+- [x] Firestore profile persistence (profileService dual backend)
+- [x] Leaderboard writes after match completion
+- [x] Match history metadata storage
+- [x] Firebase Hosting deployment config
+- [x] Firestore security rules
+
+## Phase 4 — Server Hardening (Complete)
+- [x] Server rate limiting (token bucket per client + message type)
+- [x] Matchmaking REST endpoint (`/api/rooms`) with phase filtering
+- [x] Browse open rooms UI in OnlineLobby
+- [x] Minimal spectator mode (join active matches as observer)
+- [x] Server room lifecycle tests (ConfluxRoom.test.ts)
+- [x] Shared module unit tests (seededRNG, pathGenerator, contractService, matchSummary)
 
 ## Known Limitations
 - Gauntlet mode is local-only by design (only accessible from local Lobby, 1 player, 0 bots)
-- Room code discovery relies on Colyseus getAvailableRooms metadata — may need custom matchmaking endpoint
-- No spectator mode
-- No mid-match join (rooms lock at match start)
+- No mid-match join (rooms lock at match start; spectators can join active matches but cannot play)
 - Clock skew between client/server uses generous tolerance (10s)
-- No rate limiting on message submission
-- Firebase integration is scaffolded but not wired
+- Firebase integration requires a configured Firebase project (game runs fully local without it)
 
 ## How to Run
 

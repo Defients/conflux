@@ -79,6 +79,35 @@ function getBotResult(
                 
                 primaryMetric = Math.max(3, Math.min(14, simulatedCPS));
 
+            } else if (event.id === 'whack-a-mole') {
+                const totalDuration = 12000;
+                const moleDuration = 1200 - difficulty * 200;
+                const spawnInterval = 700 - difficulty * 100;
+                const totalMoles = Math.floor(totalDuration / (moleDuration + spawnInterval));
+                
+                const { mean, std } = botProfile.reaction;
+                const { star3Chance, star2Chance } = botProfile.precision;
+                const hitChance = star3Chance + star2Chance * 0.7 + (1 - star3Chance - star2Chance) * 0.4;
+                
+                let hits = 0;
+                for (let i = 0; i < totalMoles; i++) {
+                    const reactionTime = rng.nextGaussian(mean, std);
+                    if (reactionTime < moleDuration) {
+                        if (rng.nextFloat() < hitChance) hits++;
+                    }
+                }
+                primaryMetric = hits;
+                secondaryMetric = totalMoles;
+            } else if (event.id === 'stop-the-clock') {
+                const { star3Chance, star2Chance } = botProfile.precision;
+                const { mean, std } = botProfile.reaction;
+                let totalError = 0;
+                for (let i = 0; i < 3; i++) {
+                    const baseError = rng.nextFloat() < star3Chance ? 30 : rng.nextFloat() < star2Chance ? 100 : 300;
+                    const noise = Math.abs(rng.nextGaussian(0, std * 0.3));
+                    totalError += baseError + noise;
+                }
+                primaryMetric = totalError / 3;
             } else { // Reaction Tap
                 const { mean, std, clamp } = botProfile.reaction;
                 const adjustedMean = mean + (difficulty - 1) * 20;
@@ -117,6 +146,39 @@ function getBotResult(
                 const baseTimeMs = (phraseLength / 5) / simulatedWPM * 60000;
                 const noise = rng.nextGaussian(0, 200);
                 primaryMetric = Math.max(1000, baseTimeMs + noise);
+            } else if (event.id === 'word-storm') {
+                const totalDuration = (15 - difficulty) * 1000;
+                const spawnInterval = 2500 - difficulty * 400;
+                const totalWords = Math.floor(totalDuration / spawnInterval);
+                
+                const { wpm, std } = botProfile.typing;
+                const avgWordLen = 6;
+                const timePerWord = (avgWordLen / 5) / wpm * 60000;
+                const wordsBotCanType = Math.floor(totalDuration / timePerWord);
+                
+                const { star3Chance, star2Chance } = botProfile.precision;
+                const accuracy = star3Chance + star2Chance * 0.7 + (1 - star3Chance - star2Chance) * 0.4;
+                
+                let destroyed = 0;
+                for (let i = 0; i < Math.min(totalWords, wordsBotCanType); i++) {
+                    if (rng.nextFloat() < accuracy) destroyed++;
+                }
+                primaryMetric = destroyed;
+                secondaryMetric = totalWords;
+            } else if (event.id === 'anagram-rush') {
+                const totalDuration = (12 + difficulty) * 1000;
+                const { wpm, std } = botProfile.typing;
+                const { star3Chance, star2Chance } = botProfile.precision;
+                const solveChance = star3Chance + star2Chance * 0.6 + (1 - star3Chance - star2Chance) * 0.3;
+                
+                const avgSolveTime = 3000 + (60 / wpm) * 1000;
+                const maxSolves = Math.floor(totalDuration / avgSolveTime);
+                
+                let correct = 0;
+                for (let i = 0; i < maxSolves; i++) {
+                    if (rng.nextFloat() < solveChance) correct++;
+                }
+                primaryMetric = correct;
             } else { // Type Burst
                 const { wpm, std, errorRate } = botProfile.typing;
                 const adjustedWPM = wpm - (difficulty - 1) * 5;
@@ -234,6 +296,35 @@ function getBotResult(
                      stdError = 20;
                  }
                  primaryMetric = Math.max(1, rng.nextGaussian(meanError, stdError));
+            } else if (event.id === 'dial-lock') {
+                const { star3Chance, star2Chance } = botProfile.precision;
+                let totalError = 0;
+                for (let i = 0; i < 3; i++) {
+                    const roll = rng.nextFloat();
+                    let meanError, stdError;
+                    if (roll < star3Chance) { meanError = 3; stdError = 2; }
+                    else if (roll < star3Chance + star2Chance) { meanError = 12; stdError = 5; }
+                    else { meanError = 30; stdError = 15; }
+                    totalError += Math.max(0.5, rng.nextGaussian(meanError, stdError));
+                }
+                primaryMetric = totalError;
+            } else if (event.id === 'pixel-push') {
+                const { star3Chance, star2Chance } = botProfile.precision;
+                let successCount = 0;
+                for (let i = 0; i < 3; i++) {
+                    const roll = rng.nextFloat();
+                    if (roll < star3Chance) successCount++;
+                    else if (roll < star3Chance + star2Chance * 0.7) successCount++;
+                }
+                primaryMetric = successCount;
+            } else if (event.id === 'mirror-draw') {
+                const { star3Chance, star2Chance } = botProfile.precision;
+                const roll = rng.nextFloat();
+                let meanCompletion, stdCompletion;
+                if (roll < star3Chance) { meanCompletion = 92; stdCompletion = 5; }
+                else if (roll < star3Chance + star2Chance) { meanCompletion = 75; stdCompletion = 8; }
+                else { meanCompletion = 55; stdCompletion = 15; }
+                primaryMetric = Math.max(0, Math.min(100, rng.nextGaussian(meanCompletion, stdCompletion)));
             } else { // slider-precision
                 const { star3Chance } = botProfile.precision;
                 const isIntermediate = star3Chance > 0.2;
@@ -308,6 +399,39 @@ function getBotResult(
                 }
                 primaryMetric = correctSteps;
                 secondaryMetric = sequenceLength;
+            } else if (event.id === 'number-stack') {
+                const sequenceLength = 4 + difficulty;
+                const { star3Chance } = botProfile.precision;
+                const isIntermediate = star3Chance > 0.2;
+                const correctChance = isIntermediate ? 0.90 : 0.70;
+                let correctCount = 0;
+                for (let i = 0; i < sequenceLength; i++) {
+                    if (rng.nextFloat() < correctChance) {
+                        correctCount++;
+                    } else {
+                        break;
+                    }
+                }
+                primaryMetric = correctCount;
+                secondaryMetric = sequenceLength;
+            } else if (event.id === 'symbol-match') {
+                const setCount = 3 + difficulty;
+                const { star3Chance } = botProfile.precision;
+                const isIntermediate = star3Chance > 0.2;
+                const correctChance = isIntermediate ? 0.95 : 0.75;
+                const wrongChance = isIntermediate ? 0.05 : 0.20;
+                
+                let correct = 0;
+                let wrong = 0;
+                for (let i = 0; i < setCount; i++) {
+                    if (rng.nextFloat() < correctChance) correct++;
+                }
+                const distractors = 12 - setCount;
+                for (let i = 0; i < distractors; i++) {
+                    if (rng.nextFloat() < wrongChance) wrong++;
+                }
+                primaryMetric = correct;
+                secondaryMetric = wrong;
             } else { // pattern-recall
                 const sequenceLength = 3 + difficulty;
                 const { star3Chance } = botProfile.precision;
@@ -384,6 +508,35 @@ function getBotResult(
                 
                 primaryMetric = isCorrect ? 1 : 0;
                 secondaryMetric = Math.max(500, Math.min(12000, decisionTime));
+            } else if (event.id === 'drum-echo') {
+                const totalHits = 6;
+                const bpm = 90 + difficulty * 20;
+                const beatInterval = 60000 / bpm;
+                const timingStd = botProfile.reaction.std / 2;
+                const { star3Chance } = botProfile.precision;
+                const isIntermediate = star3Chance > 0.2;
+                const padAccuracy = isIntermediate ? 0.95 : 0.75;
+                
+                let score = 0;
+                for (let i = 0; i < totalHits; i++) {
+                    if (rng.nextFloat() < padAccuracy) {
+                        const timingError = Math.abs(rng.nextGaussian(0, timingStd));
+                        if (timingError < beatInterval * 0.1) score += 3;
+                        else if (timingError < beatInterval * 0.25) score += 2;
+                        else if (timingError < beatInterval * 0.5) score += 1;
+                    }
+                }
+                primaryMetric = score;
+                secondaryMetric = totalHits;
+            } else if (event.id === 'wave-ride') {
+                const { star3Chance, star2Chance } = botProfile.precision;
+                const timingStd = botProfile.reaction.std;
+                const roll = rng.nextFloat();
+                let meanPct, stdPct;
+                if (roll < star3Chance) { meanPct = 88; stdPct = 5; }
+                else if (roll < star3Chance + star2Chance) { meanPct = 65; stdPct = 8; }
+                else { meanPct = 45; stdPct = 15; }
+                primaryMetric = Math.max(0, Math.min(100, rng.nextGaussian(meanPct, stdPct)));
             } else { // EvadeGrid, etc.
                 const totalRounds = 4 + difficulty;
                 const { star3Chance } = botProfile.precision;
@@ -500,6 +653,54 @@ function getBotResult(
 
                 primaryMetric = accuracy;
                 secondaryMetric = Math.max(3000, thinkingTime + typingTime);
+            } else if (event.id === 'color-sort') {
+                const totalDuration = 12000;
+                const spawnInterval = 2000 - difficulty * 300;
+                const totalOrbs = Math.floor(totalDuration / spawnInterval);
+                
+                const { mean, std } = botProfile.reaction;
+                const { star3Chance, star2Chance } = botProfile.precision;
+                const accuracy = star3Chance + star2Chance * 0.7 + (1 - star3Chance - star2Chance) * 0.4;
+                
+                let correct = 0;
+                for (let i = 0; i < totalOrbs; i++) {
+                    const reactionTime = rng.nextGaussian(mean, std);
+                    if (reactionTime < spawnInterval * 0.8) {
+                        if (rng.nextFloat() < accuracy) correct++;
+                    }
+                }
+                primaryMetric = correct;
+                secondaryMetric = totalOrbs;
+            } else if (event.id === 'flow-connect') {
+                const { star3Chance, star2Chance } = botProfile.precision;
+                const { mean, std } = botProfile.reaction;
+                const gridSize = difficulty >= 3 ? 4 : 3;
+                const baseTime = gridSize * gridSize * 2000;
+                const thinkingTime = rng.nextGaussian(mean, std) * (gridSize * 3);
+                let completionTime = baseTime + thinkingTime;
+                completionTime *= rng.nextGaussian(1, 0.15);
+                
+                const solveChance = star3Chance + star2Chance * 0.5;
+                if (rng.nextFloat() > solveChance) {
+                    primaryMetric = 99999;
+                } else {
+                    primaryMetric = Math.max(3000, completionTime);
+                }
+            } else if (event.id === 'logic-gates') {
+                const totalDuration = (12 + difficulty) * 1000;
+                const { mean, std } = botProfile.reaction;
+                const { star3Chance, star2Chance } = botProfile.precision;
+                const accuracy = star3Chance + star2Chance * 0.7 + (1 - star3Chance - star2Chance) * 0.4;
+                
+                const avgTimePerQ = rng.nextGaussian(mean, std) * 2 + 1500;
+                const totalQ = Math.floor(totalDuration / avgTimePerQ);
+                
+                let correct = 0;
+                for (let i = 0; i < totalQ; i++) {
+                    if (rng.nextFloat() < accuracy) correct++;
+                }
+                primaryMetric = correct;
+                secondaryMetric = totalQ;
             } else {
                  // Fallback for other logic stubs
                 const { star2Chance, star3Chance } = botProfile.precision;

@@ -22,8 +22,17 @@ import {
 // ─── Configuration ───────────────────────────────────────────────────────────
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'ws://localhost:2567';
+const HTTP_SERVER_URL = SERVER_URL.replace(/^wss:/, 'https:').replace(/^ws:/, 'http:');
 const ROOM_NAME = 'conflux_match';
 const RECONNECT_TOKEN_KEY = 'conflux-reconnect-token';
+
+export interface OpenRoomInfo {
+  roomId: string;
+  roomCode: string;
+  playerCount: number;
+  maxPlayers: number;
+  phase: string;
+}
 
 // ─── Event Listener Types ────────────────────────────────────────────────────
 
@@ -187,6 +196,7 @@ class NetworkService {
     try {
       this.room = await client.reconnect(reconnectData.reconnectionToken);
       this.setupRoomListeners();
+      this.saveReconnectData();
       this._sessionId = this.room.sessionId;
       this._isConnected = true;
       this.handlers.onConnectionChange?.(true);
@@ -412,6 +422,38 @@ class NetworkService {
       sessionStorage.removeItem(RECONNECT_TOKEN_KEY);
     } catch {
       // sessionStorage may not be available
+    }
+  }
+
+  /**
+   * Fetch open rooms from the REST endpoint.
+   */
+  async getOpenRooms(): Promise<OpenRoomInfo[]> {
+    try {
+      const res = await fetch(`${HTTP_SERVER_URL}/api/rooms`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.rooms ?? [];
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Join a room as a spectator (can join during active matches).
+   */
+  async spectateRoom(roomId: string): Promise<void> {
+    const client = this.ensureClient();
+    try {
+      this.room = await client.joinById(roomId, { spectate: true } as any);
+      this.setupRoomListeners();
+      this._sessionId = this.room.sessionId;
+      this._isConnected = true;
+      this.handlers.onConnectionChange?.(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to spectate room';
+      this.handlers.onRoomError?.(message);
+      throw err;
     }
   }
 }

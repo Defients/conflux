@@ -14,6 +14,8 @@ interface LobbyProps {
   onGoToEventList: () => void;
   onGoToAccolades: () => void;
   onGoToOnline?: () => void;
+  onGoToLeaderboard?: () => void;
+  onGoToMatchHistory?: () => void;
   onSwitchPilot?: () => void;
 }
 
@@ -39,6 +41,11 @@ const loadSettings = (): Partial<GameSettings> => {
                 return decoded;
             }
         }
+        if (hash && hash.startsWith('#seed=')) {
+            const seed = hash.substring('#seed='.length);
+            window.history.replaceState(null, '', window.location.pathname + window.location.search);
+            return { seed };
+        }
     } catch (e) {
         console.error("Failed to load settings from URL hash", e);
     }
@@ -57,7 +64,28 @@ const saveSettings = (settings: GameSettings) => {
     localStorage.setItem('conflux-circuit-settings', JSON.stringify(settings));
 };
 
-export const Lobby: React.FC<LobbyProps> = ({ profile, setProfile, onStartGame, onStartGauntlet, onGoToEventList, onGoToAccolades, onGoToOnline, onSwitchPilot }) => {
+const Slider = ({ label, value, min, max, onChange, id, formatValue }: { label: string, value: number, min: number, max: number, onChange: (val: number) => void, id: string, formatValue?: (v: number) => string }) => (
+  <div className="mb-5">
+    <div className="flex justify-between mb-1">
+        <label htmlFor={id} className='text-xs font-bold tracking-wider uppercase text-galaxy-cyan'>{label}</label>
+        <span className="text-xs font-mono text-white" aria-live="polite">{formatValue ? formatValue(value) : value}</span>
+    </div>
+    <input id={id} type="range" min={min} max={max} value={value} onChange={e => onChange(parseInt(e.target.value, 10))} className="w-full" aria-valuemin={min} aria-valuemax={max} aria-valuenow={value} aria-valuetext={formatValue ? formatValue(value) : String(value)} />
+  </div>
+);
+
+const Toggle = ({ label, checked, onChange, id }: { label: string, checked: boolean, onChange: (e: React.ChangeEvent<HTMLInputElement>) => void, id: string }) => (
+  <div className="flex items-center justify-between py-3 sm:py-2 border-b border-white/5 last:border-0 active:bg-white/5 sm:hover:bg-white/5 px-2 rounded transition-colors">
+      <label htmlFor={id} className="text-sm text-gray-300 cursor-pointer select-none flex-grow pr-4">{label}</label>
+      <label htmlFor={id} className="relative inline-flex h-4 w-8 cursor-pointer items-center">
+          <input type="checkbox" id={id} checked={checked} onChange={onChange} className="peer sr-only" aria-label={label} />
+          <span className="h-4 w-8 rounded-full bg-gray-700 transition-colors duration-200 peer-checked:bg-hyper-green/80"></span>
+          <span className="pointer-events-none absolute left-[2px] h-3 w-3 rounded-full bg-white shadow-sm transition-transform duration-200 peer-checked:translate-x-4"></span>
+      </label>
+  </div>
+);
+
+export const Lobby: React.FC<LobbyProps> = ({ profile, setProfile, onStartGame, onStartGauntlet, onGoToEventList, onGoToAccolades, onGoToOnline, onGoToLeaderboard, onGoToMatchHistory, onSwitchPilot }) => {
     const [settings, setSettings] = useState<GameSettings>(() => {
         const loaded = loadSettings();
         const chassis = loaded.selectedChassis && profile.unlockedChassis.includes(loaded.selectedChassis)
@@ -181,27 +209,6 @@ export const Lobby: React.FC<LobbyProps> = ({ profile, setProfile, onStartGame, 
       }
   }
 
-  const Slider = ({ label, value, min, max, onChange, id, formatValue }: { label: string, value: number, min: number, max: number, onChange: (val: number) => void, id: string, formatValue?: (v: number) => string }) => (
-    <div className="mb-5">
-      <div className="flex justify-between mb-1">
-          <label htmlFor={id} className='text-xs font-bold tracking-wider uppercase text-galaxy-cyan'>{label}</label>
-          <span className="text-xs font-mono text-white" aria-live="polite">{formatValue ? formatValue(value) : value}</span>
-      </div>
-      <input id={id} type="range" min={min} max={max} value={value} onChange={e => onChange(parseInt(e.target.value, 10))} className="w-full" aria-valuemin={min} aria-valuemax={max} aria-valuenow={value} aria-valuetext={formatValue ? formatValue(value) : String(value)} />
-    </div>
-  );
-  
-  const Toggle = ({ label, checked, onChange, id }: { label: string, checked: boolean, onChange: (e: React.ChangeEvent<HTMLInputElement>) => void, id: string }) => (
-    <div className="flex items-center justify-between py-3 sm:py-2 border-b border-white/5 last:border-0 active:bg-white/5 sm:hover:bg-white/5 px-2 rounded transition-colors">
-        <label htmlFor={id} className="text-sm text-gray-300 cursor-pointer select-none flex-grow pr-4">{label}</label>
-        <label htmlFor={id} className="relative inline-flex h-4 w-8 cursor-pointer items-center">
-            <input type="checkbox" id={id} checked={checked} onChange={onChange} className="peer sr-only" aria-label={label} />
-            <span className="h-4 w-8 rounded-full bg-gray-700 transition-colors duration-200 peer-checked:bg-hyper-green/80"></span>
-            <span className="pointer-events-none absolute left-[2px] h-3 w-3 rounded-full bg-white shadow-sm transition-transform duration-200 peer-checked:translate-x-4"></span>
-        </label>
-    </div>
-  );
-
   return (
     <div className="min-h-screen w-full flex flex-col p-2 sm:p-4 md:p-6 animate-fade-in overflow-y-auto overflow-x-hidden pb-4" role="region" aria-label="Game Lobby">
         {/* Header */}
@@ -213,7 +220,7 @@ export const Lobby: React.FC<LobbyProps> = ({ profile, setProfile, onStartGame, 
                 <p className="text-xs sm:text-sm text-nebula-pink font-mono tracking-widest uppercase">Hyper-Competitive Racing Simulation</p>
             </div>
             <div className="text-right hidden md:block">
-                <p className="text-sm text-gray-400">Version 1.0</p>
+                <p className="text-sm text-gray-400">Version 3.2</p>
                 <div className="flex gap-2 text-xs text-gray-500">
                     <span>REACT</span>
                     <span>TAILWIND</span>
@@ -263,6 +270,14 @@ export const Lobby: React.FC<LobbyProps> = ({ profile, setProfile, onStartGame, 
                         </button>
                         <button onClick={handleEventListClick} className="flex-1 py-3 sm:py-2 text-sm bg-white/5 active:bg-white/15 sm:hover:bg-white/10 border border-white/10 rounded transition-colors text-gray-300" aria-label="Open Workshop">
                           Workshop
+                        </button>
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                        <button onClick={() => onGoToLeaderboard?.()} className="flex-1 py-3 sm:py-2 text-sm bg-white/5 active:bg-white/15 sm:hover:bg-white/10 border border-white/10 rounded transition-colors text-gray-300" aria-label="View Leaderboards">
+                          🏆 Leaderboards
+                        </button>
+                        <button onClick={() => onGoToMatchHistory?.()} className="flex-1 py-3 sm:py-2 text-sm bg-white/5 active:bg-white/15 sm:hover:bg-white/10 border border-white/10 rounded transition-colors text-gray-300" aria-label="View Match History">
+                          🏁 History
                         </button>
                     </div>
                     <button onClick={() => onSwitchPilot?.()} className="w-full mt-2 py-3 sm:py-2 text-sm bg-white/5 active:bg-white/15 sm:hover:bg-white/10 border border-white/10 rounded transition-colors text-gray-300" aria-label="Switch pilot profile">

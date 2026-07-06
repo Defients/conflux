@@ -36,7 +36,7 @@ function assignDifficultyAndModifiers(
     rng.shuffle(modifierTypes);
     const modifierPositions = new Set<number>();
     // Place 2-4 modifiers in a run, not on the first or last tile
-    const numModifiers = rng.nextInt(2, 5);
+    const numModifiers = rng.nextInt(2, Math.min(5, runLength - 1));
     if (runLength > 2) {
         while (modifierPositions.size < numModifiers) {
             modifierPositions.add(rng.nextInt(1, runLength - 1));

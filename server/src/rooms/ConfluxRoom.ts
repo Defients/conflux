@@ -29,9 +29,13 @@ import {
 } from '../../../shared/protocol';
 import { EVENT_DESCRIPTORS, STAR_COMPUTERS } from '../eventDescriptors';
 import { ServerEventValidator } from '../validation/eventValidator';
+import { ClientRateLimiter, RATE_LIMITS } from '../validation/rateLimiter';
 import { computeMatchSummary, applyMatchSummaryToProfile } from '../../../shared/matchSummary';
 import { generateContracts } from '../../../shared/contractService';
 import { getProfile, saveProfile } from '../services/profileRepository';
+import { writeLeaderboardEntry } from '../services/leaderboardRepository';
+import { writeMatchHistory } from '../services/matchHistoryRepository';
+import { LeaderboardEntry, MatchHistoryEntry } from '../../../shared/types';
 
 // ─── Room State (plain object, synced via messages) ──────────────────────────
 
@@ -99,6 +103,16 @@ export class ConfluxRoom extends Room {
 
   private resultTimeout: Delayed | null = null;
   private nextPlayerId = 1;
+  private eventDimensionMap: Record<string, string> = {};
+  private rateLimiter = new ClientRateLimiter();
+  private spectatorIds: Set<string> = new Set();
+
+  private getEventDimensionMap(): Record<string, string> {
+    if (Object.keys(this.eventDimensionMap).length === 0) {
+      EVENT_DESCRIPTORS.forEach(e => { this.eventDimensionMap[e.id] = e.performanceDimension; });
+    }
+    return this.eventDimensionMap;
+  }
 
   // ─── Lifecycle ───────────────────────────────────────────────────────────
 
@@ -117,47 +131,71 @@ export class ConfluxRoom extends Room {
 
     console.log(`[Room ${this.roomState.roomCode}] Created`);
 
-    // ─── Register message handlers ─────────────────────────────────────
-    this.onMessage(ClientMessages.READY, (client, payload: ReadyPayload) => {
+    // ─── Register message handlers (with rate limiting) ────────────────
+    const wrapWithRateLimit = <P,>(msgType: string, handler: (client: Client, payload: P) => void) => {
+      this.onMessage(msgType, (client: Client, payload: P) => {
+        const limit = (RATE_LIMITS as Record<string, { burst: number; refill: number }>)[msgType];
+        if (limit) {
+          if (!this.rateLimiter.isAllowed(client.sessionId, msgType, limit.burst, limit.refill)) {
+            console.warn(`[Room ${this.roomState.roomCode}] Rate limited: ${msgType} from ${client.sessionId}`);
+            client.send(ServerMessages.ROOM_ERROR, { message: 'Too many requests. Please slow down.' });
+            return;
+          }
+        }
+        handler(client, payload);
+      });
+    };
+
+    wrapWithRateLimit<ReadyPayload>(ClientMessages.READY, (client, payload) => {
       this.handleReady(client, payload);
     });
 
-    this.onMessage(ClientMessages.START, (client) => {
+    wrapWithRateLimit<Record<string, never>>(ClientMessages.START, (client) => {
       this.handleStart(client);
     });
 
-    this.onMessage(ClientMessages.UPDATE_SETTINGS, (client, payload: UpdateSettingsPayload) => {
+    wrapWithRateLimit<UpdateSettingsPayload>(ClientMessages.UPDATE_SETTINGS, (client, payload) => {
       this.handleUpdateSettings(client, payload);
     });
 
-    this.onMessage(ClientMessages.SUBMIT_EVENT_RESULT, (client, payload: EventTelemetry) => {
+    wrapWithRateLimit<EventTelemetry>(ClientMessages.SUBMIT_EVENT_RESULT, (client, payload) => {
       this.handleSubmitEventResult(client, payload);
     });
 
-    this.onMessage(ClientMessages.USE_POWER_UP, (client, payload: UsePowerUpPayload) => {
+    wrapWithRateLimit<UsePowerUpPayload>(ClientMessages.USE_POWER_UP, (client, payload) => {
       this.handleUsePowerUp(client, payload);
     });
 
-    this.onMessage(ClientMessages.ACTIVATE_OVERDRIVE, (client, payload: ActivateOverdrivePayload) => {
+    wrapWithRateLimit<ActivateOverdrivePayload>(ClientMessages.ACTIVATE_OVERDRIVE, (client, payload) => {
       this.handleActivateOverdrive(client, payload);
     });
 
-    this.onMessage(ClientMessages.INTERVENTION_CHOICE, (client, payload: InterventionChoicePayload) => {
+    wrapWithRateLimit<InterventionChoicePayload>(ClientMessages.INTERVENTION_CHOICE, (client, payload) => {
       this.handleInterventionChoice(client, payload);
     });
 
-    this.onMessage(ClientMessages.PIT_STOP_ACTION, (client, payload: PitStopActionPayload) => {
+    wrapWithRateLimit<PitStopActionPayload>(ClientMessages.PIT_STOP_ACTION, (client, payload) => {
       this.handlePitStopAction(client, payload);
     });
 
-    this.onMessage(ClientMessages.REQUEST_REMATCH, (client) => {
+    wrapWithRateLimit<Record<string, never>>(ClientMessages.REQUEST_REMATCH, (client) => {
       this.handleRematch(client);
     });
   }
 
   onJoin(client: Client, options: RoomConfig) {
-    // Reject joins during an active match (non-lobby phase)
+    // Reject joins during an active match unless spectating
     if (this.roomState.phase !== 'lobby') {
+      // Check if this is a spectator join
+      if ((options as any).spectate) {
+        this.spectatorIds.add(client.sessionId);
+        client.send(ServerMessages.SPECTATOR_MODE, { roomCode: this.roomState.roomCode });
+        if (this.roomState.gameState) {
+          this.sendGameStateToClient(client);
+        }
+        console.log(`[Room ${this.roomState.roomCode}] Spectator joined (session: ${client.sessionId})`);
+        return;
+      }
       throw new Error('Match already in progress.');
     }
 
@@ -198,6 +236,16 @@ export class ConfluxRoom extends Room {
   }
 
   async onLeave(client: Client, consented: boolean) {
+    // Spectators simply leave - no reconnection needed
+    if (this.spectatorIds.has(client.sessionId)) {
+      this.spectatorIds.delete(client.sessionId);
+      console.log(`[Room ${this.roomState.roomCode}] Spectator left (session: ${client.sessionId})`);
+      if (this.roomState.players.size === 0 && this.spectatorIds.size === 0) {
+        this.disconnect();
+      }
+      return;
+    }
+
     const player = this.roomState.players.get(client.sessionId);
     if (!player) return;
 
@@ -255,8 +303,9 @@ export class ConfluxRoom extends Room {
       }
     }
 
-    // Auto-dispose if empty
-    if (this.roomState.players.size === 0) {
+    // Auto-dispose if empty (no players and no spectators)
+    if (this.roomState.players.size === 0 && this.spectatorIds.size === 0) {
+      this.rateLimiter.removeClient(client.sessionId);
       this.disconnect();
     }
   }
@@ -302,7 +351,12 @@ export class ConfluxRoom extends Room {
     const player = this.roomState.players.get(client.sessionId);
     if (!player?.isHost) return;
 
-    this.roomState.settings = { ...this.roomState.settings, ...payload.settings };
+    const s = { ...this.roomState.settings, ...payload.settings };
+    s.playerCount = Math.max(1, Math.min(s.playerCount, MAX_ROOM_PLAYERS));
+    s.runLength = Math.max(1, Math.min(s.runLength, 20));
+    s.easyBots = Math.max(0, s.easyBots);
+    s.intermediateBots = Math.max(0, s.intermediateBots);
+    this.roomState.settings = s;
     this.broadcastLobbyState();
   }
 
@@ -608,7 +662,8 @@ export class ConfluxRoom extends Room {
     }
 
     const tile = gs.run[gs.currentTileIndex];
-    const baseDuration = 15000; // Default 15 seconds, actual varies per event
+    // Conservative server-side default for timeout validation; actual event duration is client-side.
+    const baseDuration = 15000;
     const anomalyMult = gs.activeAnomaly?.id === 'TIME_DILATION' ? 0.8 : 1;
     this.roomState.tileDurationMs = baseDuration * anomalyMult;
     this.roomState.tileStartTimestamp = Date.now();
@@ -839,8 +894,7 @@ export class ConfluxRoom extends Room {
     // ── Async per-player summary pipeline (parallel, non-blocking) ──────────
     const dailySeed = new Date().toISOString().split('T')[0];
     const contracts = generateContracts(this.roomState.gameState.settings.seed);
-    const eventDimensionMap: Record<string, string> = {};
-    EVENT_DESCRIPTORS.forEach(e => { eventDimensionMap[e.id] = e.performanceDimension; });
+    const eventDimensionMap = this.getEventDimensionMap();
     const gs = this.roomState.gameState; // capture snapshot
     const roomCode = this.roomState.roomCode;
 
@@ -875,6 +929,42 @@ export class ConfluxRoom extends Room {
         }
 
         await saveProfile(roomPlayer.userId!, updatedProfile);
+
+        // ── Write leaderboard entries (allTime + daily + gauntlet) ────────
+        const lbEntry: LeaderboardEntry = {
+          userId: roomPlayer.userId!,
+          playerName: updatedProfile.name,
+          avatarId: updatedProfile.avatarId,
+          circuitPoints: updatedProfile.circuitPoints,
+          bestScore: summary.humanPlacement === 0 ? 1 : 0,
+          updatedAt: Date.now(),
+        };
+        await writeLeaderboardEntry('allTime', lbEntry);
+
+        if (summary.isDaily && summary.dailyIsNewBest && summary.dailyPersonalBest !== null) {
+          await writeLeaderboardEntry('daily', { ...lbEntry, bestScore: summary.dailyPersonalBest }, dailySeed);
+        }
+
+        if (summary.isGauntlet && summary.gauntletNewHighScore && summary.gauntletTilesSurvived !== null) {
+          await writeLeaderboardEntry('gauntlet', { ...lbEntry, bestScore: summary.gauntletTilesSurvived });
+        }
+
+        // ── Write match history ───────────────────────────────────────────
+        const historyEntry: MatchHistoryEntry = {
+          matchId: summary.matchId,
+          seed: summary.seed,
+          mode: 'online',
+          completedAt: summary.completedAt,
+          runLength: summary.runLength,
+          placement: summary.humanPlacement + 1,
+          totalPlayers: gs.players.length,
+          cpEarned: summary.cp.totalCp,
+          isDaily: summary.isDaily,
+          isGauntlet: summary.isGauntlet,
+          rivalDefeated: summary.rivalDelta?.wins === 1,
+          gauntletTilesSurvived: summary.gauntletTilesSurvived,
+        };
+        await writeMatchHistory(roomPlayer.userId!, historyEntry);
 
         const client = this.clients.find(c => c.sessionId === sessionId);
         if (client) {
@@ -953,6 +1043,9 @@ export class ConfluxRoom extends Room {
       isHost: p.isHost,
       isConnected: p.isConnected,
     }));
+
+    // Update metadata with current phase for room discovery
+    this.setMetadata({ phase: this.roomState.phase });
 
     this.broadcast('room:state', {
       roomCode: this.roomState.roomCode,

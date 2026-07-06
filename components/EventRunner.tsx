@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { GameState, EventResult, PowerUp, EventTelemetry } from '../types';
 import { eventRegistry } from '../events/eventRegistry';
 import { RaceTrackHUD } from './RaceTrackHUD';
@@ -34,13 +34,22 @@ export const EventRunner: React.FC<EventRunnerProps> = ({ gameState, onTileCompl
   const [isEventOver, setIsEventOver] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
   const [isExplainModalOpen, setIsExplainModalOpen] = useState(false);
-  
-  const humanPlayer = players.find(p => !p.isBot)!;
-  const hasBlurStatus = humanPlayer.statuses.some(s => s.type === 'BLURRED');
-  const hasStunStatus = humanPlayer.statuses.some(s => s.type === 'STUNNED');
-  const hasFrozenStatus = humanPlayer.statuses.some(s => s.type === 'FROZEN');
+
+  // Reset event state when tile changes (fixes stale isEventOver blocking subsequent tiles)
+  useEffect(() => {
+    setIsEventOver(false);
+  }, [currentTileIndex]);
+
+  const gameStateRef = useRef(gameState);
+  gameStateRef.current = gameState;
+
   const [isActivelyBlurred, setIsActivelyBlurred] = useState(false);
-  const isPlayerOverdriving = overdrivingPlayerIds.includes(humanPlayer.id);
+
+  const humanPlayer = players.find(p => !p.isBot);
+  const hasBlurStatus = humanPlayer?.statuses.some(s => s.type === 'BLURRED') ?? false;
+  const hasStunStatus = humanPlayer?.statuses.some(s => s.type === 'STUNNED') ?? false;
+  const hasFrozenStatus = humanPlayer?.statuses.some(s => s.type === 'FROZEN') ?? false;
+  const isPlayerOverdriving = humanPlayer ? overdrivingPlayerIds.includes(humanPlayer.id) : false;
   
   const arePowerupsDisabled = currentTile.modifier === 'STATIC_FIELD';
   const isDataCorrupted = activeAnomaly?.id === 'DATA_CORRUPTION';
@@ -68,7 +77,7 @@ export const EventRunner: React.FC<EventRunnerProps> = ({ gameState, onTileCompl
     };
   }, [hasBlurStatus, eventDuration, currentTileIndex, isPaused]);
 
-  const handleEventComplete = (result: Omit<EventResult, 'playerId' | 'stars'>) => {
+  const handleEventComplete = useCallback((result: Omit<EventResult, 'playerId' | 'stars'>) => {
     if (isEventOver) return;
     setIsEventOver(true);
 
@@ -83,11 +92,11 @@ export const EventRunner: React.FC<EventRunnerProps> = ({ gameState, onTileCompl
         completionTimestamp: Date.now(),
       };
       onSubmitTelemetry(telemetry);
-      // Server will broadcast results; no local processing needed.
       return;
     }
 
     // ─── Local Mode: compute stars and simulate bots locally ──────────
+    if (!humanPlayer) return;
     const humanResult: EventResult = {
       ...result,
       stars: event.getStars(result),
@@ -106,18 +115,19 @@ export const EventRunner: React.FC<EventRunnerProps> = ({ gameState, onTileCompl
     setTimeout(() => {
       onTileComplete(allResults);
     }, 1500);
-  };
+  }, [isEventOver, onlineMode, onSubmitTelemetry, currentTileIndex, currentTile.eventId, currentTile.subSeed, settings.seed, event, humanPlayer, players, onTileComplete]);
   
   // Bot Logic (local mode only — server handles bots in online mode)
   useEffect(() => {
-    if (onlineMode || isPaused) return; // Server handles bot decisions or paused
+    if (onlineMode || isPaused) return;
+    const gs = gameStateRef.current;
     const botDecisionTimeout = setTimeout(() => {
-        players.forEach(player => {
+        gs.players.forEach(player => {
             if (player.isBot) {
-                if (decideBotOverdrive(player, gameState)) {
+                if (decideBotOverdrive(player, gs)) {
                     onActivateOverdrive(player.id);
                 }
-                const decision = decideBotPowerUp(player, gameState, currentTile);
+                const decision = decideBotPowerUp(player, gs, gs.run[gs.currentTileIndex]);
                 if (decision) {
                     onUsePowerUp(player.id, decision.use, decision.targetId);
                 }
@@ -136,10 +146,6 @@ export const EventRunner: React.FC<EventRunnerProps> = ({ gameState, onTileCompl
             if (Math.random() < 0.1) { // 10% chance every second
                 const randomPlayer = players[Math.floor(Math.random() * players.length)];
                 if (!gameState.overdrivingPlayerIds.includes(randomPlayer.id)) {
-                    // We need to pass force=true, but onActivateOverdrive only takes playerId.
-                    // We'll just call onActivateOverdrive and let it fail if they don't have energy.
-                    // Wait, we can't pass force=true through onActivateOverdrive unless we change its signature.
-                    // Let's change onActivateOverdrive signature in EventRunner props.
                     onActivateOverdrive(randomPlayer.id, true);
                 }
             }
@@ -152,6 +158,8 @@ export const EventRunner: React.FC<EventRunnerProps> = ({ gameState, onTileCompl
   const EventComponent = event.Component;
   // Memoize the event component to avoid re-renders from parent state changes unrelated to the game loop
   const MemoizedEventComponent = useMemo(() => React.memo(EventComponent), [EventComponent]);
+
+  if (!humanPlayer) return <div className="flex items-center justify-center h-screen text-gray-500">No human player found.</div>;
 
   const canAffordOverdrive = humanPlayer.energy >= OVERDRIVE_ENERGY_COST;
   const isOverdriveOnCooldown = humanPlayer.overdriveCooldown > 0;

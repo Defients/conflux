@@ -1,7 +1,7 @@
 
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { GameScreen, GameSettings, GameState, GameEvent, PilotProfile, EventTelemetry, PowerUp } from './types';
+import { GameScreen, GameSettings, GameState, GameEvent, PilotProfile, EventTelemetry, PowerUp, EventResult } from './types';
 import { MatchSummary, computeMatchSummary, applyMatchSummaryToProfile } from './shared/matchSummary';
 import { useGameEngine } from './hooks/useGameEngine';
 import { useOnlineGame } from './hooks/useOnlineGame';
@@ -19,12 +19,14 @@ import { EventList } from './components/EventList';
 import { EventPlaytestRunner } from './components/EventPlaytestRunner';
 import { PilotProfileSetup } from './components/PilotProfileSetup';
 import { loadProfile, saveProfile, createProfileAccount, clearProfile, listProfiles, setActiveProfile, deleteProfileAccount } from './services/profileService';
-import { fetchProfile, syncProfile } from './services/firebaseProfileService';
-import { signIn, resetAnonymousSession } from './services/firebase';
+import { fetchProfile, syncProfile, syncProfileMerge } from './services/firebaseProfileService';
+import { signIn, resetAnonymousSession, auth } from './services/firebase';
 import { PitStopScreen, PitStopAction } from './components/PitStopScreen';
 import { PIT_STOP_CONFIG } from './constants';
 import { RivalInterventionModal } from './components/RivalInterventionModal';
 import { AccoladesScreen } from './components/AccoladesScreen';
+import { LeaderboardScreen } from './components/LeaderboardScreen';
+import { MatchHistoryScreen } from './components/MatchHistoryScreen';
 import { RivalTauntOverlay } from './components/RivalTauntOverlay';
 import { generateContracts } from './shared/contractService';
 import { getDailySeed, getDailyPersonalBest, saveDailyPersonalBest } from './shared/dailyChallengeService';
@@ -109,7 +111,7 @@ const App: React.FC = () => {
   }, []);
 
   const handleSwitchPilot = useCallback(async () => {
-    onlineGame.leaveRoom();
+    await onlineGame.leaveRoom();
     onlineGame.setMode('local');
     clearProfile();
     setProfile(null);
@@ -158,7 +160,7 @@ const App: React.FC = () => {
     setMatchSummary(null);
   }, [initializeGauntlet]);
 
-  const handleTileComplete = useCallback((results: { [playerId: number]: import("./types").EventResult; }) => {
+  const handleTileComplete = useCallback((results: { [playerId: number]: EventResult }) => {
       if (gameState?.settings.isGauntlet) {
           processGauntletTile(results);
       } else {
@@ -220,8 +222,12 @@ const App: React.FC = () => {
     });
 
     const updatedProfile = handleAuthoritativeMatchSummary(summary);
-    if (updatedProfile && raceMode === 'local') {
-      syncProfile(updatedProfile);
+    if (updatedProfile) {
+      if (raceMode === 'local') {
+        syncProfile(updatedProfile);
+      } else {
+        syncProfileMerge(updatedProfile);
+      }
     }
   }, [profile, eventDimensionMap, handleAuthoritativeMatchSummary]);
 
@@ -293,6 +299,21 @@ const App: React.FC = () => {
 
   const handleGoToAccolades = useCallback(() => {
     setScreen(GameScreen.Accolades);
+  }, []);
+
+  const handleGoToLeaderboard = useCallback(() => {
+    setScreen(GameScreen.Leaderboard);
+  }, []);
+
+  const handleGoToMatchHistory = useCallback(() => {
+    setScreen(GameScreen.MatchHistory);
+  }, []);
+
+  const handleReplaySeed = useCallback((seed: string) => {
+    setScreen(GameScreen.Lobby);
+    setMatchSummary(null);
+    // The seed will be picked up via URL hash or manual entry
+    window.location.hash = `#seed=${seed}`;
   }, []);
 
   const handleGoToOnline = useCallback(() => {
@@ -406,13 +427,19 @@ const App: React.FC = () => {
         return <PilotProfileSetup onProfileCreated={handleProfileCreated} existingProfiles={savedProfiles} onSelectProfile={handleSelectExistingProfile} onDeleteProfile={handleDeleteExistingProfile} />;
     }
 
+    const renderLobby = () => <Lobby profile={profile} setProfile={setProfile} onStartGame={handleStartGame} onStartGauntlet={handleStartGauntlet} onGoToEventList={handleGoToEventList} onGoToAccolades={handleGoToAccolades} onGoToOnline={handleGoToOnline} onGoToLeaderboard={handleGoToLeaderboard} onGoToMatchHistory={handleGoToMatchHistory} onSwitchPilot={handleSwitchPilot} />;
+
     switch (screen) {
       case 'ONLINE_LOBBY':
         return <OnlineLobby profile={profile} online={onlineGame} onBack={() => { onlineGame.setMode('local'); setScreen(GameScreen.Lobby); }} />;
       case GameScreen.Lobby:
-        return <Lobby profile={profile} setProfile={setProfile} onStartGame={handleStartGame} onStartGauntlet={handleStartGauntlet} onGoToEventList={handleGoToEventList} onGoToAccolades={handleGoToAccolades} onGoToOnline={handleGoToOnline} onSwitchPilot={handleSwitchPilot} />;
+        return renderLobby();
       case GameScreen.Accolades:
         return <AccoladesScreen profile={profile} onBack={() => setScreen(GameScreen.Lobby)} />;
+      case GameScreen.Leaderboard:
+        return <LeaderboardScreen onBack={() => setScreen(GameScreen.Lobby)} />;
+      case GameScreen.MatchHistory:
+        return <MatchHistoryScreen onBack={() => setScreen(GameScreen.Lobby)} onReplaySeed={handleReplaySeed} userId={auth?.currentUser?.uid ?? null} />;
       case GameScreen.EventList:
         return <EventList 
                     onBack={() => setScreen(GameScreen.Lobby)} 
@@ -421,14 +448,14 @@ const App: React.FC = () => {
                     initialActiveIds={activeEventIds}
                 />;
        case GameScreen.EventPlaytest:
-        if (!playtestConfig) return <Lobby profile={profile} setProfile={setProfile} onStartGame={handleStartGame} onStartGauntlet={handleStartGauntlet} onGoToEventList={handleGoToEventList} onGoToAccolades={handleGoToAccolades} onGoToOnline={handleGoToOnline} onSwitchPilot={handleSwitchPilot} />;
+        if (!playtestConfig) return renderLobby();
         return <EventPlaytestRunner 
                     event={playtestConfig.event} 
                     difficulty={playtestConfig.difficulty} 
                     onExit={() => setScreen(GameScreen.EventList)} 
                 />;
       case GameScreen.Event:
-        if (!activeGameState)  return <Lobby profile={profile} setProfile={setProfile} onStartGame={handleStartGame} onStartGauntlet={handleStartGauntlet} onGoToEventList={handleGoToEventList} onGoToAccolades={handleGoToAccolades} onGoToOnline={handleGoToOnline} onSwitchPilot={handleSwitchPilot} />;
+        if (!activeGameState)  return renderLobby();
         return <EventRunner
           gameState={activeGameState}
           onTileComplete={handleTileComplete}
@@ -439,16 +466,16 @@ const App: React.FC = () => {
           isPaused={showCountdown}
         />;
       case GameScreen.TileResults:
-        if (!activeGameState) return <Lobby profile={profile} setProfile={setProfile} onStartGame={handleStartGame} onStartGauntlet={handleStartGauntlet} onGoToEventList={handleGoToEventList} onGoToAccolades={handleGoToAccolades} onGoToOnline={handleGoToOnline} onSwitchPilot={handleSwitchPilot} />;
+        if (!activeGameState) return renderLobby();
         return <TileResultsScreen gameState={activeGameState} onContinue={isOnline ? () => { /* server auto-advances */ } : handleContinueAfterResults} />;
       case GameScreen.PitStop:
-        if (!activeGameState) return <Lobby profile={profile} setProfile={setProfile} onStartGame={handleStartGame} onStartGauntlet={handleStartGauntlet} onGoToEventList={handleGoToEventList} onGoToAccolades={handleGoToAccolades} onGoToOnline={handleGoToOnline} onSwitchPilot={handleSwitchPilot} />;
+        if (!activeGameState) return renderLobby();
         return <PitStopScreen gameState={activeGameState} onAction={isOnline
           ? (_pid: number, action: PitStopAction) => { onlineGame.sendPitStopAction(action); }
           : handlePitStopComplete
         } />;
       case GameScreen.Results:
-        if (!activeGameState) return <Lobby profile={profile} setProfile={setProfile} onStartGame={handleStartGame} onStartGauntlet={handleStartGauntlet} onGoToEventList={handleGoToEventList} onGoToAccolades={handleGoToAccolades} onGoToOnline={handleGoToOnline} onSwitchPilot={handleSwitchPilot} />;
+        if (!activeGameState) return renderLobby();
         return <ResultsScreen profile={profile} gameState={activeGameState} matchSummary={matchSummary} summaryPending={isOnline && isSignedIn && matchSummary === null} onRematch={isOnline ? () => { onlineGame.sendRequestRematch(); } : handleRematch} onNewRun={isOnline ? () => { onlineGame.leaveRoom(); onlineGame.setMode('local'); setScreen(GameScreen.Lobby); } : handleNewRun} onCopySeed={handleCopySeed} onShareRun={handleShareRun} />;
       default:
         return <div>Unknown Screen</div>;

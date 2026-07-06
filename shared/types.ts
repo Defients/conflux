@@ -17,6 +17,8 @@ export enum GameScreen {
   Results = 'RESULTS',
   PitStop = 'PIT_STOP',
   Accolades = 'ACCOLADES',
+  Leaderboard = 'LEADERBOARD',
+  MatchHistory = 'MATCH_HISTORY',
 }
 
 export enum BotPersonality {
@@ -352,4 +354,33 @@ export interface RoomStateSummary {
   settings: GameSettings;
   /** Set once match begins. */
   gameState?: GameState;
+}
+
+// ─── Leaderboard & Match History Types ────────────────────────────────────────
+
+export type LeaderboardCategory = 'allTime' | 'daily' | 'gauntlet';
+
+export interface LeaderboardEntry {
+  userId: string;
+  playerName: string;
+  avatarId: string;
+  circuitPoints: number;
+  /** For daily leaderboards: the best position score. For gauntlet: tiles survived. */
+  bestScore: number;
+  updatedAt: number;
+}
+
+export interface MatchHistoryEntry {
+  matchId: string;
+  seed: string;
+  mode: 'local' | 'online';
+  completedAt: number;
+  runLength: number;
+  placement: number;
+  totalPlayers: number;
+  cpEarned: number;
+  isDaily: boolean;
+  isGauntlet: boolean;
+  rivalDefeated: boolean;
+  gauntletTilesSurvived: number | null;
 }

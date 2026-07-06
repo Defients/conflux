@@ -3,9 +3,22 @@
 The Colyseus multiplayer backend is a plain Node.js web service.
 It runs on Render free tier with no Docker required.
 
+A `render.yaml` blueprint exists in the repo root for one-click deployment.
+You can use either the blueprint or the manual settings below.
+
 ---
 
-## Exact Render Settings
+## Option A — Blueprint (recommended)
+
+1. Push the repo to GitHub.
+2. Go to <https://dashboard.render.com> → **New** → **Blueprint**.
+3. Select the repository. Render will detect `render.yaml` automatically.
+4. Click **Apply**. The service will build and deploy.
+5. Note the generated URL (e.g., `https://conflux-circuit-server.onrender.com`).
+
+---
+
+## Option B — Manual Settings
 
 | Field | Value |
 |---|---|
@@ -24,7 +37,7 @@ It runs on Render free tier with no Docker required.
 | Variable | Value | Required |
 |---|---|---|
 | `NODE_ENV` | `production` | Yes |
-| `ALLOWED_ORIGINS` | `https://confluxcircuit.com` | Yes |
+| `ALLOWED_ORIGINS` | `https://confluxcircuit.com,https://www.confluxcircuit.com` | Yes |
 | `GOOGLE_APPLICATION_CREDENTIALS` | *(JSON path or leave unset)* | No — Firebase auth/profile sync is disabled when absent, but the game server runs fully |
 
 > **`PORT` is set automatically by Render (defaults to `10000`). Do not set it manually.**
@@ -33,15 +46,37 @@ It runs on Render free tier with no Docker required.
 
 ## Frontend Integration
 
-In the client `.env` (or Render env for the static host), set:
+### 1. Set the server URL
+
+In the client `.env` (or Netlify env vars), set:
 
 ```
-VITE_SERVER_URL=wss://<your-service-name>.onrender.com
+VITE_SERVER_URL=wss://conflux-circuit-server.onrender.com
 ```
 
 - Use `wss://` (WebSocket Secure) — Render terminates TLS.
 - Do **not** include a trailing slash or path.
 - After setting this, rebuild the client: `npm run build` from the repo root.
+
+### 2. Deploy the frontend to Netlify
+
+A `netlify.toml` is included in the repo root.
+
+1. Push the repo to GitHub.
+2. Go to <https://app.netlify.com> → **Add new site** → **Import from Git**.
+3. Select the repository. Build settings are auto-detected from `netlify.toml`:
+   - **Build command**: `npm run build`
+   - **Publish directory**: `dist`
+4. Add environment variable: `VITE_SERVER_URL=wss://conflux-circuit-server.onrender.com`
+5. Deploy. The site will be live at `https://<site-name>.netlify.app`.
+
+### 3. Set custom domain to confluxcircuit.com
+
+1. In Netlify: **Site settings** → **Domain management** → **Add custom domain**.
+2. Enter `confluxcircuit.com` and `www.confluxcircuit.com`.
+3. Update your DNS registrar's nameservers to Netlify's (shown in the dashboard).
+4. Netlify will provision TLS certificates automatically.
+5. Update `ALLOWED_ORIGINS` on the Render server to `https://confluxcircuit.com,https://www.confluxcircuit.com`.
 
 ---
 

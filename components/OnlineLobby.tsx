@@ -6,11 +6,12 @@
  * Rendered when user selects "Online" mode from the main Lobby.
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { PilotProfile, ChassisId, LobbyPlayer, GameSettings, RoomConfig } from '../types';
 import { CHASSIS_DEFINITIONS } from '../constants';
 import { OnlineGameHook } from '../hooks/useOnlineGame';
 import { auth } from '../services/firebase';
+import { networkService, OpenRoomInfo } from '../services/networkService';
 
 interface OnlineLobbyProps {
   profile: PilotProfile;
@@ -24,6 +25,9 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
   const [selectedChassis, setSelectedChassis] = useState<ChassisId>(
     profile.unlockedChassis[profile.unlockedChassis.length - 1] || ChassisId.Standard
   );
+  const [openRooms, setOpenRooms] = useState<OpenRoomInfo[]>([]);
+  const [showBrowse, setShowBrowse] = useState(false);
+  const [loadingRooms, setLoadingRooms] = useState(false);
 
   const {
     isConnected, isReconnecting, sessionId, error, lobbyState,
@@ -75,6 +79,21 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
     sendStart();
   };
 
+  const handleBrowse = useCallback(async () => {
+    setShowBrowse(s => !s);
+    if (!showBrowse) {
+      setLoadingRooms(true);
+      const rooms = await networkService.getOpenRooms();
+      setOpenRooms(rooms);
+      setLoadingRooms(false);
+    }
+  }, [showBrowse]);
+
+  const handleJoinOpenRoom = async (room: OpenRoomInfo) => {
+    clearError();
+    await joinRoom(room.roomCode, buildConfig());
+  };
+
   // ─── Not in a room yet: show create/join ─────────────────────────────
 
   if (!isInRoom) {
@@ -101,7 +120,7 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
           )}
 
           {error && (
-            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/40 rounded text-sm text-red-300">
+            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/40 rounded text-sm text-red-300" role="alert">
               {error}
               <button onClick={clearError} className="ml-2 text-red-400 hover:text-white">✕</button>
             </div>
@@ -167,6 +186,40 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
               JOIN
             </button>
           </div>
+
+          {/* Browse Open Rooms */}
+          <button
+            onClick={handleBrowse}
+            className="w-full mt-4 py-3 text-sm font-bold text-gray-400 border border-white/10 rounded-lg active:bg-white/5 sm:hover:bg-white/5 transition-colors"
+            aria-label="Browse open rooms"
+            aria-expanded={showBrowse}
+          >
+            {showBrowse ? '▲ HIDE OPEN ROOMS' : '▼ BROWSE OPEN ROOMS'}
+          </button>
+          {showBrowse && (
+            <div className="mt-3 space-y-2 max-h-48 overflow-y-auto" role="region" aria-label="Open rooms list">
+              {loadingRooms ? (
+                <div className="text-center py-4 text-sm text-gray-500" aria-live="polite">Loading rooms...</div>
+              ) : openRooms.length === 0 ? (
+                <div className="text-center py-4 text-sm text-gray-500">No open rooms found. Create one!</div>
+              ) : (
+                openRooms.map(room => (
+                  <button
+                    key={room.roomId}
+                    onClick={() => handleJoinOpenRoom(room)}
+                    className="w-full flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-lg active:bg-white/10 sm:hover:bg-white/10 transition-colors text-left"
+                    aria-label={`Join room ${room.roomCode} with ${room.playerCount} players`}
+                  >
+                    <div>
+                      <span className="font-mono text-sm text-solar-orange font-bold tracking-widest">{room.roomCode}</span>
+                      <span className="ml-2 text-xs text-gray-400">{room.playerCount}/{room.maxPlayers} players</span>
+                    </div>
+                    <span className="text-xs text-hyper-green font-bold">JOIN →</span>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -200,7 +253,7 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-500/20 border border-red-500/40 rounded text-sm text-red-300">
+          <div className="mb-4 p-3 bg-red-500/20 border border-red-500/40 rounded text-sm text-red-300" role="alert">
             {error}
             <button onClick={clearError} className="ml-2 text-red-400 hover:text-white">✕</button>
           </div>
@@ -319,7 +372,7 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
           {isHost && (
             <button
               onClick={handleStart}
-              disabled={!allReady || (lobbyState?.players.length ?? 0) < 1}
+              disabled={!allReady || (lobbyState?.players.length ?? 0) < 2}
               className="flex-1 py-4 bg-gradient-to-r from-hyper-green to-emerald-600 text-cosmic-blue font-black text-base sm:text-lg rounded-lg active:shadow-[0_0_20px_rgba(77,255,175,0.3)] sm:hover:shadow-[0_0_20px_rgba(77,255,175,0.3)] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               aria-label="Start the match"
             >

@@ -16,6 +16,11 @@ export const TimerBar: React.FC<TimerBarProps> = ({ duration, totalDuration, isP
   const animationFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
+    // Reset refs when duration changes (new tile/event)
+    startTimeRef.current = null;
+    pausedTimeRef.current = null;
+    totalPausedDurationRef.current = 0;
+
     // Wait until it's unpaused to start the timer, or track pause duration
     if (isPaused) {
         if (pausedTimeRef.current === null) {
@@ -61,6 +66,7 @@ export const TimerBar: React.FC<TimerBarProps> = ({ duration, totalDuration, isP
 
       if (textRef.current) {
          textRef.current.textContent = remaining.toFixed(1);
+         textRef.current.setAttribute('aria-label', `${remaining.toFixed(0)} seconds remaining`);
          if (remaining <= 3) {
              textRef.current.classList.add('text-solar-orange', 'animate-pulse');
              textRef.current.classList.remove('text-white');

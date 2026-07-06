@@ -124,6 +124,7 @@ export function useOnlineGame(): OnlineGameHook {
       onCountdown: (_data) => {
         setTileResults(null);
         setInterventionData(null);
+        setMatchSummary(null);
         setMatchPhase('countdown');
       },
 

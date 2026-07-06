@@ -42,6 +42,7 @@ export const ReactionTap: React.FC<EventProps> = ({ onComplete, tile, settings, 
   }, [event, tile.difficulty, settings.accessibility, endEvent, isPaused]);
 
   useEffect(() => {
+    if (isPaused) return;
     if (state === State.Ready) {
       timerRef.current = setTimeout(() => {
         if (!isMountedRef.current) return;
@@ -65,7 +66,7 @@ export const ReactionTap: React.FC<EventProps> = ({ onComplete, tile, settings, 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [state, settings.seed, tile.tileIndex]);
+  }, [state, settings.seed, tile.tileIndex, isPaused]);
 
   const handleTap = useCallback((e?: React.MouseEvent | KeyboardEvent) => {
     if (e && 'clientX' in e) {

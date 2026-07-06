@@ -135,6 +135,7 @@ export const ClientMessages = {
   INTERVENTION_CHOICE: 'game:interventionChoice',
   PIT_STOP_ACTION: 'game:pitStopAction',
   REQUEST_REMATCH: 'game:requestRematch',
+  SPECTATE: 'room:spectate',
 } as const;
 
 export const ServerMessages = {
@@ -149,4 +150,5 @@ export const ServerMessages = {
   PLAYER_DISCONNECTED: 'game:playerDisconnected',
   PLAYER_RECONNECTED: 'game:playerReconnected',
   MATCH_SUMMARY: 'game:matchSummary',
+  SPECTATOR_MODE: 'room:spectatorMode',
 } as const;

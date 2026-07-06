@@ -15,6 +15,18 @@ export const syncProfile = async (profile: PilotProfile) => {
   }
 };
 
+export const syncProfileMerge = async (profile: PilotProfile) => {
+  if (!auth?.currentUser || !db) return saveLocalProfile(profile);
+  try {
+    const docRef = doc(db, 'profiles', auth.currentUser.uid);
+    await setDoc(docRef, profile, { merge: true });
+    saveLocalProfile(profile);
+  } catch (err) {
+    console.error('Error merge-syncing profile to Firebase', err);
+    saveLocalProfile(profile);
+  }
+};
+
 export const fetchProfile = async (): Promise<PilotProfile | null> => {
   if (!auth?.currentUser || !db) return loadLocalProfile();
   try {

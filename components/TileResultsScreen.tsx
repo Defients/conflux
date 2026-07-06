@@ -52,7 +52,7 @@ export const TileResultsScreen: React.FC<TileResultsScreenProps> = ({ gameState,
   }, [handleDismiss]);
   
   const playerResults = useMemo(() => {
-    if (!lastTileResults) return [];
+    if (!lastTileResults || !completedTile) return [];
     const baseStep = 100 / settings.runLength;
 
     const oldPlayerState = players.map(p => {
@@ -75,7 +75,11 @@ export const TileResultsScreen: React.FC<TileResultsScreenProps> = ({ gameState,
     return oldPlayerState.sort((a,b) => b.position - a.position);
   }, [lastTileResults, players, settings.runLength, completedTile]);
 
-  const tileModifier = completedTile?.modifier ? TILE_MODIFIER_DEFINITIONS[completedTile.modifier] : null;
+  if (!completedTile || !lastTileResults) {
+    return null;
+  }
+
+  const tileModifier = completedTile.modifier ? TILE_MODIFIER_DEFINITIONS[completedTile.modifier] : null;
   
   const renderStars = (stars: number) => {
     if (stars === 4) return <span className="text-nebula-pink">★★★★</span>;
@@ -84,7 +88,7 @@ export const TileResultsScreen: React.FC<TileResultsScreenProps> = ({ gameState,
   };
 
   return (
-    <div className="fixed inset-0 bg-cosmic-blue/90 sm:backdrop-blur-md flex items-center justify-center z-50 animate-fade-in p-2 sm:p-4" onClick={onContinue} role="dialog" aria-label="Tile Results" aria-modal="true">
+    <div className="fixed inset-0 bg-cosmic-blue/90 sm:backdrop-blur-md flex items-center justify-center z-50 animate-fade-in p-2 sm:p-4" onClick={onContinue} role="dialog" aria-label="Tile Results" aria-modal="true" aria-live="polite">
       <div className="w-full max-w-3xl glass-panel p-4 sm:p-8 animate-slide-in-up border-t-4 border-galaxy-cyan" onClick={(e) => e.stopPropagation()}>
         
         <div className="flex justify-between items-end mb-3 sm:mb-6 pb-3 sm:pb-4 border-b border-white/10">
