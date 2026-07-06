@@ -72,6 +72,25 @@ const App: React.FC = () => {
   const [matchSummary, setMatchSummary] = useState<MatchSummary | null>(null);
   const [savedProfiles, setSavedProfiles] = useState(() => listProfiles());
   const [showWelcome, setShowWelcome] = useState(false);
+  const [pendingRoomCode, setPendingRoomCode] = useState<string | undefined>(undefined);
+
+  // Parse ?room= URL param for auto-join
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const room = params.get('room');
+    if (room) {
+      setPendingRoomCode(room.toUpperCase());
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, []);
+
+  // Auto-navigate to online lobby when pendingRoomCode is set and profile is ready
+  useEffect(() => {
+    if (pendingRoomCode && profile && !isOnline) {
+      onlineGame.setMode('online');
+      setScreen('ONLINE_LOBBY' as AppScreen);
+    }
+  }, [pendingRoomCode, profile, isOnline]);
 
   useEffect(() => {
     // Accessibility and settings listeners
@@ -442,7 +461,7 @@ const App: React.FC = () => {
 
     switch (screen) {
       case 'ONLINE_LOBBY':
-        return <OnlineLobby profile={profile} online={onlineGame} onBack={() => { onlineGame.setMode('local'); setScreen(GameScreen.Lobby); }} />;
+        return <OnlineLobby profile={profile} online={onlineGame} onBack={() => { onlineGame.setMode('local'); setScreen(GameScreen.Lobby); }} pendingRoomCode={pendingRoomCode} />;
       case GameScreen.Lobby:
         return renderLobby();
       case GameScreen.Accolades:

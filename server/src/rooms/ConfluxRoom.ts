@@ -26,6 +26,7 @@ import {
   TileStartPayload, TileResultsPayload, RaceFinishedPayload,
   ReadyPayload, UsePowerUpPayload, ActivateOverdrivePayload,
   InterventionChoicePayload, PitStopActionPayload, UpdateSettingsPayload,
+  KickPlayerPayload, BanPlayerPayload,
 } from '../../../shared/protocol';
 import { EVENT_DESCRIPTORS, STAR_COMPUTERS } from '../eventDescriptors';
 import { ServerEventValidator } from '../validation/eventValidator';
@@ -63,6 +64,9 @@ interface ConfluxRoomState {
   pendingPitStops: Set<number>; // playerIds who have submitted pit stop actions
   tileStartTimestamp: number;
   tileDurationMs: number;
+  isPrivate: boolean;
+  bannedUserIds: Set<string>;
+  bannedSessionIds: Set<string>;
 }
 
 function generateRoomCode(): string {
@@ -99,6 +103,9 @@ export class ConfluxRoom extends Room {
     pendingPitStops: new Set(),
     tileStartTimestamp: 0,
     tileDurationMs: 0,
+    isPrivate: false,
+    bannedUserIds: new Set(),
+    bannedSessionIds: new Set(),
   };
 
   private resultTimeout: Delayed | null = null;
@@ -116,9 +123,10 @@ export class ConfluxRoom extends Room {
 
   // ─── Lifecycle ───────────────────────────────────────────────────────────
 
-  onCreate(_options: Record<string, unknown>) {
+  onCreate(options: Record<string, unknown>) {
     this.roomState.roomCode = generateRoomCode();
     this.roomState.settings.seed = String(Math.floor(Math.random() * 1000000));
+    this.roomState.isPrivate = !!options.isPrivate;
 
     // Set max clients
     this.maxClients = MAX_ROOM_PLAYERS;
@@ -126,8 +134,8 @@ export class ConfluxRoom extends Room {
     // Allow reconnection
     this.autoDispose = false;
 
-    // Expose room code and phase in metadata so clients can discover via getAvailableRooms
-    this.setMetadata({ roomCode: this.roomState.roomCode, phase: 'lobby' });
+    // Expose room code, phase, and privacy in metadata so clients can discover via getAvailableRooms
+    this.setMetadata({ roomCode: this.roomState.roomCode, phase: 'lobby', isPrivate: this.roomState.isPrivate });
 
     console.log(`[Room ${this.roomState.roomCode}] Created`);
 
@@ -181,9 +189,27 @@ export class ConfluxRoom extends Room {
     wrapWithRateLimit<Record<string, never>>(ClientMessages.REQUEST_REMATCH, (client) => {
       this.handleRematch(client);
     });
+
+    wrapWithRateLimit<Record<string, never>>(ClientMessages.TOGGLE_PRIVATE, (client) => {
+      this.handleTogglePrivate(client);
+    });
+
+    wrapWithRateLimit<KickPlayerPayload>(ClientMessages.KICK_PLAYER, (client, payload) => {
+      this.handleKickPlayer(client, payload);
+    });
+
+    wrapWithRateLimit<BanPlayerPayload>(ClientMessages.BAN_PLAYER, (client, payload) => {
+      this.handleBanPlayer(client, payload);
+    });
   }
 
   onJoin(client: Client, options: RoomConfig) {
+    // Check ban lists
+    if (this.roomState.bannedSessionIds.has(client.sessionId) ||
+        (options.userId && this.roomState.bannedUserIds.has(options.userId))) {
+      throw new Error('You are banned from this room.');
+    }
+
     // Reject joins during an active match unless spectating
     if (this.roomState.phase !== 'lobby') {
       // Check if this is a spectator join
@@ -506,6 +532,85 @@ export class ConfluxRoom extends Room {
     this.roomState.pendingPitStops.clear();
     this.roomState.settings.seed = String(Math.floor(Math.random() * 1000000));
     this.broadcastLobbyState();
+  }
+
+  private handleTogglePrivate(client: Client) {
+    if (this.roomState.phase !== 'lobby') return;
+
+    const player = this.roomState.players.get(client.sessionId);
+    if (!player?.isHost) {
+      client.send(ServerMessages.ROOM_ERROR, { message: 'Only the host can toggle private mode.' });
+      return;
+    }
+
+    this.roomState.isPrivate = !this.roomState.isPrivate;
+    this.setMetadata({ isPrivate: this.roomState.isPrivate });
+    this.broadcastLobbyState();
+    console.log(`[Room ${this.roomState.roomCode}] Private: ${this.roomState.isPrivate}`);
+  }
+
+  private handleKickPlayer(client: Client, payload: KickPlayerPayload) {
+    if (this.roomState.phase !== 'lobby') return;
+
+    const host = this.roomState.players.get(client.sessionId);
+    if (!host?.isHost) {
+      client.send(ServerMessages.ROOM_ERROR, { message: 'Only the host can kick players.' });
+      return;
+    }
+
+    if (payload.sessionId === client.sessionId) {
+      client.send(ServerMessages.ROOM_ERROR, { message: 'You cannot kick yourself.' });
+      return;
+    }
+
+    const target = this.roomState.players.get(payload.sessionId);
+    if (!target) return;
+
+    // Notify the kicked player
+    const targetClient = this.clients.find((c: Client) => c.sessionId === payload.sessionId);
+    if (targetClient) {
+      targetClient.send(ServerMessages.PLAYER_KICKED, { message: 'You were kicked from the room.' });
+    }
+
+    // Remove from room state
+    this.roomState.players.delete(payload.sessionId);
+    this.broadcastLobbyState();
+    console.log(`[Room ${this.roomState.roomCode}] Kicked ${target.name}`);
+  }
+
+  private handleBanPlayer(client: Client, payload: BanPlayerPayload) {
+    if (this.roomState.phase !== 'lobby') return;
+
+    const host = this.roomState.players.get(client.sessionId);
+    if (!host?.isHost) {
+      client.send(ServerMessages.ROOM_ERROR, { message: 'Only the host can ban players.' });
+      return;
+    }
+
+    if (payload.sessionId === client.sessionId) {
+      client.send(ServerMessages.ROOM_ERROR, { message: 'You cannot ban yourself.' });
+      return;
+    }
+
+    const target = this.roomState.players.get(payload.sessionId);
+    if (!target) return;
+
+    // Add to ban lists
+    this.roomState.bannedSessionIds.add(payload.sessionId);
+    if (target.userId) {
+      this.roomState.bannedUserIds.add(target.userId);
+    }
+
+    // Notify the banned player
+    const targetClient = this.clients.find((c: Client) => c.sessionId === payload.sessionId);
+    if (targetClient) {
+      targetClient.send(ServerMessages.PLAYER_BANNED, { message: 'You were banned from the room.' });
+    }
+
+    // Remove from room state
+    this.roomState.players.delete(payload.sessionId);
+    this.broadcastLobbyState();
+    console.log(`[Room ${this.roomState.roomCode}] Banned ${target.name}`);
   }
 
   // ─── Match Lifecycle ───────────────────────────────────────────────────
@@ -1044,8 +1149,8 @@ export class ConfluxRoom extends Room {
       isConnected: p.isConnected,
     }));
 
-    // Update metadata with current phase for room discovery
-    this.setMetadata({ phase: this.roomState.phase });
+    // Update metadata with current phase and privacy for room discovery
+    this.setMetadata({ phase: this.roomState.phase, isPrivate: this.roomState.isPrivate });
 
     this.broadcast('room:state', {
       roomCode: this.roomState.roomCode,
@@ -1053,6 +1158,7 @@ export class ConfluxRoom extends Room {
       hostSessionId: this.roomState.hostSessionId,
       players: lobbyPlayers,
       settings: this.roomState.settings,
+      isPrivate: this.roomState.isPrivate,
     });
   }
 

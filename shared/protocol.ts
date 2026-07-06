@@ -67,6 +67,14 @@ export interface PitStopActionPayload {
   action: 'scrub' | 'tuneUp' | 'analyze' | 'recharge';
 }
 
+export interface KickPlayerPayload {
+  sessionId: string;
+}
+
+export interface BanPlayerPayload {
+  sessionId: string;
+}
+
 // ─── Server → Client ─────────────────────────────────────────────────────────
 
 export interface RoomCreatedPayload {
@@ -136,6 +144,9 @@ export const ClientMessages = {
   PIT_STOP_ACTION: 'game:pitStopAction',
   REQUEST_REMATCH: 'game:requestRematch',
   SPECTATE: 'room:spectate',
+  TOGGLE_PRIVATE: 'room:togglePrivate',
+  KICK_PLAYER: 'room:kickPlayer',
+  BAN_PLAYER: 'room:banPlayer',
 } as const;
 
 export const ServerMessages = {
@@ -151,4 +162,6 @@ export const ServerMessages = {
   PLAYER_RECONNECTED: 'game:playerReconnected',
   MATCH_SUMMARY: 'game:matchSummary',
   SPECTATOR_MODE: 'room:spectatorMode',
+  PLAYER_KICKED: 'room:playerKicked',
+  PLAYER_BANNED: 'room:playerBanned',
 } as const;

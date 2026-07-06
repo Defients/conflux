@@ -16,7 +16,8 @@ import {
   ReadyPayload, UsePowerUpPayload, ActivateOverdrivePayload,
   InterventionChoicePayload, PitStopActionPayload, UpdateSettingsPayload,
   TileStartPayload, TileResultsPayload, RaceFinishedPayload,
-  RoomCreatedPayload, RoomErrorPayload, PlayerConnectionPayload, MatchSummaryPayload
+  RoomCreatedPayload, RoomErrorPayload, PlayerConnectionPayload, MatchSummaryPayload,
+  KickPlayerPayload, BanPlayerPayload,
 } from '../shared/protocol';
 
 // ─── Configuration ───────────────────────────────────────────────────────────
@@ -43,6 +44,7 @@ export interface NetworkEventHandlers {
     hostSessionId: string;
     players: LobbyPlayer[];
     settings: GameSettings;
+    isPrivate: boolean;
   }) => void;
   onGameStateUpdate?: (data: { gameState: GameState; phase?: MatchPhase }) => void;
   onTileStart?: (data: TileStartPayload) => void;
@@ -57,6 +59,8 @@ export interface NetworkEventHandlers {
   onRoomError?: (message: string) => void;
   onRoomCreated?: (roomCode: string) => void;
   onConnectionChange?: (connected: boolean) => void;
+  onPlayerKicked?: (message: string) => void;
+  onPlayerBanned?: (message: string) => void;
 }
 
 // ─── NetworkService Singleton ────────────────────────────────────────────────
@@ -318,6 +322,18 @@ class NetworkService {
     this.room?.send(ClientMessages.REQUEST_REMATCH, {});
   }
 
+  sendTogglePrivate() {
+    this.room?.send(ClientMessages.TOGGLE_PRIVATE, {});
+  }
+
+  sendKickPlayer(sessionId: string) {
+    this.room?.send(ClientMessages.KICK_PLAYER, { sessionId } satisfies KickPlayerPayload);
+  }
+
+  sendBanPlayer(sessionId: string) {
+    this.room?.send(ClientMessages.BAN_PLAYER, { sessionId } satisfies BanPlayerPayload);
+  }
+
   // ─── Room Listeners Setup ──────────────────────────────────────────────
 
   private setupRoomListeners() {
@@ -375,6 +391,14 @@ class NetworkService {
 
     this.room.onMessage(ServerMessages.PLAYER_RECONNECTED, (data: PlayerConnectionPayload) => {
       this.handlers.onPlayerReconnected?.(data);
+    });
+
+    this.room.onMessage(ServerMessages.PLAYER_KICKED, (data: { message: string }) => {
+      this.handlers.onPlayerKicked?.(data.message);
+    });
+
+    this.room.onMessage(ServerMessages.PLAYER_BANNED, (data: { message: string }) => {
+      this.handlers.onPlayerBanned?.(data.message);
     });
 
     // Connection lifecycle

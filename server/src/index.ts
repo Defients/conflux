@@ -53,7 +53,8 @@ app.get('/api/rooms', async (_req, res) => {
     const openRooms = rooms
       .filter((r: any) => {
         const phase = r.metadata?.phase ?? 'lobby';
-        const isJoinable = phase === 'lobby' && (r.clients ?? 0) < (r.maxClients ?? 6);
+        const isPrivate = r.metadata?.isPrivate ?? false;
+        const isJoinable = phase === 'lobby' && !isPrivate && (r.clients ?? 0) < (r.maxClients ?? 6);
         const hasRoomCode = r.metadata?.roomCode;
         return isJoinable && hasRoomCode;
       })

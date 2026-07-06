@@ -17,9 +17,10 @@ interface OnlineLobbyProps {
   profile: PilotProfile;
   online: OnlineGameHook;
   onBack: () => void;
+  pendingRoomCode?: string;
 }
 
-export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBack }) => {
+export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBack, pendingRoomCode }) => {
   const [joinCode, setJoinCode] = useState('');
   const joinCodeRef = useRef<HTMLInputElement>(null);
   const [selectedChassis, setSelectedChassis] = useState<ChassisId>(
@@ -28,11 +29,15 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
   const [openRooms, setOpenRooms] = useState<OpenRoomInfo[]>([]);
   const [showBrowse, setShowBrowse] = useState(false);
   const [loadingRooms, setLoadingRooms] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [createPrivate, setCreatePrivate] = useState(false);
+  const autoJoinAttempted = useRef(false);
 
   const {
     isConnected, isReconnecting, sessionId, error, lobbyState,
     createRoom, joinRoom, leaveRoom,
     sendReady, sendStart, sendUpdateSettings,
+    sendTogglePrivate, sendKickPlayer, sendBanPlayer,
     clearError,
   } = online;
 
@@ -58,7 +63,7 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
 
   const handleCreate = async () => {
     clearError();
-    await createRoom(buildConfig());
+    await createRoom({ ...buildConfig(), isPrivate: createPrivate });
   };
 
   const handleJoin = async () => {
@@ -78,6 +83,26 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
   const handleStart = () => {
     sendStart();
   };
+
+  const handleCopyLink = useCallback(() => {
+    if (!lobbyState?.roomCode) return;
+    const url = `${window.location.origin}${window.location.pathname}?room=${lobbyState.roomCode}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    }).catch(() => {
+      setLinkCopied(false);
+    });
+  }, [lobbyState?.roomCode]);
+
+  useEffect(() => {
+    if (pendingRoomCode && !isInRoom && !autoJoinAttempted.current) {
+      autoJoinAttempted.current = true;
+      setJoinCode(pendingRoomCode.toUpperCase());
+      clearError();
+      joinRoom(pendingRoomCode.toUpperCase(), buildConfig());
+    }
+  }, [pendingRoomCode, isInRoom]);
 
   const handleBrowse = useCallback(async () => {
     setShowBrowse(s => !s);
@@ -156,11 +181,26 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
           {/* Create Room */}
           <button
             onClick={handleCreate}
-            className="w-full py-4 mb-4 bg-gradient-to-r from-hyper-green to-emerald-600 text-cosmic-blue font-black text-lg rounded-lg active:shadow-[0_0_20px_rgba(77,255,175,0.3)] sm:hover:shadow-[0_0_20px_rgba(77,255,175,0.3)] transition-all"
+            className="w-full py-4 mb-2 bg-gradient-to-r from-hyper-green to-emerald-600 text-cosmic-blue font-black text-lg rounded-lg active:shadow-[0_0_20px_rgba(77,255,175,0.3)] sm:hover:shadow-[0_0_20px_rgba(77,255,175,0.3)] transition-all"
             aria-label="Create a new online room"
           >
             CREATE ROOM
           </button>
+
+          {/* Private Room Toggle */}
+          <label className="flex items-center justify-center gap-2 mb-4 text-sm text-gray-400 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={createPrivate}
+              onChange={e => setCreatePrivate(e.target.checked)}
+              className="peer sr-only"
+              aria-label="Create a private room"
+            />
+            <span className={`relative inline-flex h-4 w-8 cursor-pointer items-center rounded-full transition-colors ${createPrivate ? 'bg-solar-orange/80' : 'bg-gray-700'}`}>
+              <span className={`pointer-events-none absolute h-3 w-3 rounded-full bg-white shadow-sm transition-transform ${createPrivate ? 'translate-x-4' : 'translate-x-[2px]'}`} />
+            </span>
+            <span className={createPrivate ? 'text-solar-orange font-bold' : ''}>🔒 Private Room</span>
+          </label>
 
           {/* Join Room */}
           <div className="flex gap-2">
@@ -236,11 +276,23 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
             <h2 className="text-lg sm:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-galaxy-cyan to-hyper-green">
               ROOM LOBBY
             </h2>
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
               <span className="text-xs text-gray-400">Code:</span>
               <span className="font-mono text-lg text-solar-orange tracking-[0.3em] font-bold">
                 {lobbyState?.roomCode}
               </span>
+              {lobbyState?.isPrivate && (
+                <span className="text-[10px] px-1.5 py-0.5 bg-solar-orange/20 text-solar-orange rounded font-bold uppercase">
+                  🔒 Private
+                </span>
+              )}
+              <button
+                onClick={handleCopyLink}
+                className="ml-1 text-xs px-2 py-1 bg-white/5 border border-white/10 rounded active:bg-white/10 sm:hover:bg-white/10 transition-colors text-gray-300"
+                aria-label="Copy share link"
+              >
+                {linkCopied ? '✓ Copied' : '🔗 Copy Link'}
+              </button>
             </div>
           </div>
           <button
@@ -309,6 +361,24 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
                       Not Ready
                     </span>
                   )}
+                  {isHost && player.sessionId !== sessionId && (
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => sendKickPlayer(player.sessionId)}
+                        className="text-[10px] px-1.5 py-0.5 bg-yellow-500/20 border border-yellow-500/30 rounded text-yellow-300 active:bg-yellow-500/30 sm:hover:bg-yellow-500/30 transition-colors"
+                        aria-label={`Kick ${player.name}`}
+                      >
+                        Kick
+                      </button>
+                      <button
+                        onClick={() => sendBanPlayer(player.sessionId)}
+                        className="text-[10px] px-1.5 py-0.5 bg-red-500/20 border border-red-500/30 rounded text-red-300 active:bg-red-500/30 sm:hover:bg-red-500/30 transition-colors"
+                        aria-label={`Ban ${player.name}`}
+                      >
+                        Ban
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -349,6 +419,19 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
                   ))}
                 </select>
               </div>
+            </div>
+            {/* Private Room Toggle */}
+            <div className="mt-3 pt-3 border-t border-white/10">
+              <button
+                onClick={() => sendTogglePrivate()}
+                className={`flex items-center gap-2 text-sm transition-colors ${lobbyState?.isPrivate ? 'text-solar-orange font-bold' : 'text-gray-400'}`}
+                aria-label="Toggle private room"
+              >
+                <span className={`relative inline-flex h-4 w-8 cursor-pointer items-center rounded-full transition-colors ${lobbyState?.isPrivate ? 'bg-solar-orange/80' : 'bg-gray-700'}`}>
+                  <span className={`pointer-events-none absolute h-3 w-3 rounded-full bg-white shadow-sm transition-transform ${lobbyState?.isPrivate ? 'translate-x-4' : 'translate-x-[2px]'}`} />
+                </span>
+                🔒 {lobbyState?.isPrivate ? 'Private Room' : 'Public Room'}
+              </button>
             </div>
           </div>
         )}

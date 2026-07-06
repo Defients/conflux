@@ -23,6 +23,7 @@ export interface OnlineLobbyState {
   hostSessionId: string;
   players: LobbyPlayer[];
   settings: GameSettings;
+  isPrivate: boolean;
 }
 
 /** Online match phase as seen by the client. */
@@ -70,6 +71,9 @@ export interface OnlineGameHook {
   sendInterventionChoice: (accept: boolean) => void;
   sendPitStopAction: (action: 'scrub' | 'tuneUp' | 'analyze' | 'recharge') => void;
   sendRequestRematch: () => void;
+  sendTogglePrivate: () => void;
+  sendKickPlayer: (sessionId: string) => void;
+  sendBanPlayer: (sessionId: string) => void;
   clearError: () => void;
 }
 
@@ -107,6 +111,7 @@ export function useOnlineGame(): OnlineGameHook {
           hostSessionId: data.hostSessionId,
           players: data.players,
           settings: data.settings,
+          isPrivate: data.isPrivate,
         });
         // Sync match phase from lobby state
         if (data.phase === 'lobby') setMatchPhase('lobby');
@@ -175,6 +180,14 @@ export function useOnlineGame(): OnlineGameHook {
 
       onPlayerReconnected: (data) => {
         console.log(`[useOnlineGame] Player reconnected: ${data.sessionId}`);
+      },
+
+      onPlayerKicked: (message) => {
+        setError(message);
+      },
+
+      onPlayerBanned: (message) => {
+        setError(message);
       },
     };
 
@@ -259,6 +272,9 @@ export function useOnlineGame(): OnlineGameHook {
     sendInterventionChoice: networkService.sendInterventionChoice.bind(networkService),
     sendPitStopAction: networkService.sendPitStopAction.bind(networkService),
     sendRequestRematch: networkService.sendRequestRematch.bind(networkService),
+    sendTogglePrivate: networkService.sendTogglePrivate.bind(networkService),
+    sendKickPlayer: networkService.sendKickPlayer.bind(networkService),
+    sendBanPlayer: networkService.sendBanPlayer.bind(networkService),
     clearError,
   };
 }

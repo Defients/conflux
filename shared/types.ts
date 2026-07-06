@@ -312,6 +312,7 @@ export interface RoomConfig {
   avatarId: string;
   chassisId: ChassisId;
   userId?: string;
+  isPrivate?: boolean;
 }
 
 /** Lobby-visible player entry (before match starts). */
@@ -352,6 +353,7 @@ export interface RoomStateSummary {
   hostSessionId: string;
   players: LobbyPlayer[];
   settings: GameSettings;
+  isPrivate: boolean;
   /** Set once match begins. */
   gameState?: GameState;
 }

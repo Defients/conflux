@@ -91,4 +91,7 @@ export const RATE_LIMITS = {
   [ClientMessages.UPDATE_SETTINGS]: { burst: 10, refill: 5 },
   [ClientMessages.START]: { burst: 3, refill: 1 },
   [ClientMessages.REQUEST_REMATCH]: { burst: 3, refill: 1 },
+  [ClientMessages.TOGGLE_PRIVATE]: { burst: 5, refill: 2 },
+  [ClientMessages.KICK_PLAYER]: { burst: 5, refill: 2 },
+  [ClientMessages.BAN_PLAYER]: { burst: 5, refill: 2 },
 } as const;

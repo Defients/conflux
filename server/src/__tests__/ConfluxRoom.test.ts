@@ -38,6 +38,9 @@ function createMockRoom() {
     pendingPitStops: new Set(),
     tileStartTimestamp: 0,
     tileDurationMs: 0,
+    isPrivate: false,
+    bannedUserIds: new Set(),
+    bannedSessionIds: new Set(),
   };
   (room as any).resultTimeout = null;
   (room as any).nextPlayerId = 1;
@@ -66,6 +69,9 @@ function createMockRoom() {
   (room as any).onMessage = vi.fn((type: string, handler: any) => {
     (room as any)._messageHandlers.set(type, handler);
   });
+
+  // Mock clients array for kick/ban tests
+  (room as any).clients = [];
 
   // Call onCreate
   room.onCreate({});
@@ -250,6 +256,87 @@ describe('ConfluxRoom', () => {
   describe('room code generation', () => {
     it('generates a 4-character room code', () => {
       expect(room.roomState.roomCode).toHaveLength(4);
+    });
+  });
+
+  describe('handleTogglePrivate', () => {
+    it('toggles isPrivate when called by host', () => {
+      room.onJoin(client1, makeRoomConfig());
+      expect(room.roomState.isPrivate).toBe(false);
+      const handler = room._messageHandlers.get(ClientMessages.TOGGLE_PRIVATE);
+      handler(client1, {});
+      expect(room.roomState.isPrivate).toBe(true);
+    });
+
+    it('rejects toggle from non-host', () => {
+      room.onJoin(client1, makeRoomConfig());
+      room.onJoin(client2, makeRoomConfig({ playerName: 'P2' }));
+      const handler = room._messageHandlers.get(ClientMessages.TOGGLE_PRIVATE);
+      handler(client2, {});
+      expect(room.roomState.isPrivate).toBe(false);
+      expect(client2.sentMessages).toContainEqual({
+        type: ServerMessages.ROOM_ERROR,
+        data: { message: 'Only the host can toggle private mode.' },
+      });
+    });
+  });
+
+  describe('handleKickPlayer', () => {
+    it('removes player from room when host kicks', () => {
+      room.onJoin(client1, makeRoomConfig());
+      room.onJoin(client2, makeRoomConfig({ playerName: 'P2' }));
+      const handler = room._messageHandlers.get(ClientMessages.KICK_PLAYER);
+      handler(client1, { sessionId: 'session-2' });
+      expect(room.roomState.players.size).toBe(1);
+      expect(room.roomState.players.has('session-2')).toBe(false);
+    });
+
+    it('rejects kick from non-host', () => {
+      room.onJoin(client1, makeRoomConfig());
+      room.onJoin(client2, makeRoomConfig({ playerName: 'P2' }));
+      const handler = room._messageHandlers.get(ClientMessages.KICK_PLAYER);
+      handler(client2, { sessionId: 'session-1' });
+      expect(room.roomState.players.size).toBe(2);
+    });
+
+    it('prevents host from kicking self', () => {
+      room.onJoin(client1, makeRoomConfig());
+      const handler = room._messageHandlers.get(ClientMessages.KICK_PLAYER);
+      handler(client1, { sessionId: 'session-1' });
+      expect(room.roomState.players.size).toBe(1);
+      expect(client1.sentMessages).toContainEqual({
+        type: ServerMessages.ROOM_ERROR,
+        data: { message: 'You cannot kick yourself.' },
+      });
+    });
+  });
+
+  describe('handleBanPlayer', () => {
+    it('bans player and prevents rejoin by sessionId', () => {
+      room.onJoin(client1, makeRoomConfig());
+      room.onJoin(client2, makeRoomConfig({ playerName: 'P2' }));
+      const handler = room._messageHandlers.get(ClientMessages.BAN_PLAYER);
+      handler(client1, { sessionId: 'session-2' });
+      expect(room.roomState.players.size).toBe(1);
+      expect(room.roomState.bannedSessionIds.has('session-2')).toBe(true);
+      // Attempt rejoin
+      expect(() => room.onJoin(client2, makeRoomConfig({ playerName: 'P2' }))).toThrow('You are banned from this room.');
+    });
+
+    it('bans player by userId and prevents rejoin', () => {
+      room.onJoin(client1, makeRoomConfig());
+      room.onJoin(client2, makeRoomConfig({ playerName: 'P2', userId: 'user-2' }));
+      const handler = room._messageHandlers.get(ClientMessages.BAN_PLAYER);
+      handler(client1, { sessionId: 'session-2' });
+      expect(room.roomState.bannedUserIds.has('user-2')).toBe(true);
+    });
+
+    it('rejects ban from non-host', () => {
+      room.onJoin(client1, makeRoomConfig());
+      room.onJoin(client2, makeRoomConfig({ playerName: 'P2' }));
+      const handler = room._messageHandlers.get(ClientMessages.BAN_PLAYER);
+      handler(client2, { sessionId: 'session-1' });
+      expect(room.roomState.players.size).toBe(2);
     });
   });
 });
