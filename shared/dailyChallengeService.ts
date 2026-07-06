@@ -1,5 +1,5 @@
-import { EventPreset } from "../types";
-import { WEEKLY_CUP_PRESETS } from "../constants";
+import { EventPreset } from "./types";
+import { WEEKLY_CUP_PRESETS } from "./constants";
 import { SeededRNG } from "./seededRNG";
 
 export const getDailySeed = (): string => {
