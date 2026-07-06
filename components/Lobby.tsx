@@ -398,7 +398,28 @@ export const Lobby: React.FC<LobbyProps> = ({ profile, setProfile, onStartGame, 
                     </div>
 
                     {/* Launch Controls */}
-                    <div className="mt-auto grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 launch-grid">
+                    <div className="mt-auto space-y-3">
+                        {/* Online Multiplayer — Hero Button */}
+                        <button
+                            onClick={() => { playSound('ui-click'); onGoToOnline?.(); }}
+                            className="w-full py-5 sm:py-6 rounded-xl relative overflow-hidden group transition-all active:scale-[0.98] sm:hover:scale-[1.01]"
+                            aria-label="Online Multiplayer — Play with friends in real-time"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-galaxy-cyan via-hyper-green to-galaxy-cyan bg-[length:200%_100%] animate-[gradientShift_3s_ease-in-out_infinite]"></div>
+                            <div className="absolute inset-0 shadow-[0_0_30px_rgba(0,212,255,0.3)] group-hover:shadow-[0_0_40px_rgba(77,255,175,0.5)] transition-shadow"></div>
+                            <div className="relative z-10 flex items-center justify-center gap-3">
+                                <div className="text-left">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-lg sm:text-xl font-black text-cosmic-blue tracking-wider uppercase">🌐 Online Multiplayer</span>
+                                        <span className="px-2 py-0.5 bg-red-500 text-white text-[10px] font-black uppercase rounded animate-pulse">LIVE</span>
+                                    </div>
+                                    <div className="text-xs sm:text-sm text-cosmic-blue/80 font-semibold mt-0.5">Race against friends in real-time</div>
+                                </div>
+                            </div>
+                        </button>
+
+                        {/* Secondary Launch Grid (3 buttons) */}
+                        <div className="grid grid-cols-3 gap-2 sm:gap-3">
                          <button onClick={handleStartDailyChallenge} className="p-2 sm:p-3 bg-gradient-to-b from-[#ff6a00] to-[#c73800] rounded-xl active:opacity-80 sm:hover:opacity-90 transition-all shadow-lg relative overflow-hidden group flex flex-col items-center justify-center aspect-square text-center border-t border-white/20" aria-label="Start Daily Challenge">
                             <div className="absolute inset-0 scanline-overlay opacity-40"></div>
                             <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 hidden sm:block"></div>
@@ -417,13 +438,8 @@ export const Lobby: React.FC<LobbyProps> = ({ profile, setProfile, onStartGame, 
                             <div className="text-[10px] sm:text-xs font-black text-white/80 uppercase tracking-widest mb-1 z-10">Solo</div>
                             <div className="text-[13px] sm:text-sm md:text-base lg:text-lg font-bold text-white z-10 leading-tight">Gauntlet</div>
                         </button>
-                         <button onClick={() => { playSound('ui-click'); onGoToOnline?.(); }} className="p-2 sm:p-3 bg-gradient-to-b from-[#00d4ff] to-[#0052cc] rounded-xl active:opacity-80 sm:hover:opacity-90 transition-all shadow-lg relative overflow-hidden group flex flex-col items-center justify-center aspect-square text-center border-t border-white/20" aria-label="Online Multiplayer">
-                            <div className="absolute inset-0 scanline-overlay opacity-40"></div>
-                            <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 hidden sm:block"></div>
-                            <div className="text-[10px] sm:text-xs font-black text-white/80 uppercase tracking-widest mb-1 z-10">Online</div>
-                            <div className="text-[11px] sm:text-xs md:text-sm lg:text-base xl:text-lg font-bold text-white leading-tight z-10 px-1">Multiplayer</div>
-                        </button>
-                        <button onClick={handleStartClick} className="col-span-2 sm:col-span-4 launch-full py-4 sm:py-5 bg-gradient-to-r from-hyper-green to-emerald-600 text-cosmic-blue font-black text-xl sm:text-2xl rounded-xl active:shadow-[0_0_30px_rgba(77,255,175,0.4)] sm:hover:shadow-[0_0_30px_rgba(77,255,175,0.4)] transition-all tracking-widest mt-2" aria-label="Initialize Race Run">
+                        </div>
+                        <button onClick={handleStartClick} className="w-full py-4 sm:py-5 bg-gradient-to-r from-hyper-green to-emerald-600 text-cosmic-blue font-black text-xl sm:text-2xl rounded-xl active:shadow-[0_0_30px_rgba(77,255,175,0.4)] sm:hover:shadow-[0_0_30px_rgba(77,255,175,0.4)] transition-all tracking-widest" aria-label="Initialize Race Run">
                           INITIALIZE RUN
                         </button>
                     </div>

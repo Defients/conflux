@@ -28,6 +28,7 @@ import { AccoladesScreen } from './components/AccoladesScreen';
 import { LeaderboardScreen } from './components/LeaderboardScreen';
 import { MatchHistoryScreen } from './components/MatchHistoryScreen';
 import { RivalTauntOverlay } from './components/RivalTauntOverlay';
+import { WelcomePopup, hasSeenWelcome } from './components/WelcomePopup';
 import { generateContracts } from './shared/contractService';
 import { getDailySeed, getDailyPersonalBest, saveDailyPersonalBest } from './shared/dailyChallengeService';
 import { Contract } from './types';
@@ -70,6 +71,7 @@ const App: React.FC = () => {
   const [activeContracts, setActiveContracts] = useState<Contract[]>([]);
   const [matchSummary, setMatchSummary] = useState<MatchSummary | null>(null);
   const [savedProfiles, setSavedProfiles] = useState(() => listProfiles());
+  const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
     // Accessibility and settings listeners
@@ -321,6 +323,15 @@ const App: React.FC = () => {
     setScreen('ONLINE_LOBBY' as AppScreen);
   }, [onlineGame]);
 
+  const handleWelcomeClose = useCallback(() => {
+    setShowWelcome(false);
+  }, []);
+
+  const handleWelcomeGoOnline = useCallback(() => {
+    setShowWelcome(false);
+    handleGoToOnline();
+  }, [handleGoToOnline]);
+
   // ─── Online match phase → screen transitions ────────────────────────
   useEffect(() => {
     if (!isOnline) return;
@@ -489,11 +500,21 @@ const App: React.FC = () => {
     onlineGame.sendInterventionChoice(accept);
   }, [onlineGame]);
 
+  useEffect(() => {
+    if (profile && !hasSeenWelcome()) {
+      const timer = setTimeout(() => setShowWelcome(true), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [profile]);
+
   return (
     <div className={`w-full min-h-screen bg-cosmic-blue text-gray-200 transition-transform duration-500 ${isShaking ? 'animate-shake' : ''}`} role="application" aria-label="Conflux Circuit Game">
         <main id="main-content" className="w-full min-h-screen">
         {renderScreen()}
         </main>
+        {showWelcome && profile && (
+            <WelcomePopup onClose={handleWelcomeClose} onGoOnline={handleWelcomeGoOnline} />
+        )}
         {showCountdown && activeGameState && upcomingEvent && (
             <Countdown
                 tileNumber={activeGameState.currentTileIndex + 1}

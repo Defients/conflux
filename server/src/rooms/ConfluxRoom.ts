@@ -126,8 +126,8 @@ export class ConfluxRoom extends Room {
     // Allow reconnection
     this.autoDispose = false;
 
-    // Expose room code in metadata so clients can discover via getAvailableRooms
-    this.setMetadata({ roomCode: this.roomState.roomCode });
+    // Expose room code and phase in metadata so clients can discover via getAvailableRooms
+    this.setMetadata({ roomCode: this.roomState.roomCode, phase: 'lobby' });
 
     console.log(`[Room ${this.roomState.roomCode}] Created`);
 

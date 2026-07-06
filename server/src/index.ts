@@ -51,7 +51,12 @@ app.get('/api/rooms', async (_req, res) => {
   try {
     const rooms = await matchMaker.query({ name: 'conflux_match' });
     const openRooms = rooms
-      .filter((r: any) => r.metadata?.phase === 'lobby' || (!r.metadata?.phase && r.clients < r.maxClients))
+      .filter((r: any) => {
+        const phase = r.metadata?.phase ?? 'lobby';
+        const isJoinable = phase === 'lobby' && (r.clients ?? 0) < (r.maxClients ?? 6);
+        const hasRoomCode = r.metadata?.roomCode;
+        return isJoinable && hasRoomCode;
+      })
       .map((r: any) => ({
         roomId: r.roomId,
         roomCode: r.metadata?.roomCode ?? '',

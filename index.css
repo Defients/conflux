@@ -425,3 +425,23 @@ button:focus-visible,
     padding-top: env(viewport-segment-top 0 1, 0.5rem);
   }
 }
+
+/* ─── Keyframe Animations ──────────────────────────────────────────────── */
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes popupScale {
+  0% { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
