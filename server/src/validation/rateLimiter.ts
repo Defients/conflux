@@ -4,6 +4,7 @@
  * Token-bucket rate limiter for per-client message throttling.
  * Allows bursts up to `burstSize` messages, then refills at `refillRate` tokens/sec.
  */
+import { ClientMessages } from '../../../shared/protocol';
 
 export class TokenBucket {
   private tokens: number;
@@ -91,6 +92,3 @@ export const RATE_LIMITS = {
   [ClientMessages.START]: { burst: 3, refill: 1 },
   [ClientMessages.REQUEST_REMATCH]: { burst: 3, refill: 1 },
 } as const;
-
-// Import here to avoid circular dependency issues
-import { ClientMessages } from '../../../shared/protocol';
