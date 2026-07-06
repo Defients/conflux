@@ -6,6 +6,8 @@
  */
 import { ClientMessages } from '../../../shared/protocol';
 
+import { ClientMessages } from '../../../shared/protocol';
+
 export class TokenBucket {
   private tokens: number;
   private lastRefillTime: number;
