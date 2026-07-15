@@ -464,13 +464,15 @@ class NetworkService {
   // v5.0: Ping/pong for RTT measurement
   private startPing() {
     if (this._pingInterval) clearInterval(this._pingInterval);
-    this._pingInterval = setInterval(() => {
-      // Send ping to whichever room is active (queue or gameplay).
+    // Send an immediate ping so RTT is measured right away, not after 5s.
+    const sendPing = () => {
       const activeRoom = this._queueRoom ?? this.room;
       if (!activeRoom) return;
       this._lastPingTime = Date.now();
       activeRoom.send(ClientMessages.PING, {});
-    }, 5000);
+    };
+    sendPing();
+    this._pingInterval = setInterval(sendPing, 5000);
   }
 
   private stopPing() {

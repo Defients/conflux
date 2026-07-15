@@ -111,7 +111,7 @@ export function useOnlineGame(): OnlineGameHook {
   // v5.0 state
   const [queueState, setQueueState] = useState<{ queueSize: number; message: string } | null>(null);
   const [isQueuing, setIsQueuing] = useState(false);
-  const [connectionQuality, setConnectionQuality] = useState<ConnectionQuality>('critical');
+  const [connectionQuality, setConnectionQuality] = useState<ConnectionQuality>('good');
   const [rttMs, setRttMs] = useState(0);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const [isSpectator, setIsSpectator] = useState(false);

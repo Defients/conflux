@@ -2,7 +2,7 @@
 # Docs: https://render.com/docs/blueprint-spec
 services:
   - type: web
-    name: conflux-circuit-server
+    name: conflux-op8v
     runtime: node
     rootDir: server
     plan: free

@@ -342,29 +342,29 @@ export class ConfluxRoom extends Room {
         player.reconnectAttempts = attempts;
         if (attempts > MAX_RECONNECT_ATTEMPTS_V5) {
           this.handlePlayerAbandoned(client.sessionId);
-          return;
-        }
-        try {
-          // Wait for reconnection (v5.0: extended grace period)
-          await this.allowReconnection(client, RECONNECT_GRACE_PERIOD_V5_MS / 1000);
+        } else {
+          try {
+            // Wait for reconnection (v5.0: extended grace period)
+            await this.allowReconnection(client, RECONNECT_GRACE_PERIOD_V5_MS / 1000);
 
-          // Reconnected!
-          player.isConnected = true;
-          console.log(`[Room ${this.roomState.roomCode}] ${player.name} reconnected`);
+            // Reconnected!
+            player.isConnected = true;
+            console.log(`[Room ${this.roomState.roomCode}] ${player.name} reconnected`);
 
-          this.broadcast(ServerMessages.PLAYER_RECONNECTED, {
-            sessionId: client.sessionId,
-            playerName: player.name,
-          });
+            this.broadcast(ServerMessages.PLAYER_RECONNECTED, {
+              sessionId: client.sessionId,
+              playerName: player.name,
+            });
 
-          // Send current game state to reconnected client
-          if (this.roomState.gameState) {
-            this.sendGameStateToClient(client);
+            // Send current game state to reconnected client
+            if (this.roomState.gameState) {
+              this.sendGameStateToClient(client);
+            }
+          } catch {
+            // Reconnection timed out - mark as abandoned
+            console.log(`[Room ${this.roomState.roomCode}] ${player.name} abandoned (reconnect timeout)`);
+            this.handlePlayerAbandoned(client.sessionId);
           }
-        } catch {
-          // Reconnection timed out - mark as abandoned
-          console.log(`[Room ${this.roomState.roomCode}] ${player.name} abandoned (reconnect timeout)`);
-          this.handlePlayerAbandoned(client.sessionId);
         }
       } else {
         this.handlePlayerAbandoned(client.sessionId);
@@ -373,7 +373,6 @@ export class ConfluxRoom extends Room {
 
     // Auto-dispose if empty (no players and no spectators)
     if (this.roomState.players.size === 0 && this.spectatorIds.size === 0) {
-      this.rateLimiter.removeClient(client.sessionId);
       this.disconnect();
     }
   }
@@ -1189,6 +1188,10 @@ export class ConfluxRoom extends Room {
         gamePlayer.isConnected = false;
       }
     }
+
+    // Remove the player from the room so empty-room detection works
+    this.roomState.players.delete(sessionId);
+    this.rateLimiter.removeClient(sessionId);
 
     // If we're waiting for their result, submit a 0-star default
     if (this.roomState.phase === 'playing') {

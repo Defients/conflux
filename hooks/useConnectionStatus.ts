@@ -10,7 +10,7 @@ import { networkService } from '../services/networkService';
 import { ConnectionQuality } from '../shared/types';
 
 export function useConnectionStatus() {
-  const [quality, setQuality] = useState<ConnectionQuality>('critical');
+  const [quality, setQuality] = useState<ConnectionQuality>('good');
   const [rttMs, setRttMs] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
 

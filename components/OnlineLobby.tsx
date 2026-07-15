@@ -13,8 +13,6 @@ import { OnlineGameHook } from '../hooks/useOnlineGame';
 import { auth } from '../services/firebase';
 import { networkService, OpenRoomInfo } from '../services/networkService';
 import { RankBadge } from './RankBadge';
-import { ConnectionIndicator } from './ConnectionIndicator';
-import { useConnectionStatus } from '../hooks/useConnectionStatus';
 
 interface OnlineLobbyProps {
   profile: PilotProfile;
@@ -35,7 +33,6 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
   const [linkCopied, setLinkCopied] = useState(false);
   const [createPrivate, setCreatePrivate] = useState(false);
   const autoJoinAttempted = useRef(false);
-  const connectionStatus = useConnectionStatus();
 
   const {
     isConnected, isReconnecting, sessionId, error, lobbyState,
@@ -387,14 +384,6 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
             Leave
           </button>
         </div>
-
-        {/* v5.0: Connection quality indicator */}
-        {isConnected && (
-          <div className="mb-3 flex items-center gap-2 text-xs text-gray-400">
-            <ConnectionIndicator quality={connectionStatus.quality} rttMs={connectionStatus.rttMs} isConnected={connectionStatus.isConnected} showLabel />
-            <span>· {connectionStatus.quality}</span>
-          </div>
-        )}
 
         {error && (
           <div className="mb-4 p-3 bg-red-500/20 border border-red-500/40 rounded text-sm text-red-300" role="alert">
