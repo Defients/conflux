@@ -54,7 +54,38 @@
 - [x] App.tsx: sound effect on `tile_results` in online mode (looks up human player by `connectionId`)
 
 ## Remaining — Phase 2 (Integration Polish)
-- [ ] Online mode end-to-end test (start server + client, create room, play through)
+- [x] Online mode end-to-end test (start server + client, create room, play through)
+
+## Phase 5 — Production Readiness & Polish (Complete)
+- [x] Extracted Express app into `createExpressApp.ts` for testability
+- [x] REST API tests: health, diagnostics, rooms, queue status, 404 (5 tests)
+- [x] Removed dead code: unused `onReportResult` prop and `handleTournamentReportResult` callback
+- [x] Added `server/.env.example` with all env vars documented
+
+## Phase 4 — Tournament Flow & Test Coverage (Complete)
+- [x] Wire RACE_FINISHED → reportTournamentResult so match results flow back to TournamentRoom
+- [x] App.tsx tracks tournamentMatchId, determines win/loss from finalStandings, reports to server
+- [x] Auto-return to tournament screen after match concludes
+- [x] TournamentRoom.advanceRound broadcasts TOURNAMENT_CHAMPION when champion is set
+- [x] Cleaned up TournamentScreen — removed redundant state (now handled at App level)
+- [x] TournamentRoom server integration test: 4 clients → bracket → report → champion
+- [x] Ghost race Firestore service tests: graceful degradation + type validation
+- [x] Extended vitest include pattern for services/**/*.test.ts
+
+## Phase 2+3 — Game Modes & Content Expansion (Complete)
+- [x] Ghost Race mode: fetch ghost runs from Firestore, race against recorded performances, submit results
+- [x] Tournament mode: connect to TournamentRoom, populate bracket, join matches, report results, advance bracket
+- [x] 3 new power-ups: Overcharge (+2 energy), Sludge (slow all opponents), Reflector (debuff immunity)
+- [x] 4 new accolades: GhostHunter, TournamentChampion, ComebackKing, PowerPlayer
+- [x] 2 new tile modifiers: ICE_PATCH (harder 3★ + bonus movement), NEBULA_DRIFT (random event replacement)
+- [x] Tournament result reporting: REPORT_TOURNAMENT_RESULT protocol message, TournamentRoom handler
+- [x] TournamentChampion accolade awarded when champion is crowned
+- [x] GhostHunter accolade awarded when winning a ghost race
+- [x] powerUpsUsed counter on Player, incremented on each power-up activation
+- [x] POWER_SURGE and pit stop tuneUp award from expanded power-up pool
+- [x] Bot AI handles new power-ups (Overcharge self-buff, Reflector defensive)
+- [x] 23 new tests for power-ups, accolades, tile modifiers, and types
+- [x] CI pipeline verified (colyseus.js already in server devDependencies)
 
 ## Phase 5 — Enhancement-First Polish (Complete)
 - [x] **BUGFIX**: EventRunner `isEventOver` reset between tiles — was stuck `true` after first tile, blocking all subsequent events

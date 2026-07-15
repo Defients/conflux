@@ -18,14 +18,16 @@ import {
   TileStartPayload, TileResultsPayload, RaceFinishedPayload,
   RoomCreatedPayload, RoomErrorPayload, PlayerConnectionPayload, MatchSummaryPayload,
   KickPlayerPayload, BanPlayerPayload,
+  MatchFoundPayload,
 } from '../shared/protocol';
 import { ConnectionQuality } from '../shared/types';
+import { RoomNames } from '../shared/protocol';
 
 // ─── Configuration ───────────────────────────────────────────────────────────
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'ws://localhost:2567';
 const HTTP_SERVER_URL = SERVER_URL.replace(/^wss:/, 'https:').replace(/^ws:/, 'http:');
-const ROOM_NAME = 'conflux_match';
+const ROOM_NAME = RoomNames.MATCH;
 const RECONNECT_TOKEN_KEY = 'conflux-reconnect-token';
 
 export interface OpenRoomInfo {
@@ -65,10 +67,11 @@ export interface NetworkEventHandlers {
   // v5.0 handlers
   onStartCountdown?: (data: { durationMs: number; tileIndex: number }) => void;
   onQueueStatus?: (data: { queueSize: number; message: string }) => void;
-  onMatchFound?: (data: { roomCode: string; message: string }) => void;
+  onMatchFound?: (data: MatchFoundPayload) => void;
   onQueueTimeout?: (data: { message: string }) => void;
   onTournamentUpdate?: (data: { bracket: unknown }) => void;
   onTournamentMatchReady?: (data: { matchId: string; roomCode: string; message: string }) => void;
+  onTournamentChampion?: (data: { championId: string; championName: string }) => void;
   onSpectatorMode?: (data: { roomCode: string }) => void;
   onConnectionQualityChange?: (quality: ConnectionQuality) => void;
 }
@@ -89,6 +92,8 @@ class NetworkService {
   private static readonly BASE_RECONNECT_DELAY_MS = 1000;
   // v5.0: RTT tracking
   private _rttMs: number = 0;
+  private _hasRtt: boolean = false;
+  private _tournamentRoom: Room | null = null;
   private _pingInterval: ReturnType<typeof setInterval> | null = null;
   private _lastPingTime: number = 0;
   // v5.0: Cached telemetry for reconnect resilience
@@ -120,7 +125,8 @@ class NetworkService {
   // v5.0: Connection quality derived from RTT
   get connectionQuality(): ConnectionQuality {
     if (!this._isConnected) return 'critical';
-    if (this._rttMs === 0 || this._rttMs < 50) return 'excellent';
+    if (!this._hasRtt) return 'good'; // Connected but no pong yet — don't claim excellent
+    if (this._rttMs < 50) return 'excellent';
     if (this._rttMs < 150) return 'good';
     if (this._rttMs < 300) return 'poor';
     return 'critical';
@@ -264,6 +270,8 @@ class NetworkService {
       this.room = null;
       this._sessionId = null;
       this._isConnected = false;
+      this._hasRtt = false;
+      this._rttMs = 0;
       this.clearReconnectData();
       this.handlers.onConnectionChange?.(false);
     }
@@ -382,26 +390,26 @@ class NetworkService {
 
   async joinQueue(config: RoomConfig, queueType: 'ranked' | 'unranked' = 'unranked'): Promise<void> {
     const client = this.ensureClient();
-    const queueRoomName = queueType === 'ranked' ? 'conflux_queue_ranked' : 'conflux_queue_unranked';
+    const queueRoomName = queueType === 'ranked' ? RoomNames.QUEUE_RANKED : RoomNames.QUEUE_UNRANKED;
     try {
-      this._queueRoom = await client.joinById(queueRoomName, config);
+      // joinOrCreate ensures all players land in the SAME shared queue instance.
+      // This was previously joinById (which expects a room ID, not a name) followed
+      // by client.create (which spawned an isolated queue per player).
+      this._queueRoom = await client.joinOrCreate(queueRoomName, config);
       this.setupQueueListeners();
-    } catch {
-      // No existing queue room, create one
-      try {
-        this._queueRoom = await client.create(queueRoomName, config);
-        this.setupQueueListeners();
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to join queue';
-        this.handlers.onRoomError?.(message);
-        throw err;
-      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to join queue';
+      this.handlers.onRoomError?.(message);
+      throw err;
     }
   }
 
   async leaveQueue(): Promise<void> {
+    this.stopPing();
     if (this._queueRoom) {
       try {
+        // Send explicit leave-queue message so the server removes us synchronously.
+        this._queueRoom.send(ClientMessages.LEAVE_QUEUE, {});
         await this._queueRoom.leave(true);
       } catch {
         // Queue room may already be disposed
@@ -412,16 +420,44 @@ class NetworkService {
 
   private setupQueueListeners() {
     if (!this._queueRoom) return;
-    this._queueRoom.onMessage(ServerMessages.QUEUE_STATUS, (data: { queueSize: number; message: string }) => {
+
+    // Start RTT measurement while in queue.
+    this.startPing();
+
+    this._queueRoom.onMessage(ServerMessages.QUEUE_STATUS, (data: { queueSize: number; message: string; position?: number }) => {
       this.handlers.onQueueStatus?.(data);
     });
-    this._queueRoom.onMessage(ServerMessages.MATCH_FOUND, (data: { roomCode: string; message: string }) => {
+    this._queueRoom.onMessage(ServerMessages.MATCH_FOUND, async (data: MatchFoundPayload) => {
       this.handlers.onMatchFound?.(data);
-      // Auto-leave queue when match found
-      this.leaveQueue().catch(() => {});
+      // Leave the queue room now that we have a seat reservation.
+      try { await this._queueRoom?.leave(true); } catch { /* queue may already be disposed */ }
+      this._queueRoom = null;
+      // Consume the seat reservation to join the actual gameplay room.
+      if (data.reservation) {
+        try {
+          this.room = await this.ensureClient().consumeSeatReservation(data.reservation as any);
+          this.setupRoomListeners();
+          this.saveReconnectData();
+          this._sessionId = this.room.sessionId;
+          this._isConnected = true;
+          this.handlers.onConnectionChange?.(true);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Failed to join match room';
+          this.handlers.onRoomError?.(message);
+        }
+      }
     });
     this._queueRoom.onMessage(ServerMessages.QUEUE_TIMEOUT, (data: { message: string }) => {
       this.handlers.onQueueTimeout?.(data);
+    });
+    // v5.1: Ping/pong for latency measurement while in queue.
+    this._queueRoom.onMessage(ServerMessages.PONG, () => {
+      if (this._lastPingTime > 0) {
+        const newRtt = Date.now() - this._lastPingTime;
+        this._rttMs = this._rttMs === 0 ? newRtt : Math.round(this._rttMs * 0.7 + newRtt * 0.3);
+        this._hasRtt = true;
+        this.handlers.onConnectionQualityChange?.(this.connectionQuality);
+      }
     });
   }
 
@@ -429,9 +465,11 @@ class NetworkService {
   private startPing() {
     if (this._pingInterval) clearInterval(this._pingInterval);
     this._pingInterval = setInterval(() => {
-      if (!this.room) return;
+      // Send ping to whichever room is active (queue or gameplay).
+      const activeRoom = this._queueRoom ?? this.room;
+      if (!activeRoom) return;
       this._lastPingTime = Date.now();
-      this.room.send('ping', {});
+      activeRoom.send(ClientMessages.PING, {});
     }, 5000);
   }
 
@@ -506,12 +544,13 @@ class NetworkService {
       this.handlers.onSpectatorMode?.(data);
     });
 
-    // v5.0: Pong for RTT measurement
-    this.room.onMessage('pong', () => {
+    // v5.1: Pong for RTT measurement (uses typed message constant)
+    this.room.onMessage(ServerMessages.PONG, () => {
       if (this._lastPingTime > 0) {
         const newRtt = Date.now() - this._lastPingTime;
         // Smooth RTT with exponential moving average
         this._rttMs = this._rttMs === 0 ? newRtt : Math.round(this._rttMs * 0.7 + newRtt * 0.3);
+        this._hasRtt = true;
         this.handlers.onConnectionQualityChange?.(this.connectionQuality);
       }
     });
@@ -536,6 +575,8 @@ class NetworkService {
     this.room.onLeave((code) => {
       console.log(`[Network] Left room (code: ${code})`);
       this._isConnected = false;
+      this._hasRtt = false;
+      this._rttMs = 0;
       this._lastSubmittedTileIndex = -1;
       this.stopPing();
       this.handlers.onConnectionChange?.(false);
@@ -625,6 +666,49 @@ class NetworkService {
       this.handlers.onRoomError?.(message);
       throw err;
     }
+  }
+
+  // ─── Tournament ──────────────────────────────────────────────────────────
+
+  async joinTournament(config: RoomConfig, size: 4 | 8 | 16 = 4): Promise<void> {
+    const client = this.ensureClient();
+    try {
+      this._tournamentRoom = await client.joinOrCreate(RoomNames.TOURNAMENT, { ...config, size });
+      this._tournamentRoom.onMessage(ServerMessages.TOURNAMENT_UPDATE, (data) => {
+        this.handlers.onTournamentUpdate?.(data);
+      });
+      this._tournamentRoom.onMessage(ServerMessages.TOURNAMENT_MATCH_READY, (data) => {
+        this.handlers.onTournamentMatchReady?.(data);
+      });
+      this._tournamentRoom.onMessage(ServerMessages.TOURNAMENT_CHAMPION, (data) => {
+        this.handlers.onTournamentChampion?.(data);
+      });
+      this._tournamentRoom.onMessage(ServerMessages.ROOM_ERROR, (data) => {
+        this.handlers.onRoomError?.(data.message);
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to join tournament';
+      this.handlers.onRoomError?.(message);
+      throw err;
+    }
+  }
+
+  async leaveTournament(): Promise<void> {
+    if (!this._tournamentRoom) return;
+    try {
+      this._tournamentRoom.send(ClientMessages.LEAVE_TOURNAMENT, {});
+      await this._tournamentRoom.leave(true);
+    } catch { /* may already be disposed */ }
+    this._tournamentRoom = null;
+  }
+
+  reportTournamentResult(matchId: string, won: boolean): void {
+    if (!this._tournamentRoom) return;
+    this._tournamentRoom.send(ClientMessages.REPORT_TOURNAMENT_RESULT, { matchId, won });
+  }
+
+  get tournamentRoom(): Room | null {
+    return this._tournamentRoom;
   }
 }
 

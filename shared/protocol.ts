@@ -131,6 +131,54 @@ export interface MatchSummaryPayload {
   summary: MatchSummary;
 }
 
+// ─── Matchmaking Payloads (v5.1) ─────────────────────────────────────────────
+
+/**
+ * Sent by the queue room when a match is created. Carries a Colyseus seat
+ * reservation so the client can deterministically join the *same* gameplay
+ * room via `client.consumeSeatReservation(reservation)`.
+ */
+export interface MatchFoundPayload {
+  /** Colyseus SeatReservation ({ room, sessionId }). Opaque to app code. */
+  reservation: unknown;
+  /** Generated gameplay room id (for diagnostics/logging). */
+  roomId: string;
+  queueType: 'ranked' | 'unranked';
+  message: string;
+}
+
+export interface QueueStatusPayload {
+  queueSize: number;
+  /** 1-based position of this client in the queue (if known). */
+  position?: number;
+  /** Estimated seconds until a match, if computable. */
+  estimatedWaitSec?: number;
+  message: string;
+}
+
+export interface QueueTimeoutPayload {
+  message: string;
+}
+
+// ─── Room Registration Names (shared client/server contract) ─────────────────
+
+export const RoomNames = {
+  MATCH: 'conflux_match',
+  QUEUE_RANKED: 'conflux_queue_ranked',
+  QUEUE_UNRANKED: 'conflux_queue_unranked',
+  TOURNAMENT: 'conflux_tournament',
+} as const;
+
+export type RoomName = typeof RoomNames[keyof typeof RoomNames];
+
+/** Public room types registered by the server, for diagnostics parity checks. */
+export const REGISTERED_ROOM_NAMES: RoomName[] = [
+  RoomNames.MATCH,
+  RoomNames.QUEUE_RANKED,
+  RoomNames.QUEUE_UNRANKED,
+  RoomNames.TOURNAMENT,
+];
+
 // ─── Message Type String Constants ───────────────────────────────────────────
 
 export const ClientMessages = {
@@ -154,6 +202,9 @@ export const ClientMessages = {
   // v5.0 Tournament
   JOIN_TOURNAMENT: 'tournament:join',
   LEAVE_TOURNAMENT: 'tournament:leave',
+  REPORT_TOURNAMENT_RESULT: 'tournament:reportResult',
+  // v5.1 Latency measurement (works on both queue and gameplay rooms)
+  PING: 'net:ping',
 } as const;
 
 export const ServerMessages = {
@@ -178,6 +229,9 @@ export const ServerMessages = {
   // v5.0 Tournament
   TOURNAMENT_UPDATE: 'tournament:update',
   TOURNAMENT_MATCH_READY: 'tournament:matchReady',
+  TOURNAMENT_CHAMPION: 'tournament:champion',
   // v5.0 Start countdown
   START_COUNTDOWN: 'room:startCountdown',
+  // v5.1 Latency measurement
+  PONG: 'net:pong',
 } as const;

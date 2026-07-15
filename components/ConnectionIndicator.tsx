@@ -10,6 +10,7 @@ import { ConnectionQuality } from '../shared/types';
 interface ConnectionIndicatorProps {
   quality: ConnectionQuality;
   rttMs: number;
+  isConnected?: boolean;
   showLabel?: boolean;
 }
 
@@ -23,6 +24,7 @@ const qualityConfig: Record<ConnectionQuality, { label: string; bars: number; co
 export const ConnectionIndicator: React.FC<ConnectionIndicatorProps> = ({
   quality,
   rttMs,
+  isConnected = false,
   showLabel = false,
 }) => {
   const config = qualityConfig[quality];
@@ -43,7 +45,7 @@ export const ConnectionIndicator: React.FC<ConnectionIndicatorProps> = ({
       </div>
       {showLabel && (
         <span className="connection-indicator__label" style={{ color: config.color }}>
-          {rttMs > 0 ? `${rttMs}ms` : config.label}
+          {rttMs > 0 ? `${rttMs}ms` : isConnected ? 'Connecting…' : config.label}
         </span>
       )}
     </div>

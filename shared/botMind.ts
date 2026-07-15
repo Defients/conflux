@@ -777,8 +777,22 @@ export function decideBotPowerUp(
         }
     }
 
-    // Offensive logic
-    const offensivePowerUp = bot.powerUps.find(p => p !== 'Shield' && p !== 'Clarity');
+    // Overcharge: use when low on energy
+    if (bot.powerUps.includes('Overcharge') && bot.energy < 3) {
+        if (rng.nextFloat() < 0.5) {
+            return { use: 'Overcharge', targetId: bot.id };
+        }
+    }
+
+    // Reflector: use when behind and likely to be targeted
+    if (bot.powerUps.includes('Reflector') && leader.id !== bot.id) {
+        if (rng.nextFloat() < 0.3) {
+            return { use: 'Reflector', targetId: bot.id };
+        }
+    }
+
+    // Offensive logic — exclude self-buff/defensive power-ups
+    const offensivePowerUp = bot.powerUps.find(p => p !== 'Shield' && p !== 'Clarity' && p !== 'Overcharge' && p !== 'Reflector');
     if (offensivePowerUp) {
         let targetId = leader.id;
         const distanceToHuman = Math.abs(bot.position - humanPlayer.position);

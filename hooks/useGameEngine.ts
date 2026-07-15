@@ -1,6 +1,6 @@
 
 import { useState, useCallback } from 'react';
-import { GameSettings, GameState, Player, EventResult, PowerUp, BotPersonality, ChassisId, AnomalyId } from '../types';
+import { GameSettings, GameState, Player, EventResult, PowerUp, BotPersonality, ChassisId, AnomalyId, GhostRun } from '../types';
 import { generateRun, generateCustomRun } from '../services/pathGenerator';
 import { eventRegistry } from '../events/eventRegistry';
 import { BOT_NAMES, PLAYER_COLORS, CHASSIS_DEFINITIONS, ANOMALY_DEFINITIONS, GAUNTLET_CONFIG } from '../constants';
@@ -13,6 +13,7 @@ import { GameRules, GameEffect } from '../services/gameRules';
 
 export const useGameEngine = () => {
   const [gameState, setGameState] = useState<GameState | null>(null);
+  const [ghostRun, setGhostRun] = useState<GhostRun | null>(null);
   const [toasts, setToasts] = useState<{ id: number; message: string; type: 'info' | 'success' | 'warning' }[]>([]);
   const [rivalTaunt, setRivalTaunt] = useState<string | null>(null);
   const [effectTrigger, setEffectTrigger] = useState(0); // Increments to trigger visual shakes
@@ -214,6 +215,79 @@ export const useGameEngine = () => {
     if (canvas) generateNebula(canvas, settings.seed);
   }, []);
 
+  // --- Ghost Race Initialization ---
+  const initializeGhostRace = useCallback((settings: GameSettings, ghost: GhostRun) => {
+    const rng = new SeededRNG(`ghost-${settings.seed}`);
+
+    const players: Player[] = [{
+      id: 1,
+      name: 'Player 1',
+      isBot: false,
+      isRival: false,
+      color: PLAYER_COLORS[0],
+      position: 0,
+      powerUps: [],
+      statuses: [],
+      tileHistory: [],
+      energy: 0,
+      overdriveCooldown: 0,
+    }];
+
+    if (settings.selectedChassis === ChassisId.Aegis) {
+      players[0].powerUps.push('Shield');
+    }
+
+    // Ghost player: a bot that uses pre-recorded results instead of simulation.
+    players.push({
+      id: 2,
+      name: ghost.ownerName,
+      isBot: true,
+      isGhost: true,
+      isRival: false,
+      color: PLAYER_COLORS[1],
+      position: 0,
+      powerUps: [],
+      statuses: [],
+      tileHistory: [],
+      energy: 0,
+      overdriveCooldown: 0,
+    });
+
+    // Use the ghost's seed so the track matches what they played.
+    const ghostSeed = ghost.seed;
+    const run = generateRun(ghostSeed, ghost.runLength, eventRegistry);
+
+    setGhostRun(ghost);
+    setGameState({
+      settings: { ...settings, seed: ghostSeed, runLength: ghost.runLength },
+      players,
+      run,
+      currentTileIndex: 0,
+      eventResults: {},
+      lastTileResults: null,
+      overdrivingPlayerIds: [],
+      activeIntervention: null,
+      lastHazardInterventionIndex: -99,
+      activeAnomaly: null,
+    });
+
+    const canvas = document.getElementById('nebula-canvas') as HTMLCanvasElement;
+    if (canvas) generateNebula(canvas, ghostSeed);
+  }, []);
+
+  // --- Get ghost's pre-recorded result for the current tile ---
+  const getGhostResultForTile = useCallback((tileIndex: number): EventResult | null => {
+    if (!ghostRun) return null;
+    const ghostTile = ghostRun.tileResults.find(t => t.tileIndex === tileIndex + 1);
+    if (!ghostTile) return null;
+    return {
+      playerId: 2,
+      stars: ghostTile.stars as 0 | 1 | 2 | 3 | 4,
+      primaryMetric: ghostTile.primaryMetric,
+      secondaryMetric: 0,
+    };
+  }, [ghostRun]);
+
   // --- Gauntlet Tile Processing ---
   const processGauntletTile = useCallback((results: { [playerId: number]: EventResult }) => {
     setGameState(current => {
@@ -300,11 +374,14 @@ export const useGameEngine = () => {
 
   return { 
     gameState, 
+    ghostRun,
     toasts, 
     rivalTaunt,
     addToast, 
     initializeGame, 
     initializeGauntlet,
+    initializeGhostRace,
+    getGhostResultForTile,
     processTileResults, 
     processGauntletTile,
     usePowerUp, 

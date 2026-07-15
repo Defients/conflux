@@ -280,6 +280,25 @@ export function computeMatchSummary(input: MatchSummaryInput): MatchSummary {
     checkAccolade(AccoladeId.Collector);
   }
 
+  // ComebackKing: win after being in last place at the halfway point
+  if (humanPlacement === 0 && gameState.players.length > 1) {
+    const halfwayIndex = Math.floor(gameState.run.length / 2);
+    const positionsAtHalfway = gameState.players.map(p => {
+      const tilesPlayed = p.tileHistory.filter(t => t.tileIndex <= halfwayIndex);
+      const starsAtHalfway = tilesPlayed.reduce((sum, t) => sum + t.stars, 0);
+      return { playerId: p.id, stars: starsAtHalfway };
+    }).sort((a, b) => b.stars - a.stars);
+    const humanRankAtHalfway = positionsAtHalfway.findIndex(p => p.playerId === humanPlayer.id);
+    if (humanRankAtHalfway === positionsAtHalfway.length - 1) {
+      checkAccolade(AccoladeId.ComebackKing);
+    }
+  }
+
+  // PowerPlayer: use 5+ power-ups in a single race
+  if (humanPlayer.powerUpsUsed && humanPlayer.powerUpsUsed >= 5) {
+    checkAccolade(AccoladeId.PowerPlayer);
+  }
+
   // ─── Rival delta ───────────────────────────────────────────────────
   const rivalDelta = rival
     ? { wins: rivalDefeated ? 1 : 0, losses: rivalDefeated ? 0 : 1 }

@@ -42,6 +42,9 @@ export const POWERUP_DEFINITIONS: { [key in PowerUp]: { description: string; ico
   'Time Snare': { description: 'Freezes the leader (or 2nd place) on the next tile.', icon: '⏳' },
   'Shield': { description: 'Blocks the next incoming debuff.', icon: '🛡️' },
   'Data Spike': { description: 'Scrambles an opponent\'s upcoming tile view.', icon: '📡' },
+  'Overcharge': { description: 'Instantly gain +2 energy for power-up activation.', icon: '🔋' },
+  'Sludge': { description: 'Slows all opponents on the next tile.', icon: '🛢️' },
+  'Reflector': { description: 'Reflects the next incoming debuff back at the sender.', icon: '🪞' },
 };
 
 export const TILE_MODIFIER_DEFINITIONS: { [key in TileModifier]: { description: string; icon: string } } = {
@@ -50,6 +53,8 @@ export const TILE_MODIFIER_DEFINITIONS: { [key in TileModifier]: { description: 
     'STATIC_FIELD': { description: 'All Power-Ups are disabled for this tile!', icon: '🚫' },
     'FOG_BANK': { description: 'The next event is hidden until it starts!', icon: '🌫️' },
     'SPONSORED': { description: 'Bonus reputation for high performance!', icon: '🏢' },
+    'ICE_PATCH': { description: 'Slippery! 3★ is harder but grants bonus movement.', icon: '🧊' },
+    'NEBULA_DRIFT': { description: 'Cosmic chaos! The event is replaced with a random one.', icon: '🌌' },
 };
 
 export const STAR_MOVEMENT_MULTIPLIERS: Record<number, number> = {
@@ -142,6 +147,10 @@ export const ACCOLADE_DEFINITIONS: { [key in AccoladeId]: Omit<Accolade, 'id'> }
     [AccoladeId.Perfectionist]: { name: 'Perfectionist', description: 'Finish a race with a perfect 3-star average.', icon: '🌟' },
     [AccoladeId.Overdriver]: { name: 'Overdriver', description: 'Successfully execute an Overdrive for a 4-star result.', icon: '🚀' },
     [AccoladeId.Collector]: { name: 'Collector', description: 'Unlock all available Chassis in the Hangar.', icon: '🛠️' },
+    [AccoladeId.GhostHunter]: { name: 'Ghost Hunter', description: 'Defeat a recorded ghost run in Ghost Race mode.', icon: '👻' },
+    [AccoladeId.TournamentChampion]: { name: 'Tournament Champion', description: 'Win a single-elimination tournament bracket.', icon: '🏅' },
+    [AccoladeId.ComebackKing]: { name: 'Comeback King', description: 'Win a race after being in last place at the halfway point.', icon: '👑' },
+    [AccoladeId.PowerPlayer]: { name: 'Power Player', description: 'Use 5 or more Power-Ups in a single race.', icon: '🎮' },
 };
 
 export const RIVAL_TRAIT_DEFINITIONS: { [key in RivalTraitId]: Omit<RivalTrait, 'id'> } = {

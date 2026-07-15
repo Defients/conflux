@@ -7,7 +7,7 @@
  */
 
 import { Room, Client, matchMaker } from 'colyseus';
-import { ServerMessages, ClientMessages } from '../../../shared/protocol';
+import { ServerMessages, ClientMessages, RoomNames } from '../../../shared/protocol';
 import {
   TournamentBracket, TournamentRound, TournamentMatch,
   TournamentParticipant, RoomConfig,
@@ -39,6 +39,47 @@ export class TournamentRoom extends Room {
 
     this.onMessage(ClientMessages.LEAVE_TOURNAMENT, (client: Client) => {
       this.onLeave(client);
+    });
+
+    this.onMessage(ClientMessages.REPORT_TOURNAMENT_RESULT, (client: Client, data: { matchId: string; won: boolean }) => {
+      if (!this.bracket) return;
+      const currentRound = this.bracket.rounds[this.bracket.currentRound];
+      if (!currentRound) return;
+
+      const match = currentRound.matches.find(m => m.matchId === data.matchId);
+      if (!match || match.isComplete) return;
+
+      // Verify the sender is a participant in this match
+      if (!match.participants.includes(client.sessionId)) return;
+
+      if (data.won) {
+        match.winner = client.sessionId;
+        match.isComplete = true;
+      } else {
+        // Loser reports — mark the other participant as winner
+        const opponentId = match.participants.find(id => id !== client.sessionId);
+        if (opponentId) {
+          match.winner = opponentId;
+          match.isComplete = true;
+        }
+      }
+
+      // Check if all matches in the round are complete
+      currentRound.isComplete = currentRound.matches.every(m => m.isComplete);
+
+      // Mark eliminated participants
+      for (const m of currentRound.matches) {
+        if (m.isComplete && m.winner) {
+          for (const pid of m.participants) {
+            if (pid !== m.winner) {
+              const p = this.participants.get(pid);
+              if (p) p.eliminated = true;
+            }
+          }
+        }
+      }
+
+      this.broadcastBracket();
     });
   }
 
@@ -138,7 +179,7 @@ export class TournamentRoom extends Room {
     for (const match of round.matches) {
       if (match.isComplete) continue;
       try {
-        const room = await matchMaker.createRoom('conflux', {
+        const room = await matchMaker.createRoom(RoomNames.MATCH, {
           isPrivate: true,
           autoStart: true,
           tournamentMatch: true,
@@ -171,6 +212,11 @@ export class TournamentRoom extends Room {
 
     if (winners.length === 1) {
       this.bracket.champion = winners[0];
+      const championParticipant = this.participants.get(this.bracket.champion);
+      this.broadcast(ServerMessages.TOURNAMENT_CHAMPION, {
+        championId: this.bracket.champion,
+        championName: championParticipant?.name ?? 'Unknown',
+      });
       this.broadcastBracket();
       return;
     }

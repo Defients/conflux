@@ -30,6 +30,7 @@ import {
   InterventionChoicePayload, PitStopActionPayload, UpdateSettingsPayload,
   KickPlayerPayload, BanPlayerPayload,
 } from '../../../shared/protocol';
+import { RoomNames } from '../../../shared/protocol';
 import { EVENT_DESCRIPTORS, STAR_COMPUTERS } from '../eventDescriptors';
 import { ServerEventValidator } from '../validation/eventValidator';
 import { ClientRateLimiter, RATE_LIMITS } from '../validation/rateLimiter';
@@ -124,6 +125,9 @@ export class ConfluxRoom extends Room {
   private eventDimensionMap: Record<string, string> = {};
   private rateLimiter = new ClientRateLimiter();
   private spectatorIds: Set<string> = new Set();
+  /** v5.1: Matchmaking options — auto-start when expectedPlayers have joined. */
+  private autoStart = false;
+  private expectedPlayers = 0;
 
   private getEventDimensionMap(): Record<string, string> {
     if (Object.keys(this.eventDimensionMap).length === 0) {
@@ -138,6 +142,10 @@ export class ConfluxRoom extends Room {
     this.roomState.roomCode = generateRoomCode();
     this.roomState.settings.seed = String(Math.floor(Math.random() * 1000000));
     this.roomState.isPrivate = !!options.isPrivate;
+
+    // v5.1: Matchmaking-created rooms auto-start when all expected players join.
+    this.autoStart = !!options.autoStart;
+    this.expectedPlayers = typeof options.expectedPlayers === 'number' ? options.expectedPlayers : 0;
 
     // Set max clients
     this.maxClients = MAX_ROOM_PLAYERS;
@@ -212,6 +220,11 @@ export class ConfluxRoom extends Room {
     wrapWithRateLimit<BanPlayerPayload>(ClientMessages.BAN_PLAYER, (client, payload) => {
       this.handleBanPlayer(client, payload);
     });
+
+    // v5.1: Latency measurement — respond to ping with pong so clients can compute RTT.
+    this.onMessage(ClientMessages.PING, (client) => {
+      client.send(ServerMessages.PONG, {});
+    });
   }
 
   onJoin(client: Client, options: RoomConfig) {
@@ -276,6 +289,12 @@ export class ConfluxRoom extends Room {
 
     // Broadcast updated lobby state
     this.broadcastLobbyState();
+
+    // v5.1: Auto-start when all expected players have joined (matchmaking flow).
+    if (this.autoStart && this.expectedPlayers > 0 && this.roomState.players.size >= this.expectedPlayers) {
+      console.log(`[Room ${this.roomState.roomCode}] Auto-starting with ${this.roomState.players.size} players`);
+      this.startMatch();
+    }
   }
 
   async onLeave(client: Client, consented: boolean) {

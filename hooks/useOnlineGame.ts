@@ -227,7 +227,10 @@ export function useOnlineGame(): OnlineGameHook {
       onMatchFound: (data) => {
         setIsQueuing(false);
         setQueueState(null);
-        console.log(`[useOnlineGame] Match found: ${data.roomCode}`);
+        // networkService.setupQueueListeners already consumes the seat reservation
+        // and joins the gameplay room. This handler just updates UI state.
+        setMatchPhase('lobby');
+        console.log(`[useOnlineGame] Match found: ${data.roomId}`);
       },
 
       onQueueTimeout: (data) => {

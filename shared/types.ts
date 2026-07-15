@@ -42,6 +42,10 @@ export enum AccoladeId {
     Perfectionist = 'PERFECTIONIST',
     Overdriver = 'OVERDRIVER',
     Collector = 'COLLECTOR',
+    GhostHunter = 'GHOST_HUNTER',
+    TournamentChampion = 'TOURNAMENT_CHAMPION',
+    ComebackKing = 'COMEBACK_KING',
+    PowerPlayer = 'POWER_PLAYER',
 }
 
 export enum RivalTraitId {
@@ -180,7 +184,7 @@ export interface GameSettings {
   isGauntlet?: boolean;
 }
 
-export type PowerUp = 'Clarity' | 'Mist Bomb' | 'Time Snare' | 'Shield' | 'Data Spike';
+export type PowerUp = 'Clarity' | 'Mist Bomb' | 'Time Snare' | 'Shield' | 'Data Spike' | 'Overcharge' | 'Sludge' | 'Reflector';
 
 export interface PlayerStatus {
   type: 'SLOWED' | 'FROZEN' | 'BLURRED' | 'SHIELDED' | 'STUNNED' | 'BOOSTED' | 'SCRAMBLED' | 'IMMUNE';
@@ -207,6 +211,7 @@ export interface Player {
   tileHistory: { tileIndex: number; stars: number }[];
   energy: number;
   overdriveCooldown: number;
+  powerUpsUsed?: number;
   scrambledTileData?: Tile[];
   lives?: number;
 
@@ -237,7 +242,7 @@ export interface Player {
   _overdriveCooldownReduction?: number;
 }
 
-export type TileModifier = 'BOOST_PAD' | 'POWER_SURGE' | 'STATIC_FIELD' | 'FOG_BANK' | 'SPONSORED';
+export type TileModifier = 'BOOST_PAD' | 'POWER_SURGE' | 'STATIC_FIELD' | 'FOG_BANK' | 'SPONSORED' | 'ICE_PATCH' | 'NEBULA_DRIFT';
 
 export interface Tile {
   tileIndex: number;

@@ -1,7 +1,7 @@
 
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { GameScreen, GameSettings, GameState, GameEvent, PilotProfile, EventTelemetry, PowerUp, EventResult, ChassisId } from './types';
+import { GameScreen, GameSettings, GameState, GameEvent, PilotProfile, EventTelemetry, PowerUp, EventResult, ChassisId, GhostRun, TournamentBracket, AccoladeId } from './types';
 import { MatchSummary, computeMatchSummary, applyMatchSummaryToProfile } from './shared/matchSummary';
 import { useGameEngine } from './hooks/useGameEngine';
 import { useOnlineGame } from './hooks/useOnlineGame';
@@ -21,6 +21,7 @@ import { PilotProfileSetup } from './components/PilotProfileSetup';
 import { loadProfile, saveProfile, createProfileAccount, clearProfile, listProfiles, setActiveProfile, deleteProfileAccount } from './services/profileService';
 import { fetchProfile, syncProfile, syncProfileMerge } from './services/firebaseProfileService';
 import { signIn, resetAnonymousSession, auth } from './services/firebase';
+import { submitGhostRun, fetchRandomGhost } from './services/firebaseGhostService';
 import { PitStopScreen, PitStopAction } from './components/PitStopScreen';
 import { PIT_STOP_CONFIG } from './constants';
 import { RivalInterventionModal } from './components/RivalInterventionModal';
@@ -33,11 +34,13 @@ import { generateContracts } from './shared/contractService';
 import { getDailySeed, getDailyPersonalBest, saveDailyPersonalBest } from './shared/dailyChallengeService';
 import { Contract } from './types';
 import { ModeSelector, GameModeSelection } from './components/ModeSelector';
+import { GhostRaceScreen } from './components/GhostRaceScreen';
 import { SkillTreeScreen } from './components/SkillTreeScreen';
 import { HangarScreen } from './components/HangarScreen';
 import { SettingsScreen, loadSettings, saveSettings, GameSettings as UGameSettings } from './components/SettingsScreen';
 import { OnboardingFlow } from './components/OnboardingFlow';
-import { TournamentScreen, TournamentBracket } from './components/TournamentScreen';
+import { TournamentScreen } from './components/TournamentScreen';
+import { networkService } from './services/networkService';
 import { RankBadge } from './components/RankBadge';
 import { ConnectionIndicator } from './components/ConnectionIndicator';
 import { useConnectionStatus } from './hooks/useConnectionStatus';
@@ -45,7 +48,7 @@ import { useOnlineScreenSync } from './hooks/useOnlineScreenSync';
 import { SpectatorOverlay } from './components/SpectatorOverlay';
 
 /** Extended screen enum for online-specific and v5.0 screens. */
-type AppScreen = GameScreen | 'ONLINE_LOBBY' | 'MODE_SELECT' | 'SKILL_TREE' | 'HANGAR' | 'SETTINGS' | 'ONBOARDING' | 'TOURNAMENT';
+type AppScreen = GameScreen | 'ONLINE_LOBBY' | 'MODE_SELECT' | 'SKILL_TREE' | 'HANGAR' | 'SETTINGS' | 'ONBOARDING' | 'TOURNAMENT' | 'GHOST_RACE';
 
 const App: React.FC = () => {
   const [screen, setScreen] = useState<AppScreen>(GameScreen.Lobby);
@@ -68,7 +71,7 @@ const App: React.FC = () => {
     return () => { mounted = false; };
   }, []);
 
-  const { gameState, toasts, rivalTaunt, addToast, initializeGame, initializeGauntlet, processTileResults, processGauntletTile, usePowerUp, activateOverdrive, effectTrigger, handlePitStopAction, handleInterventionChoice } = useGameEngine();
+  const { gameState, ghostRun, toasts, rivalTaunt, addToast, initializeGame, initializeGauntlet, initializeGhostRace, getGhostResultForTile, processTileResults, processGauntletTile, usePowerUp, activateOverdrive, effectTrigger, handlePitStopAction, handleInterventionChoice } = useGameEngine();
   const onlineGame = useOnlineGame();
   const isOnline = onlineGame.mode === 'online';
   const isOnlineHost = onlineGame.lobbyState?.hostSessionId === onlineGame.sessionId;
@@ -87,6 +90,7 @@ const App: React.FC = () => {
   // v5.0 state
   const [uiSettings, setUiSettings] = useState<UGameSettings>(() => loadSettings());
   const [tournamentBracket, setTournamentBracket] = useState<TournamentBracket | null>(null);
+  const [tournamentMatchId, setTournamentMatchId] = useState<string | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const connectionStatus = useConnectionStatus();
   const { leaveSpectator } = useOnlineScreenSync({
@@ -202,6 +206,36 @@ const App: React.FC = () => {
     setMatchSummary(null);
   }, [initializeGauntlet]);
 
+  const handleStartGhostRace = useCallback(async (settings: GameSettings) => {
+    // Try to fetch a real ghost run from Firestore; fall back to a generated bot ghost.
+    let ghost = await fetchRandomGhost();
+    if (!ghost) {
+      // Generate a synthetic ghost so the mode is playable offline.
+      const ghostSeed = settings.seed || `ghost-${Date.now()}`;
+      const runLength = settings.runLength;
+      const tileResults = Array.from({ length: runLength }, (_, i) => ({
+        tileIndex: i + 1,
+        stars: Math.floor(Math.random() * 3) + 1,
+        primaryMetric: Math.floor(Math.random() * 200) + 100,
+      }));
+      ghost = {
+        ghostId: `synthetic-${Date.now()}`,
+        ownerName: 'Ghost AI',
+        ownerAvatarId: '👻',
+        seed: ghostSeed,
+        runLength,
+        tileResults,
+        submittedAt: Date.now(),
+        ownerCircuitPoints: 500,
+        userId: 'synthetic',
+      };
+    }
+    initializeGhostRace(settings, ghost);
+    setScreen(GameScreen.Event);
+    setShowCountdown(true);
+    setMatchSummary(null);
+  }, [initializeGhostRace]);
+
   const handleTileComplete = useCallback((results: { [playerId: number]: EventResult }) => {
       if (gameState?.settings.isGauntlet) {
           processGauntletTile(results);
@@ -271,7 +305,38 @@ const App: React.FC = () => {
         syncProfileMerge(updatedProfile);
       }
     }
-  }, [profile, eventDimensionMap, handleAuthoritativeMatchSummary]);
+
+    // Submit ghost run if this was a ghost race
+    if (ghostRun && finishedGameState.players[0]) {
+      const humanPlayer = finishedGameState.players[0];
+      const tileResults = humanPlayer.tileHistory.map(t => ({
+        tileIndex: t.tileIndex,
+        stars: t.stars,
+        primaryMetric: 0,
+      }));
+      const currentUser = auth?.currentUser;
+      if (currentUser) {
+        submitGhostRun(currentUser.uid, {
+          ownerName: profile.name,
+          ownerAvatarId: profile.avatarId,
+          seed: finishedGameState.settings.seed,
+          runLength: finishedGameState.settings.runLength,
+          tileResults,
+          ownerCircuitPoints: updatedProfile?.circuitPoints ?? profile.circuitPoints,
+        }).catch(err => console.error('[GhostRace] Failed to submit ghost run:', err));
+      }
+
+      // Award GhostHunter accolade if the human won
+      const sortedPlayers = [...finishedGameState.players].sort((a, b) => b.position - a.position);
+      if (sortedPlayers[0]?.id === humanPlayer.id && updatedProfile) {
+        if (!updatedProfile.unlockedAccolades.includes(AccoladeId.GhostHunter)) {
+          const ghostProfile = { ...updatedProfile, unlockedAccolades: [...updatedProfile.unlockedAccolades, AccoladeId.GhostHunter] };
+          setProfile(ghostProfile);
+          saveProfile(ghostProfile);
+        }
+      }
+    }
+  }, [profile, eventDimensionMap, handleAuthoritativeMatchSummary, ghostRun]);
 
   const handleContinueAfterResults = useCallback(() => {
     if (!gameState || !profile) return;
@@ -385,7 +450,7 @@ const App: React.FC = () => {
         setScreen('TOURNAMENT');
         break;
       case 'ghost':
-        setScreen(GameScreen.Lobby);
+        setScreen('GHOST_RACE');
         break;
     }
   }, [onlineGame]);
@@ -452,14 +517,27 @@ const App: React.FC = () => {
     setScreen(GameScreen.Lobby);
   }, []);
 
-  const handleTournamentJoinMatch = useCallback((_matchId: string, roomCode: string) => {
+  const handleTournamentJoinMatch = useCallback((matchId: string, roomCode: string) => {
+    setTournamentMatchId(matchId);
     onlineGame.setMode('online');
     setPendingRoomCode(roomCode);
     setScreen('ONLINE_LOBBY' as AppScreen);
   }, [onlineGame]);
 
+  const handleTournamentChampion = useCallback((championName: string) => {
+    if (profile && championName === profile.name) {
+      if (!profile.unlockedAccolades.includes(AccoladeId.TournamentChampion)) {
+        const updated = { ...profile, unlockedAccolades: [...profile.unlockedAccolades, AccoladeId.TournamentChampion] };
+        setProfile(updated);
+        saveProfile(updated);
+      }
+    }
+  }, [profile]);
+
   const handleLeaveTournament = useCallback(() => {
+    networkService.leaveTournament();
     setTournamentBracket(null);
+    setTournamentMatchId(null);
     setScreen(GameScreen.Lobby);
   }, []);
 
@@ -521,6 +599,32 @@ const App: React.FC = () => {
         break;
     }
   }, [isOnline, onlineGame.matchPhase]);
+
+  // ─── Tournament match result reporting ────────────────────────────────
+  // When a tournament match finishes, determine if the human won and report
+  // the result back to the TournamentRoom, then return to the tournament screen.
+  useEffect(() => {
+    if (!tournamentMatchId) return;
+    if (onlineGame.matchPhase !== 'finished') return;
+    if (!onlineGame.raceFinished) return;
+
+    const humanStanding = onlineGame.raceFinished.finalStandings.find(
+      s => s.name === profile?.name
+    );
+    const won = humanStanding ? humanStanding.placement === 0 : false;
+
+    networkService.reportTournamentResult(tournamentMatchId, won);
+    setTournamentMatchId(null);
+
+    // Return to tournament screen after a brief delay to let results render
+    const timer = setTimeout(() => {
+      onlineGame.leaveRoom();
+      onlineGame.setMode('local');
+      setScreen('TOURNAMENT' as AppScreen);
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [tournamentMatchId, onlineGame.matchPhase, onlineGame.raceFinished, profile]);
 
   useEffect(() => {
     if (!isOnline) return;
@@ -586,7 +690,7 @@ const App: React.FC = () => {
           <>
             {isOnline && (
               <div className="fixed top-2 right-2 z-40">
-                <ConnectionIndicator quality={connectionStatus.quality} rttMs={connectionStatus.rttMs} showLabel />
+                <ConnectionIndicator quality={connectionStatus.quality} rttMs={connectionStatus.rttMs} isConnected={connectionStatus.isConnected} showLabel />
               </div>
             )}
             <OnlineLobby profile={profile} online={onlineGame} onBack={() => { onlineGame.setMode('local'); setScreen(GameScreen.Lobby); }} pendingRoomCode={pendingRoomCode} />
@@ -601,7 +705,9 @@ const App: React.FC = () => {
       case 'SETTINGS':
         return <SettingsScreen settings={uiSettings} onSave={handleSaveSettings} onBack={() => setScreen(GameScreen.Lobby)} />;
       case 'TOURNAMENT':
-        return <TournamentScreen bracket={tournamentBracket} onJoinMatch={handleTournamentJoinMatch} onLeave={handleLeaveTournament} />;
+        return <TournamentScreen bracket={tournamentBracket} onJoinMatch={handleTournamentJoinMatch} onLeave={handleLeaveTournament} onBracketUpdate={setTournamentBracket} onChampion={handleTournamentChampion} profile={profile} />;
+      case 'GHOST_RACE':
+        return <GhostRaceScreen profile={profile} onStart={handleStartGhostRace} onBack={() => setScreen(GameScreen.Lobby)} />;
       case 'ONBOARDING':
         return <OnboardingFlow onComplete={handleOnboardingComplete} />;
       case GameScreen.Lobby:
@@ -635,6 +741,7 @@ const App: React.FC = () => {
           onActivateOverdrive={isOnline ? handleOnlineActivateOverdrive : activateOverdrive}
           onlineMode={isOnline}
           onSubmitTelemetry={isOnline ? handleSubmitTelemetry : undefined}
+          getGhostResultForTile={ghostRun ? getGhostResultForTile : undefined}
           isPaused={showCountdown}
         />;
       case GameScreen.TileResults:

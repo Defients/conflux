@@ -391,7 +391,7 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
         {/* v5.0: Connection quality indicator */}
         {isConnected && (
           <div className="mb-3 flex items-center gap-2 text-xs text-gray-400">
-            <ConnectionIndicator quality={connectionStatus.quality} rttMs={connectionStatus.rttMs} showLabel />
+            <ConnectionIndicator quality={connectionStatus.quality} rttMs={connectionStatus.rttMs} isConnected={connectionStatus.isConnected} showLabel />
             <span>· {connectionStatus.quality}</span>
           </div>
         )}

@@ -32,7 +32,7 @@ function assignDifficultyAndModifiers(
     }
 
     // Place modifiers
-    const modifierTypes: TileModifier[] = ['BOOST_PAD', 'POWER_SURGE', 'STATIC_FIELD', 'FOG_BANK', 'SPONSORED'];
+    const modifierTypes: TileModifier[] = ['BOOST_PAD', 'POWER_SURGE', 'STATIC_FIELD', 'FOG_BANK', 'SPONSORED', 'ICE_PATCH', 'NEBULA_DRIFT'];
     rng.shuffle(modifierTypes);
     const modifierPositions = new Set<number>();
     // Place 2-4 modifiers in a run, not on the first or last tile
@@ -52,6 +52,14 @@ function assignDifficultyAndModifiers(
         }
         modifiers[pos] = modifier;
     });
+
+    // ICE_PATCH: increase difficulty by 1 (capped at 3) for harder 3★ threshold
+    for (const [posStr, mod] of Object.entries(modifiers)) {
+        if (mod.type === 'ICE_PATCH') {
+            const pos = parseInt(posStr);
+            difficulties[pos] = Math.min(3, difficulties[pos] + 1);
+        }
+    }
 
     return { difficulties, modifiers };
 }
@@ -74,8 +82,19 @@ export function generateRun(
 
   for (let i = 0; i < runLength; i++) {
     // Pick an event, allowing repeats
-    const event = eventPool[rng.nextInt(0, eventPool.length)];
+    let event = eventPool[rng.nextInt(0, eventPool.length)];
     const modifierInfo = modifiers[i];
+
+    // NEBULA_DRIFT: replace the event with a different random one (cosmic chaos)
+    if (modifierInfo?.type === 'NEBULA_DRIFT' && eventPool.length > 1) {
+      let driftEvent = event;
+      let attempts = 0;
+      while (driftEvent.id === event.id && attempts < 10) {
+        driftEvent = eventPool[rng.nextInt(0, eventPool.length)];
+        attempts++;
+      }
+      event = driftEvent;
+    }
 
     run.push({
       tileIndex: i + 1,
@@ -110,8 +129,19 @@ export function generateCustomRun(
     const { difficulties, modifiers } = assignDifficultyAndModifiers(rng, runLength);
 
     for (let i = 0; i < runLength; i++) {
-        const event = eventPool[rng.nextInt(0, eventPool.length)];
+        let event = eventPool[rng.nextInt(0, eventPool.length)];
         const modifierInfo = modifiers[i];
+
+        // NEBULA_DRIFT: replace the event with a different random one (cosmic chaos)
+        if (modifierInfo?.type === 'NEBULA_DRIFT' && eventPool.length > 1) {
+          let driftEvent = event;
+          let attempts = 0;
+          while (driftEvent.id === event.id && attempts < 10) {
+            driftEvent = eventPool[rng.nextInt(0, eventPool.length)];
+            attempts++;
+          }
+          event = driftEvent;
+        }
 
         run.push({
             tileIndex: i + 1,

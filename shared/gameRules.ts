@@ -151,6 +151,14 @@ export const GameRules = {
             const shouldAward = currentTile.modifier === 'POWER_SURGE' || (result.stars > 0 && POWERUP_AWARD_RULES[result.stars as 1|2|3]);
             if (shouldAward) {
                 let award = POWERUP_AWARD_RULES[result.stars as 1|2|3] ?? 'Clarity';
+
+                // POWER_SURGE tiles have a chance to award from the expanded pool
+                if (currentTile.modifier === 'POWER_SURGE') {
+                    const expandedPool: PowerUp[] = ['Overcharge', 'Sludge', 'Reflector', 'Shield', 'Clarity'];
+                    if (powerUpRng.nextFloat() < 0.4) {
+                        award = expandedPool[powerUpRng.nextInt(0, expandedPool.length)];
+                    }
+                }
                 
                 // Chassis Bonuses
                 const chassis = p.chassisId ?? (p.isBot ? undefined : state.settings.selectedChassis);
@@ -188,6 +196,11 @@ export const GameRules = {
             if (currentTile.modifier === 'BOOST_PAD' && result.stars >= 3) {
                 moveMult *= 2;
                 if (!p.isBot) effects.push({ type: 'TOAST', message: 'Boost Pad Hit!', variant: 'success' });
+            }
+
+            if (currentTile.modifier === 'ICE_PATCH' && result.stars >= 3) {
+                moveMult *= 1.5;
+                if (!p.isBot) effects.push({ type: 'TOAST', message: 'Ice Patch Bonus!', variant: 'success' });
             }
             
             // Anomaly: Gravity Well
@@ -337,7 +350,7 @@ export const GameRules = {
         const pIdx = user.powerUps.indexOf(powerUp);
         const newPowerUps = [...user.powerUps];
         newPowerUps.splice(pIdx, 1);
-        players = players.map(p => p.id === playerId ? { ...p, powerUps: newPowerUps } : p);
+        players = players.map(p => p.id === playerId ? { ...p, powerUps: newPowerUps, powerUpsUsed: (p.powerUpsUsed ?? 0) + 1 } : p);
 
         effects.push({ type: 'SOUND', sound: 'powerup-use' });
         
@@ -423,6 +436,24 @@ export const GameRules = {
                     });
                 }
                 break;
+            case 'Overcharge':
+                players = players.map(p => p.id === playerId ? { ...p, energy: p.energy + 2 } : p);
+                if (!user.isBot) effects.push({ type: 'TOAST', message: '+2 Energy!', variant: 'success' });
+                break;
+            case 'Sludge':
+                players = players.map(p => {
+                    if (isQuantum ? rng.nextFloat() > 0.5 : p.id !== playerId) {
+                        const res = applyDebuff(p, { type: 'SLOWED', duration: 1 * durationMult }, state.settings);
+                        if (res.effect) effects.push(res.effect);
+                        return res.player;
+                    }
+                    return p;
+                });
+                break;
+            case 'Reflector':
+                players = players.map(p => p.id === playerId ? { ...p, statuses: [...p.statuses, { type: 'IMMUNE', duration: 1 * durationMult }] } : p);
+                if (!user.isBot) effects.push({ type: 'TOAST', message: 'Reflector Active!', variant: 'info' });
+                break;
         }
 
         return { newState: { ...state, players }, effects };
@@ -460,8 +491,8 @@ export const GameRules = {
                 break;
             case 'tuneUp':
                 const tuneRng = new SeededRNG(`pitstop-${state.currentTileIndex}-${playerId}`);
-                const keys = Object.keys(POWERUP_AWARD_RULES) as unknown as (keyof typeof POWERUP_AWARD_RULES)[];
-                const award = POWERUP_AWARD_RULES[keys[tuneRng.nextInt(0, keys.length)]];
+                const allPowerUps: PowerUp[] = ['Clarity', 'Mist Bomb', 'Time Snare', 'Shield', 'Data Spike', 'Overcharge', 'Sludge', 'Reflector'];
+                const award = allPowerUps[tuneRng.nextInt(0, allPowerUps.length)];
                 updatedPlayer.powerUps.push(award);
                 effects.push({ type: 'TOAST', message: `Tuned Up: ${award}`, variant: 'success' });
                 break;

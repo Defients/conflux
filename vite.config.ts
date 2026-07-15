@@ -7,7 +7,7 @@ export default defineConfig(() => {
       test: {
         globals: true,
         environment: 'node',
-        include: ['shared/**/*.test.ts'],
+        include: ['shared/**/*.test.ts', 'services/**/*.test.ts'],
       },
       build: {
         target: 'es2020',

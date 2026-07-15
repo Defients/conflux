@@ -1,5 +1,72 @@
 # Changelog
 
+## [Unreleased] — Phase 5: Production Readiness & Polish
+
+### Server Refactoring
+- Extracted Express app creation into `createExpressApp.ts` — REST routes now reusable in tests without duplicating code
+- `index.ts` simplified to import `createExpressApp` instead of defining routes inline
+
+### REST API Tests
+- New `restApi.test.ts`: 5 tests covering `GET /health`, `GET /diagnostics`, `GET /api/rooms`, `GET /api/queue/status`, and 404 handling
+- Tests verify response status codes, body structure, and registered room types
+
+### Dead Code Cleanup
+- Removed unused `onReportResult` prop from `TournamentScreen` interface and destructuring
+- Removed unused `handleTournamentReportResult` callback from `App.tsx` (result reporting handled by `useEffect` since Phase 4)
+
+### Deployment Documentation
+- Added `server/.env.example` documenting all server environment variables (PORT, NODE_ENV, ALLOWED_ORIGINS, Firebase config, build metadata)
+
+## [Unreleased] — Phase 4: Tournament Flow & Test Coverage
+
+### Tournament Match Result Flow
+- Wired `RACE_FINISHED` → `networkService.reportTournamentResult()` so match results flow back to `TournamentRoom` automatically
+- `App.tsx` tracks `tournamentMatchId` state — when a tournament match finishes, determines win/loss from `finalStandings` and reports to server
+- Auto-returns to tournament screen 3s after match concludes
+- `TournamentRoom.advanceRound()` now broadcasts `TOURNAMENT_CHAMPION` message when champion is set (was only in result handler, which ran before the tick)
+- Cleaned up `TournamentScreen` — removed redundant `currentMatchId` state and `reportMatchResult` callback (now handled at App level)
+
+### Tests
+- **TournamentRoom integration test**: 4 clients join → bracket fills → results reported → round advances → champion declared. Verifies `TOURNAMENT_UPDATE` and `TOURNAMENT_CHAMPION` messages.
+- **Ghost service tests**: 6 tests covering graceful degradation when Firebase `db` is null, `GhostRun` type structure validation, and tile result star range validation.
+- Extended vitest `include` pattern to cover `services/**/*.test.ts`
+
+## [Unreleased] — Phase 2+3: Game Modes & Content Expansion
+
+### New Game Modes
+- **Ghost Race**: Race against recorded ghost runs from Firestore. Fetch a random ghost, race head-to-head with pre-recorded tile results, and submit your own run for others to challenge. Falls back to synthetic ghosts when offline.
+- **Tournament**: Single-elimination bracket tournaments (4/8/16 players). Join via `joinOrCreate`, bracket populates and matches start automatically. Results report back to `TournamentRoom` to advance the bracket. Champion is crowned and broadcast.
+
+### New Power-Ups
+- **Overcharge** 🔋: Instantly gain +2 energy for power-up activation.
+- **Sludge** 🛢️: Slow all opponents on the next tile.
+- **Reflector** 🪞: Grants IMMUNE status, blocking the next incoming debuff.
+
+### New Accolades
+- **Ghost Hunter** 👻: Defeat a recorded ghost run in Ghost Race mode.
+- **Tournament Champion** 🏅: Win a single-elimination tournament bracket.
+- **Comeback King** 👑: Win a race after being in last place at the halfway point.
+- **Power Player** 🎮: Use 5 or more Power-Ups in a single race.
+
+### New Tile Modifiers
+- **ICE_PATCH** 🧊: Increases tile difficulty by 1. 3★ performance grants 1.5× bonus movement.
+- **NEBULA_DRIFT** 🌌: Replaces the tile's event with a different random one (cosmic chaos).
+
+### Tournament Infrastructure
+- Added `REPORT_TOURNAMENT_RESULT` client message and `TOURNAMENT_CHAMPION` server message to protocol.
+- `TournamentRoom` now processes match results, marks winners, advances rounds, and broadcasts champion.
+- `networkService` gains `joinTournament`, `leaveTournament`, `reportTournamentResult` methods.
+- `TournamentScreen` rewritten with shared `TournamentBracket` types, join/chassis/bracket-size setup, live bracket display, match cards, and champion celebration.
+
+### Game Engine
+- `powerUpsUsed` counter added to `Player` interface, incremented on each power-up activation.
+- `POWER_SURGE` tiles now have 40% chance to award from expanded power-up pool (includes new power-ups).
+- Pit Stop `tuneUp` now awards from the full 8-power-up pool instead of only 3.
+- Bot AI updated to handle new power-ups: Overcharge (self-buff when low energy), Reflector (defensive when behind).
+
+### Tests
+- 23 new tests covering new power-ups, accolades, tile modifiers, and type validity.
+
 ## [Unreleased] — Enhancement-First Polish
 
 ### Fixed

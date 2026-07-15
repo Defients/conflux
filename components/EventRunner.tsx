@@ -19,10 +19,12 @@ interface EventRunnerProps {
   onlineMode?: boolean;
   /** Called in online mode to submit raw metrics to server. */
   onSubmitTelemetry?: (telemetry: EventTelemetry) => void;
+  /** Returns pre-recorded result for ghost players, or null if not a ghost race. */
+  getGhostResultForTile?: (tileIndex: number) => EventResult | null;
   isPaused?: boolean;
 }
 
-export const EventRunner: React.FC<EventRunnerProps> = ({ gameState, onTileComplete, onUsePowerUp, onActivateOverdrive, onlineMode, onSubmitTelemetry, isPaused }) => {
+export const EventRunner: React.FC<EventRunnerProps> = ({ gameState, onTileComplete, onUsePowerUp, onActivateOverdrive, onlineMode, onSubmitTelemetry, getGhostResultForTile, isPaused }) => {
   const { settings, run, currentTileIndex, players, overdrivingPlayerIds, activeAnomaly } = gameState;
   const currentTile = run[currentTileIndex];
   const event = useMemo(() => eventRegistry.find(e => e.id === currentTile.eventId)!, [currentTile.eventId]);
@@ -107,8 +109,15 @@ export const EventRunner: React.FC<EventRunnerProps> = ({ gameState, onTileCompl
     
     players.forEach(player => {
       if (player.isBot) {
-        const botResult = simulateBotPerformance(player, event, currentTile.difficulty, settings);
-        allResults[player.id] = { ...botResult, playerId: player.id };
+        if (player.isGhost && getGhostResultForTile) {
+          const ghostResult = getGhostResultForTile(currentTileIndex);
+          if (ghostResult) {
+            allResults[player.id] = { ...ghostResult, playerId: player.id };
+          }
+        } else {
+          const botResult = simulateBotPerformance(player, event, currentTile.difficulty, settings);
+          allResults[player.id] = { ...botResult, playerId: player.id };
+        }
       }
     });
 
@@ -123,7 +132,7 @@ export const EventRunner: React.FC<EventRunnerProps> = ({ gameState, onTileCompl
     const gs = gameStateRef.current;
     const botDecisionTimeout = setTimeout(() => {
         gs.players.forEach(player => {
-            if (player.isBot) {
+            if (player.isBot && !player.isGhost) {
                 if (decideBotOverdrive(player, gs)) {
                     onActivateOverdrive(player.id);
                 }
