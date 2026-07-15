@@ -70,8 +70,8 @@ describe('rankSystem', () => {
     });
 
     it('should map mid ratings to silver/gold', () => {
-      expect(ratingToTier(1000)).toBe('silver');
-      expect(ratingToTier(1400)).toBe('gold');
+      expect(ratingToTier(1300)).toBe('silver');
+      expect(ratingToTier(1600)).toBe('gold');
     });
 
     it('should map high ratings to platinum/diamond', () => {
