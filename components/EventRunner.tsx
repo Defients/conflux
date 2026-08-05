@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { GameState, EventResult, PowerUp, EventTelemetry } from '../types';
+import { GameState, EventResult, PowerUp, EventTelemetry, RivalTraitId } from '../types';
 import { eventRegistry } from '../events/eventRegistry';
 import { RaceTrackHUD } from './RaceTrackHUD';
 import { simulateBotPerformance, decideBotPowerUp, decideBotOverdrive } from '../services/botMind';
@@ -22,9 +22,11 @@ interface EventRunnerProps {
   /** Returns pre-recorded result for ghost players, or null if not a ghost race. */
   getGhostResultForTile?: (tileIndex: number) => EventResult | null;
   isPaused?: boolean;
+  /** Rival traits from the pilot profile, used for bot simulation and power-up decisions. */
+  rivalTraits?: RivalTraitId[];
 }
 
-export const EventRunner: React.FC<EventRunnerProps> = ({ gameState, onTileComplete, onUsePowerUp, onActivateOverdrive, onlineMode, onSubmitTelemetry, getGhostResultForTile, isPaused }) => {
+export const EventRunner: React.FC<EventRunnerProps> = ({ gameState, onTileComplete, onUsePowerUp, onActivateOverdrive, onlineMode, onSubmitTelemetry, getGhostResultForTile, isPaused, rivalTraits }) => {
   const { settings, run, currentTileIndex, players, overdrivingPlayerIds, activeAnomaly } = gameState;
   const currentTile = run[currentTileIndex];
   const event = useMemo(() => eventRegistry.find(e => e.id === currentTile.eventId)!, [currentTile.eventId]);
@@ -115,7 +117,7 @@ export const EventRunner: React.FC<EventRunnerProps> = ({ gameState, onTileCompl
             allResults[player.id] = { ...ghostResult, playerId: player.id };
           }
         } else {
-          const botResult = simulateBotPerformance(player, event, currentTile.difficulty, settings);
+          const botResult = simulateBotPerformance(player, event, currentTile.difficulty, settings, player.isRival ? rivalTraits : undefined);
           allResults[player.id] = { ...botResult, playerId: player.id };
         }
       }
@@ -124,7 +126,7 @@ export const EventRunner: React.FC<EventRunnerProps> = ({ gameState, onTileCompl
     setTimeout(() => {
       onTileComplete(allResults);
     }, 1500);
-  }, [isEventOver, onlineMode, onSubmitTelemetry, currentTileIndex, currentTile.eventId, currentTile.subSeed, settings.seed, event, humanPlayer, players, onTileComplete]);
+  }, [isEventOver, onlineMode, onSubmitTelemetry, currentTileIndex, currentTile.eventId, currentTile.subSeed, settings.seed, event, humanPlayer, players, onTileComplete, rivalTraits]);
   
   // Bot Logic (local mode only — server handles bots in online mode)
   useEffect(() => {
@@ -136,7 +138,7 @@ export const EventRunner: React.FC<EventRunnerProps> = ({ gameState, onTileCompl
                 if (decideBotOverdrive(player, gs)) {
                     onActivateOverdrive(player.id);
                 }
-                const decision = decideBotPowerUp(player, gs, gs.run[gs.currentTileIndex]);
+                const decision = decideBotPowerUp(player, gs, gs.run[gs.currentTileIndex], player.isRival ? rivalTraits : undefined);
                 if (decision) {
                     onUsePowerUp(player.id, decision.use, decision.targetId);
                 }

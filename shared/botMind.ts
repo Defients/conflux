@@ -32,12 +32,45 @@ function applyRivalTraits(baseProfile: BotProfile, traits: RivalTraitId[], dimen
                 }
                 break;
             case RivalTraitId.DebuffResistant:
+                // Applied at player creation time (see applyRivalTraitsToPlayer).
                 break;
             case RivalTraitId.AggressivePowerups:
+                // Applied in decideBotPowerUp via the traits list.
                 break;
         }
     }
     return profile;
+}
+
+/**
+ * Apply rival traits that affect player creation (not per-event simulation).
+ * Currently handles DebuffResistant: gives the rival a starting Shield or Clarity.
+ *
+ * @param player The rival bot player to modify
+ * @param traits The rival's trait IDs
+ * @param rng Seeded RNG for deterministic Shield vs Clarity choice
+ * @returns Modified player with trait effects applied
+ */
+export function applyRivalTraitsToPlayer(
+    player: Player,
+    traits: RivalTraitId[],
+    rng: SeededRNG
+): Player {
+    if (!player.isRival || traits.length === 0) return player;
+
+    const modified = { ...player, powerUps: [...player.powerUps] };
+
+    for (const trait of traits) {
+        if (trait === RivalTraitId.DebuffResistant) {
+            // 50% chance of Shield, 50% chance of Clarity (deterministic via rng)
+            const powerUp = rng.nextFloat() < 0.5 ? 'Shield' : 'Clarity';
+            if (!modified.powerUps.includes(powerUp)) {
+                modified.powerUps.push(powerUp);
+            }
+        }
+    }
+
+    return modified;
 }
 
 function getBotResult(
@@ -754,11 +787,12 @@ export function decideBotPowerUp(
     bot: Player,
     gameState: GameState,
     currentTile: Tile,
+    rivalTraits?: RivalTraitId[],
 ): { use: PowerUp; targetId: number; } | null {
     if (bot.powerUps.length === 0 || currentTile.modifier === 'STATIC_FIELD') return null;
 
     const rng = new SeededRNG(`powerup-${bot.id}-tile-${gameState.currentTileIndex}-${gameState.settings.seed}`);
-    
+
     // Easy bot misfire chance
     if (bot.personality === BotPersonality.Easy && rng.nextFloat() < 0.1) {
         return null;
@@ -767,7 +801,7 @@ export function decideBotPowerUp(
     const playersSorted = [...gameState.players].sort((a, b) => b.position - a.position);
     const leader = playersSorted[0];
     const humanPlayer = gameState.players.find(p => !p.isBot)!;
-    
+
     // Shield logic
     if (bot.powerUps.includes('Shield')) {
         if (leader.id === humanPlayer.id && (leader.position - bot.position) < (100 / gameState.settings.runLength)) {
@@ -802,7 +836,7 @@ export function decideBotPowerUp(
             targetId = playersSorted[1].id;
         }
 
-        // Adaptive Rival aggression (boosted by AggressivePowerups trait)
+        // Adaptive Rival aggression
         let riskBias = bot.personality === BotPersonality.Intermediate ? 0.4 : 0.7;
         if (bot.isRival) {
             const humanRank = playersSorted.findIndex(p => p.id === humanPlayer.id);
@@ -813,8 +847,12 @@ export function decideBotPowerUp(
                     riskBias = 0.5;
                 }
             }
+            // AggressivePowerups trait: boost offensive power-up usage by +0.15
+            if (rivalTraits && rivalTraits.includes(RivalTraitId.AggressivePowerups)) {
+                riskBias = Math.min(0.98, riskBias + 0.15);
+            }
         }
-        
+
         if (rng.nextFloat() < riskBias) {
             return { use: offensivePowerUp, targetId: targetId };
         }

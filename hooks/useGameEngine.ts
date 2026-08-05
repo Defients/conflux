@@ -11,6 +11,7 @@ import { generateNebula } from '../services/nebulaGenerator';
 import { PitStopAction } from '../components/PitStopScreen';
 import { GameRules, GameEffect } from '../services/gameRules';
 import { applySkillEffects, applyLoadoutEffects } from '../shared/gameSetup';
+import { applyRivalTraitsToPlayer } from '../shared/botMind';
 
 export const useGameEngine = () => {
   const [gameState, setGameState] = useState<GameState | null>(null);
@@ -129,6 +130,14 @@ export const useGameEngine = () => {
         const randomChassisId = chassisIds[rng.nextInt(0, chassisIds.length)];
         rivalBot.chassisId = randomChassisId;
         if(randomChassisId === ChassisId.Aegis) rivalBot.powerUps.push('Shield');
+
+        // v5.0: Apply rival traits from pilot profile (e.g. DebuffResistant gives starting Shield/Clarity)
+        if (profile?.rivalData?.traits && profile.rivalData.traits.length > 0) {
+            const rivalIdx = players.findIndex(p => p === rivalBot);
+            if (rivalIdx >= 0) {
+                players[rivalIdx] = applyRivalTraitsToPlayer(rivalBot, profile.rivalData.traits, rng);
+            }
+        }
     }
 
     let run = (customEventIds && customEventIds.length > 0)

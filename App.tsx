@@ -743,6 +743,7 @@ const App: React.FC = () => {
           onSubmitTelemetry={isOnline ? handleSubmitTelemetry : undefined}
           getGhostResultForTile={ghostRun ? getGhostResultForTile : undefined}
           isPaused={showCountdown}
+          rivalTraits={profile?.rivalData?.traits}
         />;
       case GameScreen.TileResults:
         if (!activeGameState) return renderLobby();
