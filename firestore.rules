@@ -35,6 +35,14 @@ service cloud.firestore {
         && resource.data.userId == request.auth.uid;
     }
 
+    // ─── v5.0: Tournaments ──────────────────────────────────────────────
+    // Read-only for authenticated users (bracket state for spectators).
+    // Writes only via Admin SDK (server-side, bypasses rules).
+    match /tournaments/{document=**} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
     // ─── Default: deny all ──────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;
