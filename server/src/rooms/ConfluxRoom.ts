@@ -38,7 +38,7 @@ import { computeMatchSummary, applyMatchSummaryToProfile } from '../../../shared
 import { computeMultiPlayerRatingChanges, applyRatingChange, createDefaultRankInfo } from '../../../shared/rankSystem';
 import { applySkillEffects, applyLoadoutEffects, assignTeams } from '../../../shared/gameSetup';
 import { generateContracts } from '../../../shared/contractService';
-import { getProfile, saveProfile } from '../services/profileRepository';
+import { getProfile, saveProfile, updateProfileTransaction } from '../services/profileRepository';
 import { writeLeaderboardEntry } from '../services/leaderboardRepository';
 import { writeMatchHistory } from '../services/matchHistoryRepository';
 import { LeaderboardEntry, MatchHistoryEntry } from '../../../shared/types';
@@ -1111,16 +1111,59 @@ export class ConfluxRoom extends Room {
         const gamePlayer = gs.players.find(p => p.id === roomPlayer.playerId);
         if (!gamePlayer || gamePlayer.isBot) return;
 
-        const profile = await getProfile(roomPlayer.userId!);
-        if (!profile) {
-          console.log(`[Room ${roomCode}] No profile for ${roomPlayer.userId} — skipping summary.`);
-          return;
-        }
+        // Use a Firestore transaction for atomic read-modify-write.
+        // This prevents lost updates if two matches finish for the same user
+        // simultaneously, and ensures the appliedMatchIds dedup check is atomic.
+        const updatedProfile = await updateProfileTransaction(roomPlayer.userId!, (currentProfile) => {
+          if (!currentProfile) {
+            console.log(`[Room ${roomCode}] No profile for ${roomPlayer.userId} — skipping summary.`);
+            return null;
+          }
 
-        const currentDailyBest = profile.dailyBests?.[dailySeed] ?? null;
+          const currentDailyBest = currentProfile.dailyBests?.[dailySeed] ?? null;
+          const summary = computeMatchSummary({
+            gameState: gs,
+            profile: currentProfile,
+            mode: 'online',
+            contracts,
+            eventDimensionMap,
+            dailySeed,
+            currentDailyBest,
+            targetPlayerId: roomPlayer.playerId,
+          });
+
+          const newProfile = applyMatchSummaryToProfile(currentProfile, summary);
+          if (!newProfile) {
+            console.log(`[Room ${roomCode}] Match ${summary.matchId} already applied for ${roomPlayer.userId}.`);
+            return null;
+          }
+
+          // v5.0: Compute ranked rating changes if this was a ranked match
+          if (roomPlayer.rating) {
+            const allPlayers = gs.players.map(p => {
+              const rp = [...this.roomState.players.values()].find(r => r.playerId === p.id);
+              return { playerId: p.id, rating: rp?.rating ?? 1000, placement: sortedPlayers.indexOf(p) };
+            });
+            const ratingChanges = computeMultiPlayerRatingChanges(allPlayers);
+            const myChange = ratingChanges.get(roomPlayer.playerId) ?? 0;
+            if (myChange !== 0) {
+              if (!newProfile.rank) newProfile.rank = createDefaultRankInfo();
+              newProfile.rank = applyRatingChange(newProfile.rank, myChange, myChange > 0);
+            }
+          }
+
+          return newProfile;
+        });
+
+        if (!updatedProfile) return;
+
+        // Re-derive summary for leaderboard/history from the updated profile.
+        // The summary was computed inside the transaction; we recompute here
+        // for the side-effect data (leaderboard, history).
+        const currentDailyBest = updatedProfile.dailyBests?.[dailySeed] ?? null;
         const summary = computeMatchSummary({
           gameState: gs,
-          profile,
+          profile: updatedProfile,
           mode: 'online',
           contracts,
           eventDimensionMap,
@@ -1128,31 +1171,6 @@ export class ConfluxRoom extends Room {
           currentDailyBest,
           targetPlayerId: roomPlayer.playerId,
         });
-
-        const updatedProfile = applyMatchSummaryToProfile(profile, summary);
-        if (!updatedProfile) {
-          console.log(`[Room ${roomCode}] Match ${summary.matchId} already applied for ${roomPlayer.userId}.`);
-          return;
-        }
-
-        // v5.0: Compute ranked rating changes if this was a ranked match
-        if (roomPlayer.rating) {
-          const allPlayers = gs.players.map(p => {
-            const rp = [...this.roomState.players.values()].find(r => r.playerId === p.id);
-            return { playerId: p.id, rating: rp?.rating ?? 1000, placement: sortedPlayers.indexOf(p) };
-          });
-          const ratingChanges = computeMultiPlayerRatingChanges(allPlayers);
-          const myChange = ratingChanges.get(roomPlayer.playerId) ?? 0;
-          if (myChange !== 0) {
-            summary.ratingChange = myChange;
-            if (!updatedProfile.rank) updatedProfile.rank = createDefaultRankInfo();
-            updatedProfile.rank = applyRatingChange(updatedProfile.rank, myChange, myChange > 0);
-            summary.newRating = updatedProfile.rank.rating;
-            summary.newTier = updatedProfile.rank.tier;
-          }
-        }
-
-        await saveProfile(roomPlayer.userId!, updatedProfile);
 
         // ── Write leaderboard entries (allTime + daily + gauntlet) ────────
         const lbEntry: LeaderboardEntry = {

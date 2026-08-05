@@ -12,6 +12,7 @@ import {
   TournamentBracket, TournamentRound, TournamentMatch,
   TournamentParticipant, RoomConfig,
 } from '../../../shared/types';
+import { saveTournamentBracket, deleteTournamentBracket } from '../services/tournamentRepository';
 
 const TICK_MS = 3000;
 
@@ -295,6 +296,10 @@ export class TournamentRoom extends Room {
         championName: championParticipant?.name ?? 'Unknown',
       });
       this.broadcastBracket();
+      // Tournament complete — delete from Firestore (fire-and-forget)
+      deleteTournamentBracket(this.bracket.id).catch(err => {
+        console.error('[TournamentRoom] Failed to delete completed bracket:', err);
+      });
       return;
     }
 
@@ -313,6 +318,10 @@ export class TournamentRoom extends Room {
     if (!this.bracket) return;
     this.broadcast(ServerMessages.TOURNAMENT_UPDATE, {
       bracket: this.bracket,
+    });
+    // Persist bracket to Firestore (fire-and-forget, non-blocking)
+    saveTournamentBracket(this.bracket).catch(err => {
+      console.error('[TournamentRoom] Failed to persist bracket:', err);
     });
   }
 }
