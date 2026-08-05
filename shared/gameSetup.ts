@@ -347,7 +347,7 @@ export function applySeasonalModifierToSettings(settings: GameSettings): {
     return { settings, modifier: null };
   }
 
-  let modifiedSettings = { ...settings };
+  const modifiedSettings = { ...settings };
 
   if (modifier.effect.runLengthOverride !== undefined) {
     modifiedSettings.runLength = modifier.effect.runLengthOverride;
@@ -367,7 +367,7 @@ export function applySeasonalModifierToPlayer(
 ): Player {
   if (!modifier) return player;
 
-  let modifiedPlayer = { ...player };
+  const modifiedPlayer = { ...player };
 
   if (modifier.effect.disablePowerUps) {
     modifiedPlayer.powerUps = [];
