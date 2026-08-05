@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect } from 'react';
 
-export interface GameSettings {
+export interface UISettings {
   soundEnabled: boolean;
   musicEnabled: boolean;
   hapticsEnabled: boolean;
@@ -15,17 +15,17 @@ export interface GameSettings {
 }
 
 interface SettingsScreenProps {
-  settings: GameSettings;
-  onSave: (settings: GameSettings) => void;
+  settings: UISettings;
+  onSave: (settings: UISettings) => void;
   onBack: () => void;
 }
 
 const SETTINGS_KEY = 'conflux-game-settings';
 
-export const loadSettings = (): GameSettings => {
+export const loadSettings = (): UISettings => {
   try {
     const saved = localStorage.getItem(SETTINGS_KEY);
-    if (saved) return JSON.parse(saved) as GameSettings;
+    if (saved) return JSON.parse(saved) as UISettings;
   } catch {
     // ignore
   }
@@ -38,7 +38,7 @@ export const loadSettings = (): GameSettings => {
   };
 };
 
-export const saveSettings = (settings: GameSettings): void => {
+export const saveSettings = (settings: UISettings): void => {
   try {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   } catch {
@@ -51,20 +51,20 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   onSave,
   onBack,
 }) => {
-  const [settings, setSettings] = useState<GameSettings>(initialSettings);
+  const [settings, setSettings] = useState<UISettings>(initialSettings);
 
   useEffect(() => {
     setSettings(initialSettings);
   }, [initialSettings]);
 
-  const toggle = (key: keyof GameSettings) => {
+  const toggle = (key: keyof UISettings) => {
     const updated = { ...settings, [key]: !settings[key] };
     setSettings(updated);
     saveSettings(updated);
     onSave(updated);
   };
 
-  const settingRows: { key: keyof GameSettings; label: string; description: string }[] = [
+  const settingRows: { key: keyof UISettings; label: string; description: string }[] = [
     { key: 'soundEnabled', label: 'Sound Effects', description: 'Event sounds and UI feedback' },
     { key: 'musicEnabled', label: 'Music', description: 'Background music during races' },
     { key: 'hapticsEnabled', label: 'Haptics', description: 'Vibration feedback on mobile' },
@@ -101,3 +101,4 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     </div>
   );
 };
+

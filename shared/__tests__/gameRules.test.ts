@@ -63,8 +63,8 @@ describe('GameRules.processRaceStep', () => {
   it('should advance player position based on stars', () => {
     const state = makeGameState();
     const results: Record<number, EventResult> = {
-      1: { stars: 3, metric: 150, completed: true },
-      2: { stars: 1, metric: 500, completed: true },
+      1: { playerId: 1, stars: 3, primaryMetric: 150 },
+      2: { playerId: 2, stars: 1, primaryMetric: 500 },
     };
 
     const update = GameRules.processRaceStep(state, results, MOCK_EVENTS);
@@ -80,8 +80,8 @@ describe('GameRules.processRaceStep', () => {
   it('should add tile to player history', () => {
     const state = makeGameState();
     const results: Record<number, EventResult> = {
-      1: { stars: 2, metric: 200, completed: true },
-      2: { stars: 2, metric: 200, completed: true },
+      1: { playerId: 1, stars: 2, primaryMetric: 200 },
+      2: { playerId: 2, stars: 2, primaryMetric: 200 },
     };
 
     const update = GameRules.processRaceStep(state, results, MOCK_EVENTS);
@@ -93,8 +93,8 @@ describe('GameRules.processRaceStep', () => {
   it('should advance currentTileIndex', () => {
     const state = makeGameState();
     const results: Record<number, EventResult> = {
-      1: { stars: 1, metric: 300, completed: true },
-      2: { stars: 1, metric: 300, completed: true },
+      1: { playerId: 1, stars: 1, primaryMetric: 300 },
+      2: { playerId: 2, stars: 1, primaryMetric: 300 },
     };
 
     const update = GameRules.processRaceStep(state, results, MOCK_EVENTS);
@@ -104,8 +104,8 @@ describe('GameRules.processRaceStep', () => {
   it('should award energy based on stars', () => {
     const state = makeGameState();
     const results: Record<number, EventResult> = {
-      1: { stars: 3, metric: 150, completed: true },
-      2: { stars: 1, metric: 500, completed: true },
+      1: { playerId: 1, stars: 3, primaryMetric: 150 },
+      2: { playerId: 2, stars: 1, primaryMetric: 500 },
     };
 
     const update = GameRules.processRaceStep(state, results, MOCK_EVENTS);
@@ -117,8 +117,8 @@ describe('GameRules.processRaceStep', () => {
   it('should handle overdriving players with boosted movement on 3 stars', () => {
     const state = makeGameState({ overdrivingPlayerIds: [1] });
     const results: Record<number, EventResult> = {
-      1: { stars: 3, metric: 150, completed: true },
-      2: { stars: 3, metric: 150, completed: true },
+      1: { playerId: 1, stars: 3, primaryMetric: 150 },
+      2: { playerId: 2, stars: 3, primaryMetric: 150 },
     };
 
     const update = GameRules.processRaceStep(state, results, MOCK_EVENTS);
@@ -131,8 +131,8 @@ describe('GameRules.processRaceStep', () => {
   it('should stun overdriving player on non-3-star result (zero movement)', () => {
     const state = makeGameState({ overdrivingPlayerIds: [1] });
     const results: Record<number, EventResult> = {
-      1: { stars: 2, metric: 200, completed: true },
-      2: { stars: 2, metric: 200, completed: true },
+      1: { playerId: 1, stars: 2, primaryMetric: 200 },
+      2: { playerId: 2, stars: 2, primaryMetric: 200 },
     };
 
     const update = GameRules.processRaceStep(state, results, MOCK_EVENTS);
@@ -149,8 +149,8 @@ describe('GameRules.processRaceStep', () => {
   it('should clear overdrivingPlayerIds after step', () => {
     const state = makeGameState({ overdrivingPlayerIds: [1] });
     const results: Record<number, EventResult> = {
-      1: { stars: 2, metric: 200, completed: true },
-      2: { stars: 2, metric: 200, completed: true },
+      1: { playerId: 1, stars: 2, primaryMetric: 200 },
+      2: { playerId: 2, stars: 2, primaryMetric: 200 },
     };
 
     const update = GameRules.processRaceStep(state, results, MOCK_EVENTS);
@@ -288,3 +288,5 @@ describe('GameRules.applyPowerUp', () => {
     expect(p1.statuses.some(s => s.type === 'SHIELDED')).toBe(false);
   });
 });
+
+

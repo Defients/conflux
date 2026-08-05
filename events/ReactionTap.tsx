@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { EventProps } from '../types';
 import { SeededRNG } from '../services/seededRNG';
+import { useEventFeedback } from '../hooks/useEventFeedback';
 
 enum State {
   Ready,
@@ -17,6 +18,7 @@ export const ReactionTap: React.FC<EventProps> = ({ onComplete, tile, settings, 
   const startTimeRef = useRef<number>(0);
   const isMountedRef = useRef<boolean>(true);
   const [ripple, setRipple] = useState<{x: number, y: number} | null>(null);
+  const feedback = useEventFeedback();
 
   const endEvent = useCallback((reactionTime: number) => {
     if (stateRef.current === State.Done) return;
@@ -79,14 +81,16 @@ export const ReactionTap: React.FC<EventProps> = ({ onComplete, tile, settings, 
 
     if (stateRef.current === State.Waiting) {
       setMessage('Too Soon!');
+      feedback.onFail();
       endEvent(9999); // Penalty
     } else if (stateRef.current === State.Active) {
       const reactionTime = performance.now() - startTimeRef.current;
       const clampedTime = Math.max(80, reactionTime);
       setMessage(`${clampedTime.toFixed(0)} ms`);
+      feedback.onSuccess();
       endEvent(clampedTime);
     }
-  }, [endEvent]);
+  }, [endEvent, feedback]);
 
   const handleKeyPress = useCallback((event: KeyboardEvent) => {
     if (event.code === 'Space') {

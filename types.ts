@@ -32,6 +32,7 @@ export interface EventProps {
   settings: GameSettings;
   onComplete: (result: Omit<EventResult, 'playerId' | 'stars'>) => void;
   isBlurred: boolean;
-  isOverdriving: boolean;
+  /** Whether the current player is in overdrive mode. Most events don't need this. */
+  isOverdriving?: boolean;
   isPaused?: boolean;
 }

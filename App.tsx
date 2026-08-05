@@ -37,7 +37,7 @@ import { ModeSelector, GameModeSelection } from './components/ModeSelector';
 import { GhostRaceScreen } from './components/GhostRaceScreen';
 import { SkillTreeScreen } from './components/SkillTreeScreen';
 import { HangarScreen } from './components/HangarScreen';
-import { SettingsScreen, loadSettings, saveSettings, GameSettings as UGameSettings } from './components/SettingsScreen';
+import { SettingsScreen, loadSettings, saveSettings, UISettings } from './components/SettingsScreen';
 import { OnboardingFlow } from './components/OnboardingFlow';
 import { TournamentScreen } from './components/TournamentScreen';
 import { networkService } from './services/networkService';
@@ -88,7 +88,7 @@ const App: React.FC = () => {
   const [showWelcome, setShowWelcome] = useState(false);
   const [pendingRoomCode, setPendingRoomCode] = useState<string | undefined>(undefined);
   // v5.0 state
-  const [uiSettings, setUiSettings] = useState<UGameSettings>(() => loadSettings());
+  const [uiSettings, setUiSettings] = useState<UISettings>(() => loadSettings());
   const [tournamentBracket, setTournamentBracket] = useState<TournamentBracket | null>(null);
   const [tournamentMatchId, setTournamentMatchId] = useState<string | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -467,7 +467,7 @@ const App: React.FC = () => {
     setScreen('SETTINGS');
   }, []);
 
-  const handleSaveSettings = useCallback((settings: UGameSettings) => {
+  const handleSaveSettings = useCallback((settings: UISettings) => {
     setUiSettings(settings);
     saveSettings(settings);
   }, []);
@@ -842,3 +842,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+
