@@ -55,12 +55,15 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
   const myPlayer = lobbyState?.players.find(p => p.sessionId === sessionId);
   const allReady = lobbyState?.players.every(p => p.isReady || p.isHost) ?? false;
 
-  const buildConfig = (): RoomConfig => {
+  const buildConfig = async (): Promise<RoomConfig> => {
+    // Get Firebase ID token for server-side identity verification.
+    const idToken = await auth?.currentUser?.getIdToken?.() ?? undefined;
     return {
       playerName: profile.name,
       avatarId: profile.avatarId,
       chassisId: selectedChassis,
       userId: auth?.currentUser?.uid,
+      idToken,
       // v5.0 fields
       rating: profile.rank?.rating,
       skillNodeIds: Object.entries(profile.skills?.speed ?? {})
@@ -76,13 +79,15 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
 
   const handleCreate = async () => {
     clearError();
-    await createRoom({ ...buildConfig(), isPrivate: createPrivate });
+    const config = await buildConfig();
+    await createRoom({ ...config, isPrivate: createPrivate });
   };
 
   const handleJoin = async () => {
     if (!joinCode.trim()) return;
     clearError();
-    await joinRoom(joinCode.trim().toUpperCase(), buildConfig());
+    const config = await buildConfig();
+    await joinRoom(joinCode.trim().toUpperCase(), config);
   };
 
   const handleLeave = async () => {
@@ -113,7 +118,7 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
       autoJoinAttempted.current = true;
       setJoinCode(pendingRoomCode.toUpperCase());
       clearError();
-      joinRoom(pendingRoomCode.toUpperCase(), buildConfig());
+      buildConfig().then(config => joinRoom(pendingRoomCode.toUpperCase(), config));
     }
   }, [pendingRoomCode, isInRoom]);
 
@@ -129,7 +134,8 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
 
   const handleJoinOpenRoom = async (room: OpenRoomInfo) => {
     clearError();
-    await joinRoom(room.roomCode, buildConfig());
+    const config = await buildConfig();
+    await joinRoom(room.roomCode, config);
   };
 
   // v5.0: Spectate an in-progress match
@@ -305,7 +311,7 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
               </div>
             ) : (
               <button
-                onClick={() => joinQueue(buildConfig(), 'ranked')}
+                onClick={() => buildConfig().then(config => joinQueue(config, 'ranked'))}
                 className="w-full py-3 bg-gradient-to-r from-galaxy-cyan/20 to-star-purple/20 border border-galaxy-cyan/40 text-galaxy-cyan font-bold rounded-lg active:opacity-80 sm:hover:opacity-90 transition-all text-sm"
                 aria-label="Join ranked queue"
               >

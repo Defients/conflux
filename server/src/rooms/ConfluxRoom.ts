@@ -42,6 +42,7 @@ import { getProfile, saveProfile } from '../services/profileRepository';
 import { writeLeaderboardEntry } from '../services/leaderboardRepository';
 import { writeMatchHistory } from '../services/matchHistoryRepository';
 import { LeaderboardEntry, MatchHistoryEntry } from '../../../shared/types';
+import { verifyAuthToken, validateUserIdClaim } from '../auth/verifyToken';
 
 // ─── Room State (plain object, synced via messages) ──────────────────────────
 
@@ -227,10 +228,41 @@ export class ConfluxRoom extends Room {
     });
   }
 
+  /**
+   * Authentication gate: verifies Firebase ID token before allowing join.
+   * The verified UID is stored on the client for use in onJoin.
+   * In dev mode (FIREBASE_AUTH_DISABLED=1), auth is bypassed.
+   */
+  async onAuth(client: Client, options: RoomConfig): Promise<boolean> {
+    const identity = await verifyAuthToken(options.idToken);
+    if (!identity) {
+      console.warn(`[Room ${this.roomState.roomCode}] Rejected join: invalid or missing auth token (session: ${client.sessionId})`);
+      return false;
+    }
+
+    // Check ban list using verified UID (not client-supplied userId).
+    if (this.roomState.bannedUserIds.has(identity.uid)) {
+      console.warn(`[Room ${this.roomState.roomCode}] Rejected join: banned UID ${identity.uid}`);
+      return false;
+    }
+
+    // Validate that client-supplied userId matches verified UID (anti-spoofing).
+    if (!validateUserIdClaim(options.userId, identity.uid)) {
+      console.warn(`[Room ${this.roomState.roomCode}] Rejected join: userId spoof (claimed: ${options.userId}, verified: ${identity.uid})`);
+      return false;
+    }
+
+    // Store verified identity on client for use in onJoin.
+    (client as any).verifiedUid = identity.uid;
+    (client as any).authBypassed = identity.authBypassed;
+    return true;
+  }
+
   onJoin(client: Client, options: RoomConfig) {
-    // Check ban lists
+    // Check ban lists (using verified UID from onAuth, not client-supplied userId)
+    const verifiedUid = (client as any).verifiedUid as string | undefined;
     if (this.roomState.bannedSessionIds.has(client.sessionId) ||
-        (options.userId && this.roomState.bannedUserIds.has(options.userId))) {
+        (verifiedUid && this.roomState.bannedUserIds.has(verifiedUid))) {
       throw new Error('You are banned from this room.');
     }
 
@@ -267,7 +299,7 @@ export class ConfluxRoom extends Room {
       isHost: this.roomState.players.size === 0, // First player is host
       isConnected: true,
       playerId,
-      userId: options.userId,
+      userId: verifiedUid ?? options.userId, // Prefer verified UID over client claim
       // v5.0 fields
       rating: options.rating,
       teamId: options.teamId,

@@ -347,6 +347,8 @@ export interface RoomConfig {
   avatarId: string;
   chassisId: ChassisId;
   userId?: string;
+  /** Firebase ID token for server-side identity verification. */
+  idToken?: string;
   isPrivate?: boolean;
   /** Join as spectator (can join during active matches). */
   spectate?: boolean;
