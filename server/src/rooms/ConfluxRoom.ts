@@ -39,6 +39,7 @@ import { computeMultiPlayerRatingChanges, applyRatingChange, createDefaultRankIn
 import { applySkillEffects, applyLoadoutEffects, assignTeams } from '../../../shared/gameSetup';
 import { generateContracts } from '../../../shared/contractService';
 import { getProfile, saveProfile, updateProfileTransaction } from '../services/profileRepository';
+import { runMatchSummaryPipeline, RoomPlayerInfo } from '../services/matchSummaryPipeline';
 import { writeLeaderboardEntry } from '../services/leaderboardRepository';
 import { writeMatchHistory } from '../services/matchHistoryRepository';
 import { LeaderboardEntry, MatchHistoryEntry } from '../../../shared/types';
@@ -1120,128 +1121,26 @@ export class ConfluxRoom extends Room {
     this.broadcast(ServerMessages.RACE_FINISHED, payload);
     this.unlock(); // Allow new joins for rematch
 
-    // ── Async per-player summary pipeline (parallel, non-blocking) ──────────
-    const dailySeed = new Date().toISOString().split('T')[0];
-    const contracts = generateContracts(this.roomState.gameState.settings.seed);
+    // ── Async per-player summary pipeline (extracted to matchSummaryPipeline) ──
     const eventDimensionMap = this.getEventDimensionMap();
     const gs = this.roomState.gameState; // capture snapshot
-    const roomCode = this.roomState.roomCode;
 
-    const summaryTasks = [...this.roomState.players.entries()]
-      .filter(([, rp]) => !!rp.userId)
-      .map(async ([sessionId, roomPlayer]) => {
-        const gamePlayer = gs.players.find(p => p.id === roomPlayer.playerId);
-        if (!gamePlayer || gamePlayer.isBot) return;
+    const roomPlayers: RoomPlayerInfo[] = [...this.roomState.players.entries()].map(
+      ([sessionId, rp]) => ({
+        sessionId,
+        playerId: rp.playerId,
+        userId: rp.userId ?? null,
+        rating: rp.rating,
+      })
+    );
 
-        // Use a Firestore transaction for atomic read-modify-write.
-        // This prevents lost updates if two matches finish for the same user
-        // simultaneously, and ensures the appliedMatchIds dedup check is atomic.
-        const updatedProfile = await updateProfileTransaction(roomPlayer.userId!, (currentProfile) => {
-          if (!currentProfile) {
-            console.log(`[Room ${roomCode}] No profile for ${roomPlayer.userId} — skipping summary.`);
-            return null;
-          }
-
-          const currentDailyBest = currentProfile.dailyBests?.[dailySeed] ?? null;
-          const summary = computeMatchSummary({
-            gameState: gs,
-            profile: currentProfile,
-            mode: 'online',
-            contracts,
-            eventDimensionMap,
-            dailySeed,
-            currentDailyBest,
-            targetPlayerId: roomPlayer.playerId,
-          });
-
-          const newProfile = applyMatchSummaryToProfile(currentProfile, summary);
-          if (!newProfile) {
-            console.log(`[Room ${roomCode}] Match ${summary.matchId} already applied for ${roomPlayer.userId}.`);
-            return null;
-          }
-
-          // v5.0: Compute ranked rating changes if this was a ranked match
-          if (roomPlayer.rating) {
-            const allPlayers = gs.players.map(p => {
-              const rp = [...this.roomState.players.values()].find(r => r.playerId === p.id);
-              return { playerId: p.id, rating: rp?.rating ?? 1000, placement: sortedPlayers.indexOf(p) };
-            });
-            const ratingChanges = computeMultiPlayerRatingChanges(allPlayers);
-            const myChange = ratingChanges.get(roomPlayer.playerId) ?? 0;
-            if (myChange !== 0) {
-              if (!newProfile.rank) newProfile.rank = createDefaultRankInfo();
-              newProfile.rank = applyRatingChange(newProfile.rank, myChange, myChange > 0);
-            }
-          }
-
-          return newProfile;
-        });
-
-        if (!updatedProfile) return;
-
-        // Re-derive summary for leaderboard/history from the updated profile.
-        // The summary was computed inside the transaction; we recompute here
-        // for the side-effect data (leaderboard, history).
-        const currentDailyBest = updatedProfile.dailyBests?.[dailySeed] ?? null;
-        const summary = computeMatchSummary({
-          gameState: gs,
-          profile: updatedProfile,
-          mode: 'online',
-          contracts,
-          eventDimensionMap,
-          dailySeed,
-          currentDailyBest,
-          targetPlayerId: roomPlayer.playerId,
-        });
-
-        // ── Write leaderboard entries (allTime + daily + gauntlet) ────────
-        const lbEntry: LeaderboardEntry = {
-          userId: roomPlayer.userId!,
-          playerName: updatedProfile.name,
-          avatarId: updatedProfile.avatarId,
-          circuitPoints: updatedProfile.circuitPoints,
-          bestScore: summary.humanPlacement === 0 ? 1 : 0,
-          updatedAt: Date.now(),
-        };
-        await writeLeaderboardEntry('allTime', lbEntry);
-
-        if (summary.isDaily && summary.dailyIsNewBest && summary.dailyPersonalBest !== null) {
-          await writeLeaderboardEntry('daily', { ...lbEntry, bestScore: summary.dailyPersonalBest }, dailySeed);
-        }
-
-        if (summary.isGauntlet && summary.gauntletNewHighScore && summary.gauntletTilesSurvived !== null) {
-          await writeLeaderboardEntry('gauntlet', { ...lbEntry, bestScore: summary.gauntletTilesSurvived });
-        }
-
-        // ── Write match history ───────────────────────────────────────────
-        const historyEntry: MatchHistoryEntry = {
-          matchId: summary.matchId,
-          seed: summary.seed,
-          mode: 'online',
-          completedAt: summary.completedAt,
-          runLength: summary.runLength,
-          placement: summary.humanPlacement + 1,
-          totalPlayers: gs.players.length,
-          cpEarned: summary.cp.totalCp,
-          isDaily: summary.isDaily,
-          isGauntlet: summary.isGauntlet,
-          rivalDefeated: summary.rivalDelta?.wins === 1,
-          gauntletTilesSurvived: summary.gauntletTilesSurvived,
-        };
-        await writeMatchHistory(roomPlayer.userId!, historyEntry);
-
-        const client = this.clients.find(c => c.sessionId === sessionId);
-        if (client) {
-          client.send(ServerMessages.MATCH_SUMMARY, { summary });
-        }
-      });
-
-    Promise.allSettled(summaryTasks).then(results => {
-      results.forEach(r => {
-        if (r.status === 'rejected') {
-          console.error(`[Room ${roomCode}] Summary pipeline error:`, r.reason);
-        }
-      });
+    runMatchSummaryPipeline({
+      gameState: gs,
+      roomPlayers,
+      sortedPlayers,
+      eventDimensionMap,
+      roomCode: this.roomState.roomCode,
+      findClient: (sessionId: string) => this.clients.find(c => c.sessionId === sessionId),
     });
   }
 
