@@ -56,7 +56,7 @@ const generateRival = (playerName: string, playerAvatar: string): RivalData => {
 };
 
 const normalizeProfile = (input: Partial<PilotProfile & { rivalData: Partial<RivalData> }>): PilotProfile | null => {
-    let parsed = { ...input } as Partial<PilotProfile & { rivalData: Partial<RivalData> }>;
+    const parsed = { ...input } as Partial<PilotProfile & { rivalData: Partial<RivalData> }>;
     let needsSave = false;
 
     if (typeof parsed.gauntletHighScore !== 'number') {

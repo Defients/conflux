@@ -86,7 +86,6 @@ export const EvadeGrid: React.FC<EventProps> = ({ onComplete, tile, settings, ev
         }, roundDuration);
 
         return () => clearInterval(gameLoop);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isPaused, generateNewTelegraphs, roundDuration, totalRounds, onComplete]);
 
     const handleKeyDown = useCallback((e: KeyboardEvent) => {

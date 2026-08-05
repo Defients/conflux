@@ -80,8 +80,8 @@ export const GhostTrajectory: React.FC<EventProps> = ({ onComplete, tile, settin
     }, [round, startRound]);
 
     const gameLoop = useCallback(() => {
-        let newPos = { ...projectileRef.current };
-        let newVel = { ...velocityRef.current };
+        const newPos = { ...projectileRef.current };
+        const newVel = { ...velocityRef.current };
 
         newVel.y += GRAVITY;
         newPos.x += newVel.x;

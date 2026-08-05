@@ -827,7 +827,7 @@ export class ConfluxRoom extends Room {
 
     // Config Rival
     const potentialRivals = players.filter(p => p.isBot && p.personality === BotPersonality.Intermediate);
-    let rivalBot = potentialRivals.length > 0 ? potentialRivals[0] : players.find(p => p.isBot);
+    const rivalBot = potentialRivals.length > 0 ? potentialRivals[0] : players.find(p => p.isBot);
 
     if (rivalBot) {
       rivalBot.isRival = true;

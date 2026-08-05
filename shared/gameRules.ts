@@ -70,7 +70,7 @@ const applyDebuff = (player: Player, status: PlayerStatus, settings: GameSetting
 
     // 4. Apply Debuff
     const chassis = player.chassisId ?? (player.isBot ? undefined : settings.selectedChassis);
-    let finalStatus = { ...status };
+    const finalStatus = { ...status };
     
     // Glass Cannon penalty
     if (chassis === ChassisId.GlassCannon) {
@@ -115,7 +115,7 @@ export const GameRules = {
         const baseStep = 100 / runLength;
         const powerUpRng = new SeededRNG(`powerup-award-${state.currentTileIndex}-${state.settings.seed}`);
 
-        let finalResults = { ...results };
+        const finalResults = { ...results };
 
         // 1. Handle Overdrive
         state.overdrivingPlayerIds.forEach(pid => {
@@ -140,7 +140,7 @@ export const GameRules = {
             const result = finalResults[p.id];
             if (!result) return p;
 
-            let updatedPlayer = { ...p };
+            const updatedPlayer = { ...p };
 
             // A. Haptics for Human
             if (!p.isBot && (result.stars >= 2)) {
@@ -468,7 +468,7 @@ export const GameRules = {
         if (!player) return { newState: state, effects: [] };
 
         const config = PIT_STOP_CONFIG.actions[action];
-        let updatedPlayer = { ...player };
+        const updatedPlayer = { ...player };
 
         // Cost check
         if (action !== 'recharge' && updatedPlayer.energy < config.cost) {
@@ -547,7 +547,7 @@ export const GameRules = {
     resolveIntervention: (state: GameState, accept: boolean): GameUpdate => {
         if (!state.activeIntervention) return { newState: state, effects: [] };
         
-        let newRun = [...state.run];
+        const newRun = [...state.run];
         const effects: GameEffect[] = [];
         
         if (accept && state.activeIntervention.hazardTile) {

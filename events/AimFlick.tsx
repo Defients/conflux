@@ -38,8 +38,8 @@ export const AimFlick: React.FC<EventProps> = ({ onComplete, tile, event, settin
         if (status !== 'shooting' || !gameAreaRef.current) return;
 
         const { width, height } = gameAreaRef.current.getBoundingClientRect();
-        let newPos = { ...projectile };
-        let newVel = { ...velocity };
+        const newPos = { ...projectile };
+        const newVel = { ...velocity };
 
         newVel.y += GRAVITY;
         newVel.x *= FRICTION;

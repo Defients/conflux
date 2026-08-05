@@ -32,7 +32,7 @@ export const PatternRecall: React.FC<EventProps> = ({ onComplete, tile, settings
     }, [event, tile.difficulty, settings.accessibility, onComplete, sequence.length, isPaused]);
 
     useEffect(() => {
-        let timeouts: ReturnType<typeof setTimeout>[] = [];
+        const timeouts: ReturnType<typeof setTimeout>[] = [];
         setStatus('showing');
         sequence.forEach((padIndex, i) => {
             const t1 = setTimeout(() => {

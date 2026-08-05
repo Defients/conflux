@@ -74,7 +74,7 @@ export function generateRun(
   const run: Tile[] = [];
 
   const workingEvents = events.filter(e => !e.isStub);
-  let eventPool = [...workingEvents];
+  const eventPool = [...workingEvents];
   
   rng.shuffle(eventPool);
   

@@ -119,7 +119,7 @@ export const useGameEngine = () => {
 
     // Config Rival
     const potentialRivals = players.filter(p => p.isBot && p.personality === BotPersonality.Intermediate);
-    let rivalBot = potentialRivals.length > 0 ? potentialRivals[0] : players.find(p => p.isBot);
+    const rivalBot = potentialRivals.length > 0 ? potentialRivals[0] : players.find(p => p.isBot);
 
     if (rivalBot) {
         rivalBot.isRival = true;
@@ -316,7 +316,7 @@ export const useGameEngine = () => {
     setGameState(current => {
         if (!current) return null;
         const humanResult = results[1];
-        let player = { ...current.players[0] };
+        const player = { ...current.players[0] };
         const effects: GameEffect[] = [];
         
         player.tileHistory = [...player.tileHistory, { tileIndex: current.currentTileIndex, stars: humanResult.stars }];

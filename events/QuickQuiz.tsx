@@ -70,7 +70,6 @@ export const QuickQuiz: React.FC<EventProps> = ({ onComplete, tile, settings, ev
         }, 1000);
         
         return () => clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isPaused, questionIndex]);
 
     const handleAnswerClick = (index: number) => {

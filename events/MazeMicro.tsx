@@ -77,7 +77,7 @@ export const MazeMicro: React.FC<EventProps> = ({ onComplete, tile, event, setti
         if (isDoneRef.current) return;
         
         setPlayerPos(prevPos => {
-            let newPos = { ...prevPos };
+            const newPos = { ...prevPos };
             const currentCell = maze[prevPos.r][prevPos.c];
 
             if ((e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') && !currentCell.top && prevPos.r > 0) newPos.r--;

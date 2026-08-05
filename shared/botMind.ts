@@ -13,7 +13,7 @@ import { SeededRNG } from './seededRNG';
 import { BOT_PROFILES } from './constants';
 
 function applyRivalTraits(baseProfile: BotProfile, traits: RivalTraitId[], dimension: string): BotProfile {
-    let profile = { ...baseProfile, reaction: { ...baseProfile.reaction }, typing: { ...baseProfile.typing }, precision: { ...baseProfile.precision } };
+    const profile = { ...baseProfile, reaction: { ...baseProfile.reaction }, typing: { ...baseProfile.typing }, precision: { ...baseProfile.precision } };
     for (const trait of traits) {
         switch (trait) {
             case RivalTraitId.PrecisionFocus:
