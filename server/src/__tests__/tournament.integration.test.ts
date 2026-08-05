@@ -109,17 +109,26 @@ describe('Tournament integration: join → bracket → report → champion', () 
 
       // ─── Step 4: Report results directly via REPORT_TOURNAMENT_RESULT ───
       // Match 1: Player1 wins, Player2 loses
+      // Both players report (dual-report verification requires both to agree)
       const match1 = bracketStarted.bracket.rounds[0].matches[0];
       const p1Id = match1.participants[0];
       const p2Id = match1.participants[1];
 
-      // Winner reports
       const winnerRoom = p1Id === tournamentRooms[0]?.sessionId
         ? tournamentRooms[0]
         : tournamentRooms[1];
+      const loserRoom = p1Id === tournamentRooms[0]?.sessionId
+        ? tournamentRooms[1]
+        : tournamentRooms[0];
+
+      // Both report — winner says won:true, loser says won:false (agreement)
       winnerRoom.send(ClientMessages.REPORT_TOURNAMENT_RESULT, {
         matchId: match1.matchId,
         won: true,
+      });
+      loserRoom.send(ClientMessages.REPORT_TOURNAMENT_RESULT, {
+        matchId: match1.matchId,
+        won: false,
       });
 
       // Match 2: Player3 wins, Player4 loses
@@ -130,9 +139,17 @@ describe('Tournament integration: join → bracket → report → champion', () 
       const winnerRoom2 = p3Id === tournamentRooms[2]?.sessionId
         ? tournamentRooms[2]
         : tournamentRooms[3];
+      const loserRoom2 = p3Id === tournamentRooms[2]?.sessionId
+        ? tournamentRooms[3]
+        : tournamentRooms[2];
+
       winnerRoom2.send(ClientMessages.REPORT_TOURNAMENT_RESULT, {
         matchId: match2.matchId,
         won: true,
+      });
+      loserRoom2.send(ClientMessages.REPORT_TOURNAMENT_RESULT, {
+        matchId: match2.matchId,
+        won: false,
       });
 
       // ─── Step 5: Wait for round 2 (final) to appear ──────────────────────
@@ -160,17 +177,26 @@ describe('Tournament integration: join → bracket → report → champion', () 
         20_000,
       );
 
-      // ─── Step 7: Report final result ─────────────────────────────────────
+      // ─── Step 7: Report final result (both players report for verification) ─
       const finalMatch = round2Update.bracket.rounds[1].matches[0];
       const finalWinnerId = finalMatch.participants[0];
+      const finalLoserId = finalMatch.participants[1];
       const finalWinnerRoom = tournamentRooms.find(
         (r) => (r as any).sessionId === finalWinnerId,
       );
+      const finalLoserRoom = tournamentRooms.find(
+        (r) => (r as any).sessionId === finalLoserId,
+      );
       expect(finalWinnerRoom).toBeDefined();
+      expect(finalLoserRoom).toBeDefined();
 
       finalWinnerRoom!.send(ClientMessages.REPORT_TOURNAMENT_RESULT, {
         matchId: finalMatch.matchId,
         won: true,
+      });
+      finalLoserRoom!.send(ClientMessages.REPORT_TOURNAMENT_RESULT, {
+        matchId: finalMatch.matchId,
+        won: false,
       });
 
       // ─── Step 8: Wait for champion declaration ───────────────────────────

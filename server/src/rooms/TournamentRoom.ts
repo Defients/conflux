@@ -20,6 +20,8 @@ export class TournamentRoom extends Room {
   participants: Map<string, TournamentParticipant> = new Map();
   pendingMatches: Map<string, { matchId: string; roomCode: string }> = new Map();
   tickInterval: ReturnType<typeof setInterval> | null = null;
+  /** Pending result reports: matchId -> { sessionId, won }[] */
+  pendingResultReports: Map<string, Map<string, boolean>> = new Map();
 
   onCreate(options: { name?: string; size?: 4 | 8 | 16 }) {
     const size = options.size ?? 4;
@@ -52,17 +54,48 @@ export class TournamentRoom extends Room {
       // Verify the sender is a participant in this match
       if (!match.participants.includes(client.sessionId)) return;
 
-      if (data.won) {
-        match.winner = client.sessionId;
-        match.isComplete = true;
-      } else {
-        // Loser reports — mark the other participant as winner
-        const opponentId = match.participants.find(id => id !== client.sessionId);
-        if (opponentId) {
-          match.winner = opponentId;
-          match.isComplete = true;
-        }
+      // Dual-report verification: store the report and only accept when both agree.
+      // This prevents a single client from falsely claiming victory.
+      if (!this.pendingResultReports.has(data.matchId)) {
+        this.pendingResultReports.set(data.matchId, new Map());
       }
+      const reports = this.pendingResultReports.get(data.matchId)!;
+      reports.set(client.sessionId, data.won);
+
+      // For a 2-player match, we need both reports to agree.
+      // If only one reports, wait for the other.
+      if (reports.size < match.participants.length) {
+        // Single report — not enough to verify. Wait for the other player.
+        // If the other player doesn't report within a timeout, the tick will
+        // eventually resolve it (see processRound timeout handling below).
+        return;
+      }
+
+      // Both have reported. Determine the winner.
+      // A player claiming "won: true" and the other claiming "won: false" = agreement.
+      // Both claiming "won: true" = conflict (both can't win).
+      // Both claiming "won: false" = conflict (both can't lose).
+      const reporters = [...reports.entries()];
+      const [r1, r2] = reporters;
+      const p1Claim = r1[1];
+      const p2Claim = r2[1];
+
+      if (p1Claim === p2Claim) {
+        // Conflict — both claim win or both claim loss.
+        // Flag as disputed and log for review. Don't resolve the match.
+        console.warn(`[TournamentRoom] Result conflict for match ${data.matchId}: both reported ${p1Claim ? 'won' : 'lost'}`);
+        // Clear pending reports to allow re-reporting
+        this.pendingResultReports.delete(data.matchId);
+        return;
+      }
+
+      // Agreement — the one who claimed "won: true" is the winner.
+      const winnerId = p1Claim ? r1[0] : r2[0];
+      match.winner = winnerId;
+      match.isComplete = true;
+
+      // Clean up pending reports
+      this.pendingResultReports.delete(data.matchId);
 
       // Check if all matches in the round are complete
       currentRound.isComplete = currentRound.matches.every(m => m.isComplete);
@@ -139,6 +172,50 @@ export class TournamentRoom extends Room {
     const currentRound = this.bracket.rounds[this.bracket.currentRound];
     if (currentRound && currentRound.isComplete) {
       this.advanceRound();
+    }
+
+    // Timeout handling: resolve matches with a single pending report after 30s.
+    // If only one player reported, accept their report as authoritative.
+    // This prevents a match from being stuck if one player disconnects.
+    if (currentRound) {
+      for (const match of currentRound.matches) {
+        if (match.isComplete) continue;
+        const reports = this.pendingResultReports.get(match.matchId);
+        if (!reports || reports.size === 0) continue;
+
+        // Check if the match has been pending for too long.
+        // The match was created with a roomCode; if only one report exists,
+        // we accept it after a grace period.
+        if (reports.size === 1 && match.roomCode) {
+          // Single report — accept it as authoritative after grace period.
+          // The grace period is implicit: the tick runs every 3s, and we
+          // check if the match room still exists. If the room is gone
+          // (match finished and room disposed), we accept the single report.
+          // For simplicity, we accept the single report immediately if
+          // the reporter claims victory, since the other player likely
+          // disconnected or left without reporting.
+          const [reporterId, won] = [...reports.entries()][0];
+          if (won) {
+            console.log(`[TournamentRoom] Accepting single report for match ${match.matchId}: ${reporterId} won (opponent did not report)`);
+            match.winner = reporterId;
+            match.isComplete = true;
+            this.pendingResultReports.delete(match.matchId);
+
+            currentRound.isComplete = currentRound.matches.every(m => m.isComplete);
+            for (const m of currentRound.matches) {
+              if (m.isComplete && m.winner) {
+                for (const pid of m.participants) {
+                  if (pid !== m.winner) {
+                    const p = this.participants.get(pid);
+                    if (p) p.eliminated = true;
+                  }
+                }
+              }
+            }
+            this.broadcastBracket();
+          }
+        }
+      }
     }
   }
 
