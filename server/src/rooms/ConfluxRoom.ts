@@ -129,6 +129,8 @@ export class ConfluxRoom extends Room {
   /** v5.1: Matchmaking options — auto-start when expectedPlayers have joined. */
   private autoStart = false;
   private expectedPlayers = 0;
+  /** Timeout handle for auto-start grace period. */
+  private autoStartTimeout: Delayed | null = null;
 
   private getEventDimensionMap(): Record<string, string> {
     if (Object.keys(this.eventDimensionMap).length === 0) {
@@ -147,6 +149,18 @@ export class ConfluxRoom extends Room {
     // v5.1: Matchmaking-created rooms auto-start when all expected players join.
     this.autoStart = !!options.autoStart;
     this.expectedPlayers = typeof options.expectedPlayers === 'number' ? options.expectedPlayers : 0;
+
+    // v5.1: Auto-start timeout — if not all expected players join within 30s
+    // (e.g., a matched player disconnected before consuming their seat reservation),
+    // start with available players and fill remaining slots with bots.
+    if (this.autoStart && this.expectedPlayers > 0) {
+      this.autoStartTimeout = this.clock.setTimeout(() => {
+        if (this.roomState.phase === 'lobby' && this.roomState.players.size < this.expectedPlayers) {
+          console.log(`[Room ${this.roomState.roomCode}] Auto-start timeout: only ${this.roomState.players.size}/${this.expectedPlayers} players joined, filling with bots`);
+          this.startMatch();
+        }
+      }, 30_000);
+    }
 
     // Set max clients
     this.maxClients = MAX_ROOM_PLAYERS;
@@ -325,6 +339,10 @@ export class ConfluxRoom extends Room {
     // v5.1: Auto-start when all expected players have joined (matchmaking flow).
     if (this.autoStart && this.expectedPlayers > 0 && this.roomState.players.size >= this.expectedPlayers) {
       console.log(`[Room ${this.roomState.roomCode}] Auto-starting with ${this.roomState.players.size} players`);
+      if (this.autoStartTimeout) {
+        this.autoStartTimeout.clear();
+        this.autoStartTimeout = null;
+      }
       this.startMatch();
     }
   }
@@ -410,6 +428,10 @@ export class ConfluxRoom extends Room {
   }
 
   onDispose() {
+    if (this.autoStartTimeout) {
+      this.autoStartTimeout.clear();
+      this.autoStartTimeout = null;
+    }
     console.log(`[Room ${this.roomState.roomCode}] Disposed`);
   }
 
