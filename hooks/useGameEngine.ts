@@ -1,6 +1,6 @@
 
 import { useState, useCallback } from 'react';
-import { GameSettings, GameState, Player, EventResult, PowerUp, BotPersonality, ChassisId, AnomalyId, GhostRun } from '../types';
+import { GameSettings, GameState, Player, EventResult, PowerUp, BotPersonality, ChassisId, AnomalyId, GhostRun, PilotProfile } from '../types';
 import { generateRun, generateCustomRun } from '../services/pathGenerator';
 import { eventRegistry } from '../events/eventRegistry';
 import { BOT_NAMES, PLAYER_COLORS, CHASSIS_DEFINITIONS, ANOMALY_DEFINITIONS, GAUNTLET_CONFIG } from '../constants';
@@ -10,6 +10,7 @@ import { hapticsService } from '../services/hapticsService';
 import { generateNebula } from '../services/nebulaGenerator';
 import { PitStopAction } from '../components/PitStopScreen';
 import { GameRules, GameEffect } from '../services/gameRules';
+import { applySkillEffects, applyLoadoutEffects } from '../shared/gameSetup';
 
 export const useGameEngine = () => {
   const [gameState, setGameState] = useState<GameState | null>(null);
@@ -51,13 +52,13 @@ export const useGameEngine = () => {
 
 
   // --- Game Initialization ---
-  const initializeGame = useCallback((settings: GameSettings, customEventIds?: string[]) => {
+  const initializeGame = useCallback((settings: GameSettings, customEventIds?: string[], profile?: PilotProfile | null) => {
     const rng = new SeededRNG(`players-${settings.seed}`);
     const players: Player[] = [];
     const shuffledBotNames = rng.shuffle([...BOT_NAMES]);
-    
+
     // Player 1 (Human)
-    players.push({
+    let humanPlayer: Player = {
       id: 1,
       name: 'Player 1',
       isBot: false,
@@ -69,12 +70,25 @@ export const useGameEngine = () => {
       tileHistory: [],
       energy: 0,
       overdriveCooldown: 0,
-    });
+    };
 
     // Apply Chassis effects at start
     if (settings.selectedChassis === ChassisId.Aegis) {
-        players[0].powerUps.push('Shield');
+        humanPlayer.powerUps.push('Shield');
     }
+
+    // v5.0: Apply skill and loadout effects from pilot profile
+    if (profile) {
+      if (profile.skills) {
+        humanPlayer = applySkillEffects(humanPlayer, profile.skills);
+      }
+      const chassisId = settings.selectedChassis ?? humanPlayer.chassisId;
+      if (chassisId && profile.loadouts && profile.loadouts[chassisId]) {
+        humanPlayer = applyLoadoutEffects(humanPlayer, profile.loadouts[chassisId]);
+      }
+    }
+
+    players.push(humanPlayer);
 
     // Config Bots
     let botCount = 0;
@@ -110,24 +124,24 @@ export const useGameEngine = () => {
         rivalBot.isRival = true;
         rivalBot.personality = BotPersonality.Rival;
         rivalBot.name = `Rival ${rivalBot.name}`;
-        
+
         const chassisIds = Object.values(ChassisId).filter(id => CHASSIS_DEFINITIONS[id].cost > 0);
         const randomChassisId = chassisIds[rng.nextInt(0, chassisIds.length)];
         rivalBot.chassisId = randomChassisId;
         if(randomChassisId === ChassisId.Aegis) rivalBot.powerUps.push('Shield');
     }
-    
+
     let run = (customEventIds && customEventIds.length > 0)
         ? generateCustomRun(settings.seed, settings.runLength, eventRegistry, customEventIds)
         : generateRun(settings.seed, settings.runLength, eventRegistry);
-        
+
     // 15% chance for an anomaly to start the race
     let activeAnomaly = null;
     if (rng.nextFloat() < 0.15) {
         const anomalyIds = Object.values(AnomalyId);
         const randomAnomalyId = anomalyIds[rng.nextInt(0, anomalyIds.length)];
         activeAnomaly = { id: randomAnomalyId, ...ANOMALY_DEFINITIONS[randomAnomalyId] };
-        
+
         if (randomAnomalyId === AnomalyId.ChronosShift) {
             // Scramble the run, keeping the first tile the same so the countdown works smoothly
             const firstTile = run[0];
@@ -142,7 +156,7 @@ export const useGameEngine = () => {
             }));
         }
     }
-        
+
     setGameState({
       settings,
       players,
@@ -155,7 +169,7 @@ export const useGameEngine = () => {
       lastHazardInterventionIndex: -99,
       activeAnomaly,
     });
-    
+
     const canvas = document.getElementById('nebula-canvas') as HTMLCanvasElement;
     if (canvas) generateNebula(canvas, settings.seed);
 

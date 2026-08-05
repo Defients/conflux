@@ -240,6 +240,8 @@ export interface Player {
   _energyPerStarBonus?: number;
   /** Internal: overdrive cooldown reduction from skills. */
   _overdriveCooldownReduction?: number;
+  /** Internal: chance to start with a random power-up from skills. */
+  _powerUpStartChance?: number;
 }
 
 export type TileModifier = 'BOOST_PAD' | 'POWER_SURGE' | 'STATIC_FIELD' | 'FOG_BANK' | 'SPONSORED' | 'ICE_PATCH' | 'NEBULA_DRIFT';

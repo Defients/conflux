@@ -192,12 +192,12 @@ const App: React.FC = () => {
   }, []);
 
   const handleStartGame = useCallback((settings: GameSettings, customEventIds?: string[]) => {
-    initializeGame(settings, customEventIds);
+    initializeGame(settings, customEventIds, profile);
     setActiveContracts(generateContracts(settings.seed));
     setScreen(GameScreen.Event);
     setShowCountdown(true);
     setMatchSummary(null);
-  }, [initializeGame]);
+  }, [initializeGame, profile]);
 
   const handleStartGauntlet = useCallback((settings: GameSettings) => {
     initializeGauntlet(settings);
@@ -387,13 +387,13 @@ const App: React.FC = () => {
 
   const handleRematch = useCallback(() => {
       if(gameState) {
-          initializeGame(gameState.settings, activeEventIds);
+          initializeGame(gameState.settings, activeEventIds, profile);
           setActiveContracts(generateContracts(gameState.settings.seed));
           setScreen(GameScreen.Event);
           setShowCountdown(true);
           setMatchSummary(null);
       }
-  }, [gameState, initializeGame, activeEventIds]);
+  }, [gameState, initializeGame, activeEventIds, profile]);
 
   const handleNewRun = useCallback(() => {
       setScreen(GameScreen.Lobby);

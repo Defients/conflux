@@ -13,6 +13,7 @@ import {
 } from './types';
 import {
   PLAYER_COLORS, BOT_NAMES, CHASSIS_DEFINITIONS,
+  SKILL_TREE_NODES, CHASSIS_MODULES,
 } from './constants';
 import { SeededRNG } from './seededRNG';
 
@@ -141,6 +142,15 @@ export function createPlayers(
 
 /**
  * Apply pilot skill tree effects to a player at game initialization.
+ *
+ * Reads the `effect` field from SKILL_TREE_NODES (constants.ts) and translates
+ * each defined effect into a typed modifier flag on the player. The flags are
+ * consumed by GameRules during processRaceStep, applyDebuff, and activateOverdrive.
+ *
+ * Skills with empty effect objects (speed-t3, tech-t3, tech-t4, tech-t5,
+ * endurance-t3, endurance-t4, endurance-t5) represent design-intent features
+ * that are not yet implemented in the rules engine. They are intentionally
+ * not applied here to avoid cosmetic-only progression.
  */
 export function applySkillEffects(
   player: Player,
@@ -154,27 +164,50 @@ export function applySkillEffects(
     ...Object.keys(skills.endurance).filter(k => skills.endurance[k]),
   ];
 
-  // Import SKILL_TREE_NODES lazily to avoid circular deps in some contexts
-  // The caller should pass in the resolved effects instead
-  const modifiedPlayer = { ...player, powerUps: [...player.powerUps] };
+  if (allUnlocked.length === 0) return player;
 
-  // Apply effects based on unlocked skill IDs
-  // These match the SKILL_TREE_NODES defined in constants.ts
-  if (allUnlocked.includes('speed-t1')) {
-    // +0.5 energy per star
-    // Applied during processRaceStep via a flag on the player
-    modifiedPlayer.energy = player.energy; // base energy unchanged at init
-  }
-  if (allUnlocked.includes('tech-t1')) {
-    // Start with Shield
-    if (!modifiedPlayer.powerUps.includes('Shield')) {
-      modifiedPlayer.powerUps.push('Shield');
+  // Look up each unlocked node's effect from the canonical definitions.
+  const modifiedPlayer: Player = {
+    ...player,
+    powerUps: [...player.powerUps],
+  };
+
+  // Accumulate additive modifiers across all unlocked nodes.
+  let energyPerStarBonus = modifiedPlayer._energyPerStarBonus ?? 0;
+  let overdriveCooldownReduction = modifiedPlayer._overdriveCooldownReduction ?? 0;
+  let debuffResistance = modifiedPlayer._debuffResistance ?? 0;
+  let powerUpStartChance = modifiedPlayer._powerUpStartChance ?? 0;
+
+  for (const nodeId of allUnlocked) {
+    const node = SKILL_TREE_NODES.find(n => n.id === nodeId);
+    if (!node || !node.effect) continue;
+
+    const eff = node.effect;
+
+    if (typeof eff.energyPerStarBonus === 'number') {
+      energyPerStarBonus += eff.energyPerStarBonus;
+    }
+    if (typeof eff.overdriveCooldownReduction === 'number') {
+      overdriveCooldownReduction += eff.overdriveCooldownReduction;
+    }
+    if (typeof eff.debuffResistance === 'number') {
+      debuffResistance += eff.debuffResistance;
+    }
+    if (typeof eff.powerUpStartChance === 'number') {
+      powerUpStartChance += eff.powerUpStartChance;
+    }
+    if (eff.shieldStart === true) {
+      if (!modifiedPlayer.powerUps.includes('Shield')) {
+        modifiedPlayer.powerUps.push('Shield');
+      }
     }
   }
-  if (allUnlocked.includes('endurance-t1')) {
-    // Debuff resistance - applied during debuff application
-    // Marked via a flag; actual reduction handled in gameRules
-  }
+
+  // Only assign non-zero values to keep the player object clean.
+  if (energyPerStarBonus > 0) modifiedPlayer._energyPerStarBonus = energyPerStarBonus;
+  if (overdriveCooldownReduction > 0) modifiedPlayer._overdriveCooldownReduction = overdriveCooldownReduction;
+  if (debuffResistance > 0) modifiedPlayer._debuffResistance = debuffResistance;
+  if (powerUpStartChance > 0) modifiedPlayer._powerUpStartChance = powerUpStartChance;
 
   return modifiedPlayer;
 }
@@ -183,6 +216,12 @@ export function applySkillEffects(
 
 /**
  * Apply chassis module loadout effects to a player at game initialization.
+ *
+ * Reads the `effects` field from CHASSIS_MODULES (constants.ts) and translates
+ * each defined effect into typed modifier flags or direct player changes.
+ *
+ * Modules with empty effect objects (thrusters-utility, shielding-fortify)
+ * represent design-intent features not yet implemented in the rules engine.
  */
 export function applyLoadoutEffects(
   player: Player,
@@ -190,36 +229,47 @@ export function applyLoadoutEffects(
 ): Player {
   if (!loadout) return player;
 
-  const modifiedPlayer = { ...player, powerUps: [...player.powerUps] };
-
-  // Effects are applied based on module IDs in the loadout
-  // The actual module definitions are in constants.ts CHASSIS_MODULES
-  // We check for known module IDs and apply their effects
   const allModuleIds = Object.values(loadout.modules).filter(Boolean) as string[];
+  if (allModuleIds.length === 0) return player;
+
+  const modifiedPlayer: Player = {
+    ...player,
+    powerUps: [...player.powerUps],
+  };
+
+  // Accumulate additive modifiers.
+  let movementBonus = modifiedPlayer._movementBonus ?? 0;
+  let debuffResistance = modifiedPlayer._debuffResistance ?? 0;
 
   for (const moduleId of allModuleIds) {
-    switch (moduleId) {
-      case 'core-shield':
-        if (!modifiedPlayer.powerUps.includes('Shield')) {
-          modifiedPlayer.powerUps.push('Shield');
-        }
-        break;
-      case 'core-energy':
-        modifiedPlayer.energy += 2;
-        break;
-      case 'thrusters-momentum':
-        // Movement bonus applied during processRaceStep
-        break;
-      case 'shielding-cleanse':
-        // Debuff duration reduction applied during debuff application
-        break;
-      case 'shielding-powerup':
-        if (!modifiedPlayer.powerUps.includes('Clarity')) {
-          modifiedPlayer.powerUps.push('Clarity');
-        }
-        break;
+    const mod = CHASSIS_MODULES.find(m => m.id === moduleId);
+    if (!mod || !mod.effects) continue;
+
+    const eff = mod.effects;
+
+    if (typeof eff.movementBonus === 'number') {
+      movementBonus += eff.movementBonus;
+    }
+    if (typeof eff.debuffDurationReduction === 'number') {
+      debuffResistance += eff.debuffDurationReduction;
+    }
+    if (typeof eff.energyBonus === 'number') {
+      modifiedPlayer.energy += eff.energyBonus;
+    }
+    if (eff.startWithShield === true) {
+      if (!modifiedPlayer.powerUps.includes('Shield')) {
+        modifiedPlayer.powerUps.push('Shield');
+      }
+    }
+    if (eff.startWithPowerUp) {
+      if (!modifiedPlayer.powerUps.includes(eff.startWithPowerUp)) {
+        modifiedPlayer.powerUps.push(eff.startWithPowerUp);
+      }
     }
   }
+
+  if (movementBonus > 0) modifiedPlayer._movementBonus = movementBonus;
+  if (debuffResistance > 0) modifiedPlayer._debuffResistance = debuffResistance;
 
   return modifiedPlayer;
 }

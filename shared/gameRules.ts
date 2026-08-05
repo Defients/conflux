@@ -526,9 +526,9 @@ export const GameRules = {
             }
         }
 
-        const players = state.players.map(p => 
-            p.id === playerId 
-            ? { ...p, energy: force ? p.energy : p.energy - OVERDRIVE_ENERGY_COST, overdriveCooldown: force ? p.overdriveCooldown : OVERDRIVE_COOLDOWN + 1 } 
+        const players = state.players.map(p =>
+            p.id === playerId
+            ? { ...p, energy: force ? p.energy : p.energy - OVERDRIVE_ENERGY_COST, overdriveCooldown: force ? p.overdriveCooldown : Math.max(0, OVERDRIVE_COOLDOWN + 1 - (p._overdriveCooldownReduction ?? 0)) }
             : p
         );
         
