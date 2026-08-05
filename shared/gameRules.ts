@@ -21,7 +21,7 @@ import {
 import { SeededRNG } from './seededRNG';
 import { generateRun } from './pathGenerator';
 import { getRivalBanter } from './rivalBanter';
-import { applySkillEffects, applyLoadoutEffects } from './gameSetup';
+import { applySkillEffects, applyLoadoutEffects, getSeasonalEnergyMultiplier } from './gameSetup';
 
 // --- Types ---
 
@@ -169,14 +169,14 @@ export const GameRules = {
                 }
 
                 updatedPlayer.powerUps = [...updatedPlayer.powerUps, award];
-                updatedPlayer.energy += result.stars + (updatedPlayer._energyPerStarBonus ?? 0);
+                updatedPlayer.energy += Math.round((result.stars + (updatedPlayer._energyPerStarBonus ?? 0)) * getSeasonalEnergyMultiplier());
                 
                 if (!p.isBot || p.isRival) {
                     effects.push({ type: 'SOUND', sound: 'powerup-get' });
                     if (!p.isBot) effects.push({ type: 'TOAST', message: `Acquired ${award}`, variant: 'info' });
                 }
             } else {
-                updatedPlayer.energy += result.stars + (updatedPlayer._energyPerStarBonus ?? 0);
+                updatedPlayer.energy += Math.round((result.stars + (updatedPlayer._energyPerStarBonus ?? 0)) * getSeasonalEnergyMultiplier());
             }
 
             updatedPlayer.tileHistory = [...updatedPlayer.tileHistory, { tileIndex: state.currentTileIndex, stars: result.stars }];
@@ -437,8 +437,8 @@ export const GameRules = {
                 }
                 break;
             case 'Overcharge':
-                players = players.map(p => p.id === playerId ? { ...p, energy: p.energy + 2 } : p);
-                if (!user.isBot) effects.push({ type: 'TOAST', message: '+2 Energy!', variant: 'success' });
+                players = players.map(p => p.id === playerId ? { ...p, energy: p.energy + Math.round(2 * getSeasonalEnergyMultiplier()) } : p);
+                if (!user.isBot) effects.push({ type: 'TOAST', message: `+${Math.round(2 * getSeasonalEnergyMultiplier())} Energy!`, variant: 'success' });
                 break;
             case 'Sludge':
                 players = players.map(p => {
@@ -497,8 +497,8 @@ export const GameRules = {
                 effects.push({ type: 'TOAST', message: `Tuned Up: ${award}`, variant: 'success' });
                 break;
             case 'recharge':
-                updatedPlayer.energy += 2;
-                effects.push({ type: 'TOAST', message: 'Recharged +2 Energy', variant: 'info' });
+                updatedPlayer.energy += Math.round(2 * getSeasonalEnergyMultiplier());
+                effects.push({ type: 'TOAST', message: `Recharged +${Math.round(2 * getSeasonalEnergyMultiplier())} Energy`, variant: 'info' });
                 break;
             case 'analyze':
                 // UI handles visualization, state just pays cost

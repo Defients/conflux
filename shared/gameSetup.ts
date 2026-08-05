@@ -10,10 +10,12 @@
 import {
   Player, GameSettings, BotPersonality, ChassisId, PlayerType,
   TeamId, PilotProfile, PilotSkills, ChassisLoadout,
+  SeasonalModifier,
 } from './types';
 import {
   PLAYER_COLORS, BOT_NAMES, CHASSIS_DEFINITIONS,
   SKILL_TREE_NODES, CHASSIS_MODULES,
+  getActiveSeasonalModifier,
 } from './constants';
 import { SeededRNG } from './seededRNG';
 
@@ -324,4 +326,72 @@ export function getTeamPositions(players: Player[]): { teamId: TeamId; position:
     teamId: teamId as TeamId,
     position: data.sum / data.count,
   }));
+}
+
+/**
+ * Apply the active seasonal modifier to game settings.
+ * Returns modified settings (runLength override) and the modifier itself
+ * so the caller can apply player-level effects (energy multiplier, etc.).
+ *
+ * - runLengthOverride: replaces settings.runLength
+ * - disablePowerUps: flagged via the returned modifier (caller handles)
+ * - energyMultiplier: flagged via the returned modifier (caller handles)
+ * - anomalyChance: flagged via the returned modifier (caller handles)
+ */
+export function applySeasonalModifierToSettings(settings: GameSettings): {
+  settings: GameSettings;
+  modifier: SeasonalModifier | null;
+} {
+  const modifier = getActiveSeasonalModifier();
+  if (!modifier) {
+    return { settings, modifier: null };
+  }
+
+  let modifiedSettings = { ...settings };
+
+  if (modifier.effect.runLengthOverride !== undefined) {
+    modifiedSettings.runLength = modifier.effect.runLengthOverride;
+  }
+
+  return { settings: modifiedSettings, modifier };
+}
+
+/**
+ * Apply seasonal modifier effects to a player at game start.
+ * Currently handles disablePowerUps (removes starting power-ups).
+ * Energy multiplier is applied at energy gain time (see gameRules).
+ */
+export function applySeasonalModifierToPlayer(
+  player: Player,
+  modifier: SeasonalModifier | null
+): Player {
+  if (!modifier) return player;
+
+  let modifiedPlayer = { ...player };
+
+  if (modifier.effect.disablePowerUps) {
+    modifiedPlayer.powerUps = [];
+  }
+
+  return modifiedPlayer;
+}
+
+/**
+ * Get the energy multiplier from the active seasonal modifier.
+ * Returns 1 if no modifier is active or the modifier doesn't affect energy.
+ */
+export function getSeasonalEnergyMultiplier(): number {
+  const modifier = getActiveSeasonalModifier();
+  if (!modifier?.effect.energyMultiplier) return 1;
+  return modifier.effect.energyMultiplier;
+}
+
+/**
+ * Get the anomaly chance from the active seasonal modifier.
+ * Returns 0 if no modifier is active or the modifier doesn't affect anomalies.
+ */
+export function getSeasonalAnomalyChance(): number {
+  const modifier = getActiveSeasonalModifier();
+  if (!modifier?.effect.anomalyChance) return 0;
+  return modifier.effect.anomalyChance;
 }

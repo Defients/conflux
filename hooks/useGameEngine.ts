@@ -10,7 +10,7 @@ import { hapticsService } from '../services/hapticsService';
 import { generateNebula } from '../services/nebulaGenerator';
 import { PitStopAction } from '../components/PitStopScreen';
 import { GameRules, GameEffect } from '../services/gameRules';
-import { applySkillEffects, applyLoadoutEffects } from '../shared/gameSetup';
+import { applySkillEffects, applyLoadoutEffects, applySeasonalModifierToSettings, applySeasonalModifierToPlayer, getSeasonalAnomalyChance } from '../shared/gameSetup';
 import { applyRivalTraitsToPlayer } from '../shared/botMind';
 
 export const useGameEngine = () => {
@@ -54,7 +54,9 @@ export const useGameEngine = () => {
 
   // --- Game Initialization ---
   const initializeGame = useCallback((settings: GameSettings, customEventIds?: string[], profile?: PilotProfile | null) => {
-    const rng = new SeededRNG(`players-${settings.seed}`);
+    // Apply seasonal modifier to settings (e.g., runLength override)
+    const { settings: modSettings, modifier: seasonalModifier } = applySeasonalModifierToSettings(settings);
+    const rng = new SeededRNG(`players-${modSettings.seed}`);
     const players: Player[] = [];
     const shuffledBotNames = rng.shuffle([...BOT_NAMES]);
 
@@ -141,12 +143,13 @@ export const useGameEngine = () => {
     }
 
     let run = (customEventIds && customEventIds.length > 0)
-        ? generateCustomRun(settings.seed, settings.runLength, eventRegistry, customEventIds)
-        : generateRun(settings.seed, settings.runLength, eventRegistry);
+        ? generateCustomRun(modSettings.seed, modSettings.runLength, eventRegistry, customEventIds)
+        : generateRun(modSettings.seed, modSettings.runLength, eventRegistry);
 
-    // 15% chance for an anomaly to start the race
+    // Anomaly chance: base 15%, boosted by seasonal modifier if active
     let activeAnomaly = null;
-    if (rng.nextFloat() < 0.15) {
+    const anomalyChance = Math.max(0.15, getSeasonalAnomalyChance());
+    if (rng.nextFloat() < anomalyChance) {
         const anomalyIds = Object.values(AnomalyId);
         const randomAnomalyId = anomalyIds[rng.nextInt(0, anomalyIds.length)];
         activeAnomaly = { id: randomAnomalyId, ...ANOMALY_DEFINITIONS[randomAnomalyId] };
@@ -166,9 +169,14 @@ export const useGameEngine = () => {
         }
     }
 
+    // Apply seasonal modifier to all players (e.g., disablePowerUps removes starting power-ups)
+    const finalPlayers = seasonalModifier
+      ? players.map(p => applySeasonalModifierToPlayer(p, seasonalModifier))
+      : players;
+
     setGameState({
-      settings,
-      players,
+      settings: modSettings,
+      players: finalPlayers,
       run,
       currentTileIndex: 0,
       eventResults: {},
@@ -180,7 +188,7 @@ export const useGameEngine = () => {
     });
 
     const canvas = document.getElementById('nebula-canvas') as HTMLCanvasElement;
-    if (canvas) generateNebula(canvas, settings.seed);
+    if (canvas) generateNebula(canvas, modSettings.seed);
 
   }, []);
 
