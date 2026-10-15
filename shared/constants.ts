@@ -10,8 +10,37 @@ import {
   AccoladeId, Accolade, RivalTraitId, RivalTrait, CorporationId, Corporation,
   EventPreset, AnomalyId, Anomaly,
   SkillNode, SkillTreeId, ChassisModule, LoadoutSlot,
-  SeasonalModifier, RankTier,
+  SeasonalModifier, LeaderboardCategory,
 } from './types';
+
+/**
+ * Build valid 3-segment (odd) Firestore collection path segments for leaderboard queries.
+ */
+export function getLeaderboardCollectionSegments(
+  category: LeaderboardCategory,
+  dailySeed?: string
+): [string, string, string] {
+  if (category === 'allTime') {
+    return ['leaderboards', 'allTime', 'entries'];
+  }
+  if (category === 'daily') {
+    const seed = dailySeed ?? new Date().toISOString().split('T')[0];
+    return ['leaderboards', `daily_${seed}`, 'entries'];
+  }
+  return ['leaderboards', 'gauntlet', 'entries'];
+}
+
+/**
+ * Build a valid 4-segment (even) Firestore document path for leaderboard entries.
+ */
+export function getLeaderboardDocPath(
+  category: LeaderboardCategory,
+  userId: string,
+  dailySeed?: string
+): string {
+  const [col, docId, subcol] = getLeaderboardCollectionSegments(category, dailySeed);
+  return `${col}/${docId}/${subcol}/${userId}`;
+}
 
 export const ANOMALY_DEFINITIONS: { [key in AnomalyId]: Omit<Anomaly, 'id'> } = {
     [AnomalyId.TimeDilation]: { name: 'Time Dilation', description: 'All event timers are reduced by 20%.', icon: '⏳', color: '#ff2a75' },
@@ -45,6 +74,8 @@ export const POWERUP_DEFINITIONS: { [key in PowerUp]: { description: string; ico
   'Overcharge': { description: 'Instantly gain +2 energy for power-up activation.', icon: '🔋' },
   'Sludge': { description: 'Slows all opponents on the next tile.', icon: '🛢️' },
   'Reflector': { description: 'Reflects the next incoming debuff back at the sender.', icon: '🪞' },
+  'Rally': { description: 'Boost a teammate\'s movement by 1.5x on the next tile.', icon: '🤝' },
+  'Shield Wall': { description: 'Both teammates get a Shield.', icon: '🏰' },
 };
 
 export const TILE_MODIFIER_DEFINITIONS: { [key in TileModifier]: { description: string; icon: string } } = {
@@ -252,25 +283,25 @@ export const MAX_RECONNECT_ATTEMPTS_V5 = 8;
 
 export const SKILL_TREE_NODES: SkillNode[] = [
   // Speed Tree
-  { id: 'speed-t1', tree: 'speed', tier: 1, name: 'Quick Start', description: 'Begin each race with +2 Energy.', icon: '⚡', cpCost: 50, effect: { energyPerStarBonus: 0.5 }, prerequisites: [] },
+  { id: 'speed-t1', tree: 'speed', tier: 1, name: 'Quick Start', description: 'Begin each race with +0.5 bonus energy per star.', icon: '⚡', cpCost: 50, effect: { energyPerStarBonus: 0.5 }, prerequisites: [] },
   { id: 'speed-t2', tree: 'speed', tier: 2, name: 'Overclock', description: 'Overdrive cooldown reduced by 1 tile.', icon: '🔥', cpCost: 150, effect: { overdriveCooldownReduction: 1 }, prerequisites: ['speed-t1'] },
-  { id: 'speed-t3', tree: 'speed', tier: 3, name: 'Hyperdrive', description: 'Overdrive grants +4★ instead of +3★ on success.', icon: '🚀', cpCost: 300, effect: {}, prerequisites: ['speed-t2'] },
-  { id: 'speed-t4', tree: 'speed', tier: 2, name: 'Adrenaline', description: '15% chance to start with a random Power-Up.', icon: '💊', cpCost: 100, effect: { powerUpStartChance: 0.15 }, prerequisites: ['speed-t1'] },
-  { id: 'speed-t5', tree: 'speed', tier: 3, name: 'Velocity Surge', description: '3★ performance grants +0.5 bonus energy.', icon: '💨', cpCost: 250, effect: { energyPerStarBonus: 0.5 }, prerequisites: ['speed-t2'] },
+  { id: 'speed-t3', tree: 'speed', tier: 3, name: 'Hyperdrive', description: 'Overdrive success grants +25% extra hyperdrive movement surge.', icon: '🚀', cpCost: 300, effect: { hyperdriveBonus: true }, prerequisites: ['speed-t2'] },
+  { id: 'speed-t4', tree: 'speed', tier: 2, name: 'Adrenaline', description: '15% chance to start each race with a random Power-Up.', icon: '💊', cpCost: 100, effect: { powerUpStartChance: 0.15 }, prerequisites: ['speed-t1'] },
+  { id: 'speed-t5', tree: 'speed', tier: 3, name: 'Velocity Surge', description: 'Earn +0.5 additional bonus energy per star.', icon: '💨', cpCost: 250, effect: { energyPerStarBonus: 0.5 }, prerequisites: ['speed-t2'] },
 
   // Tech Tree
   { id: 'tech-t1', tree: 'tech', tier: 1, name: 'Shield Protocol', description: 'Start each race with a Shield.', icon: '🛡️', cpCost: 75, effect: { shieldStart: true }, prerequisites: [] },
   { id: 'tech-t2', tree: 'tech', tier: 2, name: 'Cleanse Field', description: 'Debuffs last 1 fewer tile.', icon: '🧼', cpCost: 150, effect: { debuffResistance: 1 }, prerequisites: ['tech-t1'] },
-  { id: 'tech-t3', tree: 'tech', tier: 3, name: 'Power Surge', description: 'Power-ups are 25% more effective.', icon: '⚡', cpCost: 300, effect: {}, prerequisites: ['tech-t2'] },
-  { id: 'tech-t4', tree: 'tech', tier: 2, name: 'Scanner', description: 'See the next 2 upcoming tiles during Pit Stops for free.', icon: '📡', cpCost: 100, effect: {}, prerequisites: ['tech-t1'] },
-  { id: 'tech-t5', tree: 'tech', tier: 3, name: 'Data Override', description: 'Data Spike affects 2 tiles instead of 1.', icon: '👾', cpCost: 250, effect: {}, prerequisites: ['tech-t2'] },
+  { id: 'tech-t3', tree: 'tech', tier: 3, name: 'Power Surge', description: 'Power-ups gain +1 tile duration or +1 bonus energy.', icon: '⚡', cpCost: 300, effect: { powerUpEffectivenessBonus: 1 }, prerequisites: ['tech-t2'] },
+  { id: 'tech-t4', tree: 'tech', tier: 2, name: 'Scanner', description: 'See the next 2 upcoming tiles for free & Pit Stop Analyze costs 0⚡.', icon: '📡', cpCost: 100, effect: { freeScanner: true }, prerequisites: ['tech-t1'] },
+  { id: 'tech-t5', tree: 'tech', tier: 3, name: 'Data Override', description: 'Data Spike scrambles targets for 2 tiles instead of 1.', icon: '👾', cpCost: 250, effect: { dataSpikeBonus: 1 }, prerequisites: ['tech-t2'] },
 
   // Endurance Tree
   { id: 'endurance-t1', tree: 'endurance', tier: 1, name: 'Tough Frame', description: 'Debuffs last 1 fewer tile.', icon: '🦾', cpCost: 50, effect: { debuffResistance: 1 }, prerequisites: [] },
-  { id: 'endurance-t2', tree: 'endurance', tier: 2, name: 'Energy Bank', description: 'Start each race with +3 Energy.', icon: '🔋', cpCost: 150, effect: { energyPerStarBonus: 1 }, prerequisites: ['endurance-t1'] },
-  { id: 'endurance-t3', tree: 'endurance', tier: 3, name: 'Iron Will', description: '1★ results still grant full movement.', icon: '💪', cpCost: 300, effect: {}, prerequisites: ['endurance-t2'] },
-  { id: 'endurance-t4', tree: 'endurance', tier: 2, name: 'Recovery', description: 'Pit Stop Recharge gives +3 Energy instead of +2.', icon: '🔄', cpCost: 100, effect: {}, prerequisites: ['endurance-t1'] },
-  { id: 'endurance-t5', tree: 'endurance', tier: 3, name: 'Last Stand', description: 'Once per race, a 0★ result is upgraded to 1★.', icon: '🛡️', cpCost: 250, effect: {}, prerequisites: ['endurance-t2'] },
+  { id: 'endurance-t2', tree: 'endurance', tier: 2, name: 'Energy Bank', description: 'Earn +1 bonus energy per star.', icon: '🔋', cpCost: 150, effect: { energyPerStarBonus: 1 }, prerequisites: ['endurance-t1'] },
+  { id: 'endurance-t3', tree: 'endurance', tier: 3, name: 'Iron Will', description: '1★ results grant 2★ movement speed (1.6x).', icon: '💪', cpCost: 300, effect: { ironWill: true }, prerequisites: ['endurance-t2'] },
+  { id: 'endurance-t4', tree: 'endurance', tier: 2, name: 'Recovery', description: 'Pit Stop Recharge gives +3 Energy instead of +2.', icon: '🔄', cpCost: 100, effect: { pitStopRechargeBonus: 1 }, prerequisites: ['endurance-t1'] },
+  { id: 'endurance-t5', tree: 'endurance', tier: 3, name: 'Last Stand', description: 'Once per race, a 0★ result is upgraded to 1★.', icon: '🛡️', cpCost: 250, effect: { lastStand: true }, prerequisites: ['endurance-t2'] },
 ];
 
 export function getSkillNode(id: string): SkillNode | undefined {
@@ -290,14 +321,14 @@ export const CHASSIS_MODULES: ChassisModule[] = [
   { id: 'core-clarity', slot: 'core', name: 'Clarity Core', description: 'Start each race with a Clarity power-up.', icon: '👁️', cpCost: 180, effects: { startWithPowerUp: 'Clarity' } },
 
   // Thruster modules
-  { id: 'thrusters-momentum', slot: 'thrusters', name: 'Momentum Thrusters', description: '+10% movement from all star results.', icon: '⚡', cpCost: 250, effects: { movementBonus: 0.1 } },
-  { id: 'thrusters-speed', slot: 'thrusters', name: 'Speed Thrusters', description: '+15% movement from 3★ results only.', icon: '💨', cpCost: 200, effects: { movementBonus: 0.15 } },
-  { id: 'thrusters-utility', slot: 'thrusters', name: 'Utility Thrusters', description: 'Start with a random Power-Up.', icon: '🔧', cpCost: 220, effects: {} },
+  { id: 'thrusters-momentum', slot: 'thrusters', name: 'Momentum Thrusters', description: '+10% movement from all star results.', icon: '⚡', cpCost: 200, effects: { movementBonus: 0.1 } },
+  { id: 'thrusters-speed', slot: 'thrusters', name: 'Speed Thrusters', description: '+15% movement from all star results.', icon: '💨', cpCost: 320, effects: { movementBonus: 0.15 } },
+  { id: 'thrusters-utility', slot: 'thrusters', name: 'Utility Thrusters', description: 'Start each race with a random Power-Up.', icon: '🔧', cpCost: 220, effects: { randomStartPowerUp: true } },
 
   // Shielding modules
   { id: 'shielding-cleanse', slot: 'shielding', name: 'Cleanse Shielding', description: 'Debuffs last 1 fewer tile.', icon: '🧼', cpCost: 180, effects: { debuffDurationReduction: 1 } },
   { id: 'shielding-powerup', slot: 'shielding', name: 'Power Shielding', description: 'Start with a Clarity power-up.', icon: '✨', cpCost: 200, effects: { startWithPowerUp: 'Clarity' } },
-  { id: 'shielding-fortify', slot: 'shielding', name: 'Fortify Shielding', description: 'Shield blocks 2 debuffs instead of 1.', icon: '🏰', cpCost: 300, effects: {} },
+  { id: 'shielding-fortify', slot: 'shielding', name: 'Fortify Shielding', description: 'Shield absorbs an extra debuff hit before breaking.', icon: '🏰', cpCost: 300, effects: { fortifiedShield: true } },
 ];
 
 export function getChassisModule(id: string): ChassisModule | undefined {
@@ -320,16 +351,32 @@ export const SEASONAL_MODIFIERS: SeasonalModifier[] = [
 ];
 
 /**
- * Get the active seasonal modifier for the current ISO week.
+ * Compute ISO-8601 week number (1..53) in UTC.
+ */
+export function getIsoWeekNumber(date: Date = new Date()): number {
+  const utc = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const dayNum = utc.getUTCDay() || 7;
+  utc.setUTCDate(utc.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(utc.getUTCFullYear(), 0, 1));
+  return Math.ceil((((utc.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+}
+
+/**
+ * Get the active seasonal modifier for the current ISO week (or a pinned season ID).
+ * Cycles the 6 seasonal modifiers across all 52 weeks on a 24-week repeating schedule
+ * so seasons remain active year-round instead of stopping after week 22.
  * Returns null if no modifier is active.
  */
-export function getActiveSeasonalModifier(): SeasonalModifier | null {
-  const now = new Date();
-  const startOfYear = new Date(now.getFullYear(), 0, 1);
-  const dayOfYear = Math.floor((now.getTime() - startOfYear.getTime()) / 86400000);
-  const weekNumber = Math.ceil((dayOfYear + startOfYear.getDay() + 1) / 7);
+export function getActiveSeasonalModifier(pinnedOrDate?: string | Date | null): SeasonalModifier | null {
+  if (typeof pinnedOrDate === 'string') {
+    if (pinnedOrDate === 'none') return null;
+    return SEASONAL_MODIFIERS.find(m => m.id === pinnedOrDate) ?? null;
+  }
+  const now = pinnedOrDate instanceof Date ? pinnedOrDate : new Date();
+  const weekNumber = getIsoWeekNumber(now);
+  const cycleWeek = ((weekNumber - 1) % 24) + 1;
 
-  return SEASONAL_MODIFIERS.find(m => weekNumber >= m.startWeek && weekNumber <= m.endWeek) ?? null;
+  return SEASONAL_MODIFIERS.find(m => cycleWeek >= m.startWeek && cycleWeek <= m.endWeek) ?? null;
 }
 
 // ─── v5.0: Team Power-Ups ────────────────────────────────────────────────────
@@ -338,3 +385,45 @@ export const TEAM_POWERUP_DEFINITIONS: Record<string, { description: string; ico
   'Rally': { description: 'Boost a teammate\'s movement by 1.5x on the next tile.', icon: '🤝' },
   'Shield Wall': { description: 'Both teammates get a Shield.', icon: '🏰' },
 };
+
+// ─── Corporation Syndicate Ranks & Perks ─────────────────────────────────────
+
+export interface SyndicateTierInfo {
+  level: 0 | 1 | 2 | 3;
+  title: 'Freelancer' | 'Contractor' | 'Operative' | 'Champion';
+  minRep: number;
+  nextRep: number | null;
+  perkSummary: string;
+}
+
+export const SYNDICATE_PERK_DESCRIPTIONS: Record<CorporationId, Record<1 | 2 | 3, string>> = {
+  [CorporationId.Cyberex]: {
+    1: '+5% movement on 3★ results',
+    2: '+1 Starting Energy & +5% 3★ movement',
+    3: '+10% movement on 3★ results & +1 Starting Energy',
+  },
+  [CorporationId.Zenith]: {
+    1: '+0.25 Energy per Star',
+    2: '+5% base movement & +0.25 Energy/Star',
+    3: '-1 Overdrive Cooldown, +5% movement & +0.25 Energy/Star',
+  },
+  [CorporationId.Rogue]: {
+    1: '+10% chance to start with a random Power-Up',
+    2: '+1 Debuff Resistance & +10% Power-Up start chance',
+    3: 'Start with Reflector Immunity (1 tile), +1 Debuff Res & +10% Power-Up chance',
+  },
+};
+
+export function getSyndicateTier(corpId: CorporationId, reputation: number = 0): SyndicateTierInfo {
+  const perks = SYNDICATE_PERK_DESCRIPTIONS[corpId];
+  if (reputation >= 150) {
+    return { level: 3, title: 'Champion', minRep: 150, nextRep: null, perkSummary: perks[3] };
+  }
+  if (reputation >= 75) {
+    return { level: 2, title: 'Operative', minRep: 75, nextRep: 150, perkSummary: perks[2] };
+  }
+  if (reputation >= 25) {
+    return { level: 1, title: 'Contractor', minRep: 25, nextRep: 75, perkSummary: perks[1] };
+  }
+  return { level: 0, title: 'Freelancer', minRep: 0, nextRep: 25, perkSummary: `Reach 25 Rep: ${perks[1]}` };
+}

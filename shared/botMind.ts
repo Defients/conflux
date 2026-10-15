@@ -79,7 +79,7 @@ function getBotResult(
     botProfile: BotProfile, 
     rng: SeededRNG
 ): Omit<EventResult, 'playerId'> {
-    let primaryMetric = 0;
+    let primaryMetric: number;
     let secondaryMetric = 0;
 
     switch (event.performanceDimension) {
@@ -133,7 +133,7 @@ function getBotResult(
                 secondaryMetric = totalMoles;
             } else if (event.id === 'stop-the-clock') {
                 const { star3Chance, star2Chance } = botProfile.precision;
-                const { mean, std } = botProfile.reaction;
+                const { std } = botProfile.reaction;
                 let totalError = 0;
                 for (let i = 0; i < 3; i++) {
                     const baseError = rng.nextFloat() < star3Chance ? 30 : rng.nextFloat() < star2Chance ? 100 : 300;
@@ -161,7 +161,7 @@ function getBotResult(
                 let score = 0;
 
                 for(let i=0; i<numWords; i++) {
-                    const isCorrupted = rng.nextFloat() < corruptionChance;
+                    const _isCorrupted = rng.nextFloat() < corruptionChance;
                     const botIdentifiesCorrectly = rng.nextFloat() < identificationAccuracy;
 
                     if (botIdentifiesCorrectly) {
@@ -184,7 +184,7 @@ function getBotResult(
                 const spawnInterval = 2500 - difficulty * 400;
                 const totalWords = Math.floor(totalDuration / spawnInterval);
                 
-                const { wpm, std } = botProfile.typing;
+                const { wpm } = botProfile.typing;
                 const avgWordLen = 6;
                 const timePerWord = (avgWordLen / 5) / wpm * 60000;
                 const wordsBotCanType = Math.floor(totalDuration / timePerWord);
@@ -200,7 +200,7 @@ function getBotResult(
                 secondaryMetric = totalWords;
             } else if (event.id === 'anagram-rush') {
                 const totalDuration = (12 + difficulty) * 1000;
-                const { wpm, std } = botProfile.typing;
+                const { wpm } = botProfile.typing;
                 const { star3Chance, star2Chance } = botProfile.precision;
                 const solveChance = star3Chance + star2Chance * 0.6 + (1 - star3Chance - star2Chance) * 0.3;
                 
@@ -563,7 +563,6 @@ function getBotResult(
                 secondaryMetric = totalHits;
             } else if (event.id === 'wave-ride') {
                 const { star3Chance, star2Chance } = botProfile.precision;
-                const timingStd = botProfile.reaction.std;
                 const roll = rng.nextFloat();
                 let meanPct, stdPct;
                 if (roll < star3Chance) { meanPct = 88; stdPct = 5; }
@@ -677,7 +676,7 @@ function getBotResult(
                 const thinkingTime = rng.nextGaussian(mean, std) * 10 + 2000;
                 const typingTime = 2000;
                 
-                let accuracy = 0;
+                let accuracy: number;
                 if (rng.nextFloat() < solveChance) {
                     accuracy = 100;
                 } else {

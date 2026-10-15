@@ -6,7 +6,7 @@
  * and validates the data transformation logic.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 // Mock firebase module — db is null in test environment
 vi.mock('../firebase', () => ({

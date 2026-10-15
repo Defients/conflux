@@ -4,19 +4,20 @@
 
 # Conflux Circuit
 
-A cyberpunk racing game where pilots compete across a procedurally generated circuit of 30+ arcade mini-game events. Features local multiplayer, online multiplayer via Colyseus, daily/weekly challenges, gauntlet survival mode, corporation contracts, rival system, and Firebase-backed leaderboards + match history.
+A cyberpunk racing game where pilots compete across a procedurally generated circuit of 47 arcade mini-game events. Features solo & team racing, online multiplayer via Colyseus (casual rooms, ranked ELO matchmaking, single-elimination tournaments, and live spectating), async PvP ghost racing, daily/weekly challenges, 50-tile gauntlet survival mode, corporation contracts, rival interventions, neural skill trees, chassis module loadouts, and Firebase-backed leaderboards + match history.
 
 ## Game Modes
 
-- **Standard Race** — 1-6 players (human + bots) across 8-12 tiles. Earn CP, climb the leaderboard.
-- **Daily Challenge** — Seeded race that changes every day. Same conditions for all players worldwide.
-- **Weekly Cup** — Larger 6-player race with a curated event preset. New seed each week.
-- **Solo Gauntlet** — Endless 50-tile survival run. 3 lives. No bots. Just you.
-- **Online Multiplayer** — Create or join rooms via 4-character codes. Real-time authoritative server.
+- **Standard & Team Race** — 1-6 players (human + bots, Free-For-All or Team Alpha vs Team Omega) across 4-20 tiles.
+- **Daily Challenge** — UTC-seeded race that changes every day (`YYYY-MM-DD`). Same conditions for all players worldwide.
+- **Weekly Cup** — Larger 6-player race with a curated event preset. New ISO-week seed each week.
+- **Solo Gauntlet** — 50-tile survival run with 3 lives and escalating difficulty.
+- **Ghost Time-Attack** — Async head-to-head PvP against recorded pilot runs on identical seeds.
+- **Online Multiplayer & Ranked Queue** — Create/join rooms via 4-character codes, queue for ELO-rated matches, compete in 4/8/16-player Elimination Tournaments, or spectate live matches.
 
 ## Run Locally
 
-**Prerequisites:** Node.js 18+
+**Prerequisites:** Node.js 20+
 
 ### Client (Vite dev server)
 
@@ -51,11 +52,11 @@ Firebase provides cloud leaderboards, match history, and profile sync. Without i
 
 ```
 ├── components/        React UI components (Lobby, EventRunner, ResultsScreen, etc.)
-├── events/            30+ arcade mini-game events (ReactionTap, AimFlick, BalanceBeam, etc.)
+├── events/            47 arcade mini-game events (ReactionTap, AimFlick, BalanceBeam, etc.)
 ├── hooks/             useGameEngine (local), useOnlineGame (Colyseus), useSound
 ├── services/          audioService, botMind, firebase, networkService, profileService
-├── shared/            Portable game logic (types, constants, pathGenerator, matchSummary, contractService)
-├── server/            Colyseus authoritative server (ConfluxRoom, rate limiting, REST matchmaking)
+├── shared/            Portable game logic (eventCatalog, types, constants, pathGenerator, matchSummary, gameRules)
+├── server/            Colyseus authoritative server (ConfluxRoom, MatchmakingRoom, TournamentRoom, REST API)
 ├── App.tsx            Root component — screen routing, online/local mode switching
 ├── types.ts           Client re-exports from shared/types + React-dependent GameEvent type
 └── index.css          Mobile-first CSS foundation (safe-area, touch targets, a11y, PWA)
@@ -63,11 +64,10 @@ Firebase provides cloud leaderboards, match history, and profile sync. Without i
 
 ## Tech Stack
 
-- **Frontend:** React 18, Vite, TailwindCSS
+- **Frontend:** React 19, Vite 6, TailwindCSS 4
 - **Backend:** Colyseus (authoritative multiplayer), Express
-- **Cloud:** Firebase (Auth, Firestore, Hosting)
-- **Testing:** Vitest
-- **PWA:** Installable, offline-capable, mobile-optimized
+- **Cloud:** Firebase (Auth, Firestore, Hosting) + hybrid server progression endpoints
+- **Testing:** Vitest, ESLint 10
 
 ## Testing
 

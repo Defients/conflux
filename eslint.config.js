@@ -35,4 +35,18 @@ export default tseslint.config(
       'no-console': 'off',
     },
   },
+  {
+    // Node-side diagnostic scripts (audit probes, tooling)
+    files: ['audit/**/*.mjs', 'audit/**/*.cjs', 'scripts/**/*.mjs', 'scripts/**/*.cjs'],
+    languageOptions: {
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        URL: 'readonly',
+        URLSearchParams: 'readonly',
+      },
+    },
+  },
 );

@@ -3,8 +3,8 @@ import { EventProps } from '../types';
 
 const MAX_CPS = 15; // Hard cap for anti-cheese
 
-export const BurstClicks: React.FC<EventProps> = ({ onComplete, event, settings, tile, isBlurred , isPaused }) => {
-    const [clicks, setClicks] = useState(0);
+export const BurstClicks: React.FC<EventProps> = ({ onComplete, _event, _settings, tile, isBlurred , isPaused } : EventProps & { _event?: unknown; _settings?: unknown }) => {
+    const [_clicks, setClicks] = useState(0);
     const [validClicks, setValidClicks] = useState(0);
     const validClicksRef = useRef(0);
     const [timeLeft, setTimeLeft] = useState(5);

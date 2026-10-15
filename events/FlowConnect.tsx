@@ -7,7 +7,8 @@ interface PipeTile {
   index: number;
   type: TileType;
   rotation: number; // 0, 90, 180, 270
-  connections: boolean[]; // [top, right, bottom, left]
+  baseConnections: boolean[]; // canonical [top, right, bottom, left] at rotation=0
+  connections: boolean[]; // rotated [top, right, bottom, left]
 }
 
 const GRID_SIZE = 3;
@@ -21,8 +22,8 @@ const PIPE_SHAPES: { connections: boolean[]; name: string }[] = [
   { connections: [false, true, false, true], name: 'RL' },   // right-left (straight)
 ];
 
-function rotateConnections(conn: boolean[], rotation: number): boolean[] {
-  const steps = (rotation / 90) % 4;
+export function rotateConnections(conn: boolean[], rotation: number): boolean[] {
+  const steps = ((rotation / 90) % 4 + 4) % 4;
   const result = [...conn];
   for (let i = 0; i < steps; i++) {
     result.unshift(result.pop()!);
@@ -30,10 +31,99 @@ function rotateConnections(conn: boolean[], rotation: number): boolean[] {
   return result;
 }
 
+/**
+ * Generate a guaranteed-solvable pipe grid from (0,0) to (gridSize-1, gridSize-1).
+ * Builds a monotonic path from source to dest, assigns exact connecting pipe shapes
+ * along the path, and scrambles interior tile rotations so the puzzle is solvable
+ * by rotating interior tiles.
+ */
+export function generateSolvableFlowGrid(gridSize: number, rng: SeededRNG): PipeTile[] {
+  const path: { r: number; c: number }[] = [{ r: 0, c: 0 }];
+  let r = 0;
+  let c = 0;
+  while (r < gridSize - 1 || c < gridSize - 1) {
+    if (r === gridSize - 1) {
+      c++;
+    } else if (c === gridSize - 1) {
+      r++;
+    } else if (rng.nextFloat() < 0.5) {
+      r++;
+    } else {
+      c++;
+    }
+    path.push({ r, c });
+  }
+
+  const pathMap = new Map<number, number>();
+  path.forEach((pos, stepIdx) => {
+    pathMap.set(pos.r * gridSize + pos.c, stepIdx);
+  });
+
+  const dirBetween = (from: { r: number; c: number }, to: { r: number; c: number }): number => {
+    if (to.r < from.r) return 0; // top
+    if (to.c > from.c) return 1; // right
+    if (to.r > from.r) return 2; // bottom
+    return 3; // left
+  };
+
+  const tiles: PipeTile[] = [];
+  for (let i = 0; i < gridSize * gridSize; i++) {
+    const row = Math.floor(i / gridSize);
+    const col = i % gridSize;
+    let type: TileType = 'empty';
+    if (row === 0 && col === 0) type = 'source';
+    else if (row === gridSize - 1 && col === gridSize - 1) type = 'dest';
+
+    const stepIdx = pathMap.get(i);
+    if (stepIdx !== undefined) {
+      const neededDirs = new Set<number>();
+      if (stepIdx > 0) {
+        neededDirs.add(dirBetween(path[stepIdx], path[stepIdx - 1]));
+      }
+      if (stepIdx < path.length - 1) {
+        neededDirs.add(dirBetween(path[stepIdx], path[stepIdx + 1]));
+      }
+      // If source or dest only has 1 neighbor on the path, add a second non-conflicting arm
+      if (neededDirs.size === 1) {
+        const onlyDir = [...neededDirs][0];
+        const oppDir = (onlyDir + 2) % 4;
+        neededDirs.add(oppDir);
+      }
+
+      const solvedConnections = [0, 1, 2, 3].map(d => neededDirs.has(d));
+      // Keep source and dest fixed in their solved orientation since handleRotate locks them;
+      // rotate interior path tiles by 90/180/270 so the player has to rotate them into place.
+      const scrambleSteps = type === 'empty' ? rng.nextInt(1, 4) : 0;
+      const rotation = scrambleSteps * 90;
+      tiles.push({
+        index: i,
+        type,
+        rotation,
+        baseConnections: solvedConnections,
+        connections: rotateConnections(solvedConnections, rotation),
+      });
+    } else {
+      const shapeIdx = rng.nextInt(0, PIPE_SHAPES.length);
+      const baseConnections = [...PIPE_SHAPES[shapeIdx].connections];
+      const rotation = rng.nextInt(0, 4) * 90;
+      tiles.push({
+        index: i,
+        type,
+        rotation,
+        baseConnections,
+        connections: rotateConnections(baseConnections, rotation),
+      });
+    }
+  }
+
+  return tiles;
+}
+
 export const FlowConnect: React.FC<EventProps> = ({ onComplete, tile, settings, event, isBlurred, isPaused }) => {
   const rng = useMemo(() => new SeededRNG(`flowconnect-${settings.seed}-${tile.tileIndex}`), [settings.seed, tile.tileIndex]);
   const [grid, setGrid] = useState<PipeTile[]>([]);
   const [solved, setSolved] = useState(false);
+  const solvedRef = useRef(false);
   const [startTime] = useState(performance.now);
   const isDoneRef = useRef(false);
   const gridRef = useRef<PipeTile[]>([]);
@@ -41,38 +131,23 @@ export const FlowConnect: React.FC<EventProps> = ({ onComplete, tile, settings, 
   const gridSize = GRID_SIZE + (tile.difficulty >= 3 ? 1 : 0);
 
   useEffect(() => {
-    const tiles: PipeTile[] = [];
-    for (let i = 0; i < gridSize * gridSize; i++) {
-      const row = Math.floor(i / gridSize);
-      const col = i % gridSize;
-      let type: TileType = 'empty';
-      if (row === 0 && col === 0) type = 'source';
-      else if (row === gridSize - 1 && col === gridSize - 1) type = 'dest';
-
-      const shapeIdx = rng.nextInt(0, PIPE_SHAPES.length);
-      const rotation = rng.nextInt(0, 4) * 90;
-      tiles.push({
-        index: i,
-        type,
-        rotation,
-        connections: rotateConnections(PIPE_SHAPES[shapeIdx].connections, rotation),
-      });
-    }
+    const tiles = generateSolvableFlowGrid(gridSize, rng);
     gridRef.current = tiles;
     setGrid(tiles);
   }, [rng, gridSize]);
 
-  const finishEvent = useCallback(() => {
+  const finishEvent = useCallback((didSolve?: boolean) => {
     if (isDoneRef.current) return;
     isDoneRef.current = true;
-    const timeMs = performance.now() - startTime;
-    onComplete({ primaryMetric: solved ? timeMs : 99999 });
-  }, [onComplete, solved, startTime]);
+    const isSolved = didSolve ?? solvedRef.current;
+    const timeMs = Math.max(1, performance.now() - startTime);
+    onComplete({ primaryMetric: isSolved ? timeMs : 99999 });
+  }, [onComplete, startTime]);
 
   useEffect(() => {
     if (isPaused) return;
     const duration = event.durationSec(tile.difficulty, settings.accessibility) * 1000;
-    const timer = setTimeout(finishEvent, duration);
+    const timer = setTimeout(() => finishEvent(false), duration);
     return () => clearTimeout(timer);
   }, [event, tile.difficulty, settings.accessibility, finishEvent, isPaused]);
 
@@ -115,23 +190,20 @@ export const FlowConnect: React.FC<EventProps> = ({ onComplete, tile, settings, 
   }, [gridSize]);
 
   const handleRotate = (index: number) => {
-    if (isDoneRef.current) return;
-    const tile = gridRef.current[index];
-    if (tile.type === 'source' || tile.type === 'dest') return;
-    const newRotation = (tile.rotation + 90) % 360;
-    const shapeIdx = PIPE_SHAPES.findIndex(s =>
-      JSON.stringify(rotateConnections(s.connections, tile.rotation)) === JSON.stringify(tile.connections)
-    );
-    const baseConn = shapeIdx >= 0 ? PIPE_SHAPES[shapeIdx].connections : tile.connections;
-    const newConn = rotateConnections(baseConn, newRotation);
+    if (isDoneRef.current || isPaused) return;
+    const current = gridRef.current[index];
+    if (!current || current.type === 'source' || current.type === 'dest') return;
+    const newRotation = (current.rotation + 90) % 360;
+    const newConn = rotateConnections(current.baseConnections, newRotation);
     const newTiles = gridRef.current.map(t =>
       t.index === index ? { ...t, rotation: newRotation, connections: newConn } : t
     );
     gridRef.current = newTiles;
     setGrid(newTiles);
     if (checkSolved(newTiles)) {
+      solvedRef.current = true;
       setSolved(true);
-      setTimeout(() => finishEvent(), 500);
+      setTimeout(() => finishEvent(true), 400);
     }
   };
 
@@ -150,12 +222,11 @@ export const FlowConnect: React.FC<EventProps> = ({ onComplete, tile, settings, 
           <div
             key={i}
             onClick={() => handleRotate(i)}
-            className={`w-16 h-16 rounded border-2 flex items-center justify-center cursor-pointer transition-transform duration-150 ${
+            className={`w-16 h-16 rounded border-2 flex items-center justify-center cursor-pointer transition-colors duration-150 ${
               t.type === 'source' ? 'border-hyper-green bg-hyper-green/20' :
               t.type === 'dest' ? 'border-solar-orange bg-solar-orange/20' :
               'border-gray-700 bg-gray-800/50 hover:border-gray-600'
             }`}
-            style={{ transform: `rotate(${t.rotation}deg)` }}
           >
             <svg width="48" height="48" viewBox="0 0 48 48">
               {t.connections[0] && <rect x="22" y="0" width="4" height="24" fill={t.type === 'source' ? '#00ff88' : t.type === 'dest' ? '#ff8c42' : '#6b21a8'} />}

@@ -7,6 +7,7 @@ import { getDailySeed } from '../shared/dailyChallengeService';
 import { ACCOLADE_DEFINITIONS, CORPORATION_DEFINITIONS } from '../constants';
 import { RankBadge } from './RankBadge';
 import { ratingToTier } from '../shared/rankSystem';
+import { getTeamPositions } from '../shared/gameSetup';
 
 
 interface ResultsScreenProps {
@@ -15,19 +16,27 @@ interface ResultsScreenProps {
   matchSummary: MatchSummary | null;
   /** True while waiting for the server-authored MatchSummary to arrive. */
   summaryPending?: boolean;
+  localPlayerId?: number;
   onRematch: () => void;
   onNewRun: () => void;
   onCopySeed: () => void;
   onShareRun: () => void;
 }
 
-export const ResultsScreen: React.FC<ResultsScreenProps> = ({ profile, gameState, matchSummary, summaryPending = false, onRematch, onNewRun, onCopySeed, onShareRun }) => {
+export const ResultsScreen: React.FC<ResultsScreenProps> = ({ profile, gameState, matchSummary, summaryPending = false, localPlayerId, onRematch, onNewRun, onCopySeed, onShareRun }) => {
   const sortedPlayers = useMemo(() => [...gameState.players].sort((a, b) => b.position - a.position), [gameState.players]);
   const { playSound } = useSound();
   const isGauntlet = !!gameState.settings.isGauntlet;
   
-  const humanPlayer = useMemo(() => sortedPlayers.find(p => !p.isBot), [sortedPlayers]);
+  const humanPlayer = useMemo(
+    () => (localPlayerId !== undefined ? sortedPlayers.find(p => p.id === localPlayerId) : undefined) ?? sortedPlayers.find(p => !p.isBot),
+    [sortedPlayers, localPlayerId]
+  );
   const rival = useMemo(() => sortedPlayers.find(p => p.isRival), [sortedPlayers]);
+  const teamStandings = useMemo(
+    () => (gameState.settings.teamMode ? getTeamPositions(gameState.players).sort((a, b) => b.position - a.position) : []),
+    [gameState.settings.teamMode, gameState.players]
+  );
 
   // Derive display values from the canonical MatchSummary
   const totalCp = matchSummary?.cp.totalCp ?? 0;
@@ -40,7 +49,7 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({ profile, gameState
 
   const copySeedToClipboard = () => {
     playSound('ui-click');
-    navigator.clipboard.writeText(gameState.settings.seed);
+    navigator.clipboard?.writeText(gameState.settings.seed).catch(() => {});
     onCopySeed();
   };
 
@@ -53,7 +62,7 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({ profile, gameState
         const encoded = encodeSettings(gameState.settings);
         textToCopy = `${window.location.origin}${window.location.pathname}#cc=${encoded}`;
     }
-    navigator.clipboard.writeText(textToCopy);
+    navigator.clipboard?.writeText(textToCopy).catch(() => {});
     onShareRun();
   };
   
@@ -88,8 +97,22 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({ profile, gameState
 
         {/* Leaderboard */}
         <div className="md:col-span-8 flex flex-col gap-2 sm:gap-3">
+            {teamStandings.length > 0 && (
+              <div className="glass-panel p-3 sm:p-4 mb-1 border border-galaxy-cyan/30 flex items-center justify-between">
+                <div className="text-xs sm:text-sm font-black uppercase tracking-wider text-galaxy-cyan">
+                  🤝 Team Standings — {teamStandings[0].teamId} Victory!
+                </div>
+                <div className="flex gap-4 text-xs font-mono">
+                  {teamStandings.map((t, i) => (
+                    <span key={t.teamId} className={i === 0 ? 'text-hyper-green font-bold' : 'text-gray-400'}>
+                      #{i + 1} TEAM {t.teamId}: {t.position.toFixed(1)}%
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
             {sortedPlayers.map((player, index) => {
-                const isHuman = !player.isBot;
+                const isHuman = humanPlayer ? player.id === humanPlayer.id : !player.isBot;
                 return (
                     <div 
                         key={player.id} 

@@ -9,13 +9,12 @@ import { describe, it, expect } from 'vitest';
 import {
   applyRivalTraitsToPlayer,
   decideBotPowerUp,
-  decideBotOverdrive,
   simulateBotPerformance,
 } from '../botMind';
 import { SeededRNG } from '../seededRNG';
 import {
   Player, GameState, GameSettings, Tile, BotPersonality,
-  RivalTraitId, PowerUp, BotEventInfo,
+  RivalTraitId, BotEventInfo,
 } from '../types';
 
 /** Create a baseline rival bot player for tests. */

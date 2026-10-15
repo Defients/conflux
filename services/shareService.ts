@@ -62,15 +62,19 @@ export function decodeSettings(settings: string): GameSettings | null {
     try {
         const jsonString = atob(settings);
         const compact = JSON.parse(jsonString) as CompactSettings;
-        // Basic validation
         if (
-            typeof compact.p === 'number' &&
-            typeof compact.e === 'number' &&
-            typeof compact.i === 'number' &&
-            typeof compact.s === 'string' &&
-            typeof compact.l === 'number' &&
+            typeof compact.p === 'number' && Number.isFinite(compact.p) && Number.isInteger(compact.p) &&
+            compact.p >= 1 && compact.p <= 6 &&
+            typeof compact.e === 'number' && Number.isFinite(compact.e) && Number.isInteger(compact.e) &&
+            compact.e >= 0 && compact.e <= 6 &&
+            typeof compact.i === 'number' && Number.isFinite(compact.i) && Number.isInteger(compact.i) &&
+            compact.i >= 0 && compact.i <= 6 &&
+            typeof compact.s === 'string' && compact.s.trim().length > 0 && compact.s.length <= 64 &&
+            typeof compact.l === 'number' && Number.isFinite(compact.l) && Number.isInteger(compact.l) &&
+            compact.l >= 4 && compact.l <= 20 &&
             typeof compact.o === 'boolean' &&
-            typeof compact.a === 'boolean'
+            typeof compact.a === 'boolean' &&
+            (compact.c === undefined || Object.values(ChassisId).includes(compact.c))
         ) {
             return fromCompact(compact);
         }

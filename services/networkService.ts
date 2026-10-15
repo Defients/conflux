@@ -82,12 +82,15 @@ class NetworkService {
   private client: Client | null = null;
   private room: Room | null = null;
   private handlers: NetworkEventHandlers = {};
+  private handlerSubscriptions: Set<NetworkEventHandlers> = new Set();
   private _sessionId: string | null = null;
   private _isConnected = false;
   private _isReconnecting = false;
   private _reconnectAttempts = 0;
   private _reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private _lastSubmittedTileIndex: number = -1;
+  private _lastSubmittedKey: string = '';
+  private _currentMatchKey: string = 'default';
   private static readonly MAX_RECONNECT_ATTEMPTS = 8;
   private static readonly BASE_RECONNECT_DELAY_MS = 1000;
   // v5.0: RTT tracking
@@ -98,6 +101,7 @@ class NetworkService {
   private _lastPingTime: number = 0;
   // v5.0: Cached telemetry for reconnect resilience
   private _cachedTelemetry: EventTelemetry | null = null;
+  private _cachedTelemetryMatchKey: string = '';
   // v5.0: Queue room reference
   private _queueRoom: Room | null = null;
 
@@ -134,18 +138,36 @@ class NetworkService {
 
   /**
    * Register event handlers. Call this from React hooks/components.
+   * Supports multiple simultaneous subscribers without overwriting each other.
    * Returns an unsubscribe function.
    */
   setHandlers(handlers: NetworkEventHandlers): () => void {
-    this.handlers = { ...this.handlers, ...handlers };
+    this.handlerSubscriptions.add(handlers);
+    this.rebuildMergedHandlers();
     return () => {
-      // Remove only the handlers that were set in this call
-      for (const key of Object.keys(handlers) as (keyof NetworkEventHandlers)[]) {
-        if (this.handlers[key] === handlers[key]) {
-          delete this.handlers[key];
-        }
-      }
+      this.handlerSubscriptions.delete(handlers);
+      this.rebuildMergedHandlers();
     };
+  }
+
+  private rebuildMergedHandlers(): void {
+    const merged: NetworkEventHandlers = {};
+    for (const sub of this.handlerSubscriptions) {
+      Object.assign(merged, sub);
+    }
+    this.handlers = merged;
+  }
+
+  private emit<K extends keyof NetworkEventHandlers>(
+    event: K,
+    ...args: Parameters<NonNullable<NetworkEventHandlers[K]>>
+  ): void {
+    for (const sub of [...this.handlerSubscriptions]) {
+      const fn = sub[event] as ((...a: unknown[]) => void) | undefined;
+      if (fn) {
+        fn(...args);
+      }
+    }
   }
 
   /**
@@ -170,11 +192,15 @@ class NetworkService {
       this.saveReconnectData();
       this._sessionId = this.room.sessionId;
       this._isConnected = true;
-      this.handlers.onConnectionChange?.(true);
+      this._currentMatchKey = this.room.id;
+      this._lastSubmittedTileIndex = -1;
+      this._lastSubmittedKey = '';
+      this._cachedTelemetry = null;
+      this.emit('onConnectionChange', true);
       return this.room.id;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to create room';
-      this.handlers.onRoomError?.(message);
+      this.emit('onRoomError', message);
       throw err;
     }
   }
@@ -192,44 +218,57 @@ class NetworkService {
       this.saveReconnectData();
       this._sessionId = this.room.sessionId;
       this._isConnected = true;
-      this.handlers.onConnectionChange?.(true);
+      this._currentMatchKey = this.room.id;
+      this._lastSubmittedTileIndex = -1;
+      this._lastSubmittedKey = '';
+      this._cachedTelemetry = null;
+      this.emit('onConnectionChange', true);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to join room';
-      this.handlers.onRoomError?.(message);
+      this.emit('onRoomError', message);
       throw err;
     }
   }
 
   /**
-   * Join a room by name with filter options (e.g., room code).
+   * Join a room by 4-letter room code or exact internal roomId.
    */
   async joinByCode(roomCode: string, config: RoomConfig): Promise<void> {
     const client = this.ensureClient();
 
     try {
-      // Try to find available rooms and match by code
+      const normalized = roomCode.trim();
+      const upper = normalized.toUpperCase();
+      // Try to find available rooms and match by exact roomId or 4-letter metadata.roomCode
       const rooms = await client.getAvailableRooms(ROOM_NAME);
       const target = rooms.find(r => {
-        // Room metadata would contain the code - for now use roomId
-        return r.roomId === roomCode || r.metadata?.roomCode === roomCode;
+        return r.roomId === normalized || r.roomId.toUpperCase() === upper || r.metadata?.roomCode?.toUpperCase() === upper;
       });
 
       if (target) {
         await this.joinRoom(target.roomId, config);
-      } else {
-        throw new Error(`Room with code "${roomCode}" not found`);
+        return;
       }
+
+      // If not in getAvailableRooms (e.g. direct roomId from tournament), try joinById directly
+      if (normalized.length > 4) {
+        await this.joinRoom(normalized, config);
+        return;
+      }
+
+      throw new Error(`Room with code "${roomCode}" not found`);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to join room';
-      this.handlers.onRoomError?.(message);
+      this.emit('onRoomError', message);
       throw err;
     }
   }
 
   /**
    * Attempt to reconnect to a previously joined room.
+   * @param preserveTokenOnFailure When true (during backoff loop), retain the token for subsequent attempts.
    */
-  async tryReconnect(): Promise<boolean> {
+  async tryReconnect(preserveTokenOnFailure = false): Promise<boolean> {
     const reconnectData = this.loadReconnectData();
     if (!reconnectData) return false;
 
@@ -241,16 +280,20 @@ class NetworkService {
       this.saveReconnectData();
       this._sessionId = this.room.sessionId;
       this._isConnected = true;
-      this.handlers.onConnectionChange?.(true);
-      // v5.0: Resend cached telemetry if we have unsent results
-      if (this._cachedTelemetry) {
-        this._lastSubmittedTileIndex = -1; // Reset to allow resend
-        this.sendEventResult(this._cachedTelemetry);
+      this.emit('onConnectionChange', true);
+      // v5.0: Resend cached telemetry only if it belongs to the active match and tile
+      if (this._cachedTelemetry && this._cachedTelemetryMatchKey === this._currentMatchKey) {
+        this._lastSubmittedTileIndex = -1;
+        this._lastSubmittedKey = '';
+        const toSend = this._cachedTelemetry;
         this._cachedTelemetry = null;
+        this.sendEventResult(toSend);
       }
       return true;
     } catch {
-      this.clearReconnectData();
+      if (!preserveTokenOnFailure) {
+        this.clearReconnectData();
+      }
       return false;
     }
   }
@@ -272,8 +315,11 @@ class NetworkService {
       this._isConnected = false;
       this._hasRtt = false;
       this._rttMs = 0;
+      this._lastSubmittedTileIndex = -1;
+      this._lastSubmittedKey = '';
+      this._cachedTelemetry = null;
       this.clearReconnectData();
-      this.handlers.onConnectionChange?.(false);
+      this.emit('onConnectionChange', false);
     }
   }
 
@@ -299,7 +345,7 @@ class NetworkService {
       console.warn('[Network] Max reconnect attempts reached, giving up');
       this._isReconnecting = false;
       this.clearReconnectData();
-      this.handlers.onRoomError?.('Connection lost. Please rejoin the room.');
+      this.emit('onRoomError', 'Connection lost. Please rejoin the room.');
       return;
     }
 
@@ -313,7 +359,8 @@ class NetworkService {
     this._reconnectTimer = setTimeout(async () => {
       this._reconnectAttempts++;
       try {
-        const success = await this.tryReconnect();
+        // Preserve reconnect token on transient failure so remaining backoff attempts can retry
+        const success = await this.tryReconnect(true);
         if (success) {
           console.log('[Network] Reconnected successfully');
           this._isReconnecting = false;
@@ -344,13 +391,16 @@ class NetworkService {
   }
 
   sendEventResult(telemetry: EventTelemetry) {
-    if (telemetry.tileIndex === this._lastSubmittedTileIndex) {
+    const dedupeKey = `${this._currentMatchKey}:${telemetry.tileIndex}`;
+    if (dedupeKey === this._lastSubmittedKey && telemetry.tileIndex === this._lastSubmittedTileIndex) {
       console.warn(`[Network] Duplicate telemetry suppressed for tile ${telemetry.tileIndex}`);
       return;
     }
     this._lastSubmittedTileIndex = telemetry.tileIndex;
-    // v5.0: Cache telemetry for reconnect resilience
+    this._lastSubmittedKey = dedupeKey;
+    // v5.0: Cache telemetry for reconnect resilience (scoped to active match)
     this._cachedTelemetry = telemetry;
+    this._cachedTelemetryMatchKey = this._currentMatchKey;
     this.room?.send(ClientMessages.SUBMIT_EVENT_RESULT, telemetry);
   }
 
@@ -371,6 +421,9 @@ class NetworkService {
   }
 
   sendRequestRematch() {
+    this._lastSubmittedTileIndex = -1;
+    this._lastSubmittedKey = '';
+    this._cachedTelemetry = null;
     this.room?.send(ClientMessages.REQUEST_REMATCH, {});
   }
 
@@ -399,7 +452,7 @@ class NetworkService {
       this.setupQueueListeners();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to join queue';
-      this.handlers.onRoomError?.(message);
+      this.emit('onRoomError', message);
       throw err;
     }
   }
@@ -425,10 +478,10 @@ class NetworkService {
     this.startPing();
 
     this._queueRoom.onMessage(ServerMessages.QUEUE_STATUS, (data: { queueSize: number; message: string; position?: number }) => {
-      this.handlers.onQueueStatus?.(data);
+      this.emit('onQueueStatus', data);
     });
     this._queueRoom.onMessage(ServerMessages.MATCH_FOUND, async (data: MatchFoundPayload) => {
-      this.handlers.onMatchFound?.(data);
+      this.emit('onMatchFound', data);
       // Leave the queue room now that we have a seat reservation.
       try { await this._queueRoom?.leave(true); } catch { /* queue may already be disposed */ }
       this._queueRoom = null;
@@ -440,15 +493,19 @@ class NetworkService {
           this.saveReconnectData();
           this._sessionId = this.room.sessionId;
           this._isConnected = true;
-          this.handlers.onConnectionChange?.(true);
+          this._currentMatchKey = this.room.id;
+          this._lastSubmittedTileIndex = -1;
+          this._lastSubmittedKey = '';
+          this._cachedTelemetry = null;
+          this.emit('onConnectionChange', true);
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Failed to join match room';
-          this.handlers.onRoomError?.(message);
+          this.emit('onRoomError', message);
         }
       }
     });
     this._queueRoom.onMessage(ServerMessages.QUEUE_TIMEOUT, (data: { message: string }) => {
-      this.handlers.onQueueTimeout?.(data);
+      this.emit('onQueueTimeout', data);
     });
     // v5.1: Ping/pong for latency measurement while in queue.
     this._queueRoom.onMessage(ServerMessages.PONG, () => {
@@ -456,7 +513,7 @@ class NetworkService {
         const newRtt = Date.now() - this._lastPingTime;
         this._rttMs = this._rttMs === 0 ? newRtt : Math.round(this._rttMs * 0.7 + newRtt * 0.3);
         this._hasRtt = true;
-        this.handlers.onConnectionQualityChange?.(this.connectionQuality);
+        this.emit('onConnectionQualityChange', this.connectionQuality);
       }
     });
   }
@@ -492,58 +549,73 @@ class NetworkService {
 
     // Lobby/room state updates
     this.room.onMessage('room:state', (data) => {
-      this.handlers.onLobbyStateUpdate?.(data);
+      this.emit('onLobbyStateUpdate', data);
     });
 
     this.room.onMessage(ServerMessages.ROOM_CREATED, (data: RoomCreatedPayload) => {
-      this.handlers.onRoomCreated?.(data.roomCode);
+      this.emit('onRoomCreated', data.roomCode);
     });
 
     this.room.onMessage(ServerMessages.ROOM_ERROR, (data: RoomErrorPayload) => {
-      this.handlers.onRoomError?.(data.message);
+      this.emit('onRoomError', data.message);
     });
 
     // Game state updates
     this.room.onMessage('game:state', (data) => {
-      this.handlers.onGameStateUpdate?.(data);
+      if (data?.gameState?.matchId) {
+        this._currentMatchKey = data.gameState.matchId;
+      } else if (data?.gameState?.settings?.seed) {
+        this._currentMatchKey = `${this.room?.id ?? 'room'}-${data.gameState.settings.seed}`;
+      }
+      this.emit('onGameStateUpdate', data);
     });
 
     this.room.onMessage(ServerMessages.TILE_START, (data: TileStartPayload) => {
-      this.handlers.onTileStart?.(data);
+      this._lastSubmittedTileIndex = -1;
+      this._lastSubmittedKey = '';
+      this._cachedTelemetry = null;
+      this.emit('onTileStart', data);
     });
 
     this.room.onMessage(ServerMessages.TILE_RESULTS, (data: TileResultsPayload) => {
-      this.handlers.onTileResults?.(data);
+      this._cachedTelemetry = null;
+      this.emit('onTileResults', data);
     });
 
     this.room.onMessage(ServerMessages.RACE_FINISHED, (data: RaceFinishedPayload) => {
-      this.handlers.onRaceFinished?.(data);
+      this._cachedTelemetry = null;
+      this._lastSubmittedTileIndex = -1;
+      this._lastSubmittedKey = '';
+      this.emit('onRaceFinished', data);
     });
 
     this.room.onMessage(ServerMessages.MATCH_SUMMARY, (data: MatchSummaryPayload) => {
-      this.handlers.onMatchSummary?.(data);
+      this.emit('onMatchSummary', data);
     });
 
     this.room.onMessage(ServerMessages.INTERVENTION, (data) => {
-      this.handlers.onIntervention?.(data);
+      this.emit('onIntervention', data);
     });
 
     this.room.onMessage(ServerMessages.PIT_STOP, () => {
-      this.handlers.onPitStop?.();
+      this.emit('onPitStop');
     });
 
     this.room.onMessage(ServerMessages.COUNTDOWN, (data) => {
-      this.handlers.onCountdown?.(data);
+      this._lastSubmittedTileIndex = -1;
+      this._lastSubmittedKey = '';
+      this._cachedTelemetry = null;
+      this.emit('onCountdown', data);
     });
 
     // v5.0: Start countdown with duration
     this.room.onMessage(ServerMessages.START_COUNTDOWN, (data: { durationMs: number; tileIndex: number }) => {
-      this.handlers.onStartCountdown?.(data);
+      this.emit('onStartCountdown', data);
     });
 
     // v5.0: Spectator mode acknowledgment
     this.room.onMessage(ServerMessages.SPECTATOR_MODE, (data: { roomCode: string }) => {
-      this.handlers.onSpectatorMode?.(data);
+      this.emit('onSpectatorMode', data);
     });
 
     // v5.1: Pong for RTT measurement (uses typed message constant)
@@ -553,24 +625,24 @@ class NetworkService {
         // Smooth RTT with exponential moving average
         this._rttMs = this._rttMs === 0 ? newRtt : Math.round(this._rttMs * 0.7 + newRtt * 0.3);
         this._hasRtt = true;
-        this.handlers.onConnectionQualityChange?.(this.connectionQuality);
+        this.emit('onConnectionQualityChange', this.connectionQuality);
       }
     });
 
     this.room.onMessage(ServerMessages.PLAYER_DISCONNECTED, (data: PlayerConnectionPayload) => {
-      this.handlers.onPlayerDisconnected?.(data);
+      this.emit('onPlayerDisconnected', data);
     });
 
     this.room.onMessage(ServerMessages.PLAYER_RECONNECTED, (data: PlayerConnectionPayload) => {
-      this.handlers.onPlayerReconnected?.(data);
+      this.emit('onPlayerReconnected', data);
     });
 
     this.room.onMessage(ServerMessages.PLAYER_KICKED, (data: { message: string }) => {
-      this.handlers.onPlayerKicked?.(data.message);
+      this.emit('onPlayerKicked', data.message);
     });
 
     this.room.onMessage(ServerMessages.PLAYER_BANNED, (data: { message: string }) => {
-      this.handlers.onPlayerBanned?.(data.message);
+      this.emit('onPlayerBanned', data.message);
     });
 
     // Connection lifecycle
@@ -580,8 +652,9 @@ class NetworkService {
       this._hasRtt = false;
       this._rttMs = 0;
       this._lastSubmittedTileIndex = -1;
+      this._lastSubmittedKey = '';
       this.stopPing();
-      this.handlers.onConnectionChange?.(false);
+      this.emit('onConnectionChange', false);
 
       // code >= 4000 means consented leave; < 4000 means unexpected disconnect
       if (code < 4000 && this.loadReconnectData()) {
@@ -591,7 +664,7 @@ class NetworkService {
 
     this.room.onError((code, message) => {
       console.error(`[Network] Room error (${code}): ${message}`);
-      this.handlers.onRoomError?.(message ?? `Room error: ${code}`);
+      this.emit('onRoomError', message ?? `Room error: ${code}`);
     });
   }
 
@@ -653,19 +726,52 @@ class NetworkService {
   }
 
   /**
-   * Join a room as a spectator (can join during active matches).
+   * Join a room as a spectator by room code or room ID (can join during active matches).
    */
-  async spectateRoom(roomId: string): Promise<void> {
+  async spectateRoom(codeOrRoomId: string, config?: Partial<RoomConfig>): Promise<void> {
     const client = this.ensureClient();
     try {
-      this.room = await client.joinById(roomId, { spectate: true } as any);
+      const normalized = codeOrRoomId.trim();
+      const upper = normalized.toUpperCase();
+      let targetRoomId = normalized;
+
+      // Resolve 4-letter room code via available rooms or REST spectatable discovery
+      if (normalized.length <= 4) {
+        const available = await client.getAvailableRooms(ROOM_NAME).catch(() => []);
+        const found = available.find(
+          r => r.roomId === normalized || r.metadata?.roomCode?.toUpperCase() === upper
+        );
+        if (found) {
+          targetRoomId = found.roomId;
+        } else {
+          const res = await fetch(`${HTTP_SERVER_URL}/api/rooms?spectatable=1`).catch(() => null);
+          if (res && res.ok) {
+            const data = await res.json();
+            const activeMatch = (data.rooms as OpenRoomInfo[] | undefined)?.find(
+              r => r.roomCode?.toUpperCase() === upper || r.roomId === normalized
+            );
+            if (activeMatch) {
+              targetRoomId = activeMatch.roomId;
+            }
+          }
+        }
+      }
+
+      this.room = await client.joinById(targetRoomId, {
+        playerName: config?.playerName ?? 'Spectator',
+        avatarId: config?.avatarId ?? '👁️',
+        chassisId: config?.chassisId,
+        userId: config?.userId,
+        idToken: config?.idToken,
+        spectate: true,
+      } as any);
       this.setupRoomListeners();
       this._sessionId = this.room.sessionId;
       this._isConnected = true;
-      this.handlers.onConnectionChange?.(true);
+      this.emit('onConnectionChange', true);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to spectate room';
-      this.handlers.onRoomError?.(message);
+      this.emit('onRoomError', message);
       throw err;
     }
   }
@@ -677,20 +783,20 @@ class NetworkService {
     try {
       this._tournamentRoom = await client.joinOrCreate(RoomNames.TOURNAMENT, { ...config, size });
       this._tournamentRoom.onMessage(ServerMessages.TOURNAMENT_UPDATE, (data) => {
-        this.handlers.onTournamentUpdate?.(data);
+        this.emit('onTournamentUpdate', data);
       });
       this._tournamentRoom.onMessage(ServerMessages.TOURNAMENT_MATCH_READY, (data) => {
-        this.handlers.onTournamentMatchReady?.(data);
+        this.emit('onTournamentMatchReady', data);
       });
       this._tournamentRoom.onMessage(ServerMessages.TOURNAMENT_CHAMPION, (data) => {
-        this.handlers.onTournamentChampion?.(data);
+        this.emit('onTournamentChampion', data);
       });
       this._tournamentRoom.onMessage(ServerMessages.ROOM_ERROR, (data) => {
-        this.handlers.onRoomError?.(data.message);
+        this.emit('onRoomError', data.message);
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to join tournament';
-      this.handlers.onRoomError?.(message);
+      this.emit('onRoomError', message);
       throw err;
     }
   }

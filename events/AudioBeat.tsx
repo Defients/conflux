@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { EventProps } from '../types';
 import { SeededRNG } from '../services/seededRNG';
+import { audioService } from '../services/audioService';
 
 export const AudioBeat: React.FC<EventProps> = ({ onComplete, tile, settings, event, isBlurred , isPaused }) => {
     const { referenceBPM, optionsBPM } = useMemo(() => {
@@ -37,6 +38,18 @@ export const AudioBeat: React.FC<EventProps> = ({ onComplete, tile, settings, ev
         const timer = setTimeout(() => finishEvent(false), duration);
         return () => clearTimeout(timer);
     }, [event, tile.difficulty, settings.accessibility, finishEvent, isPaused]);
+
+    // Synthesize audible beat pulse for the reference tempo
+    useEffect(() => {
+        if (isPaused || selectedOption !== null) return;
+        const intervalMs = Math.max(250, Math.round(60000 / referenceBPM));
+        const beatTimer = setInterval(() => {
+            if (!isDoneRef.current) {
+                audioService.playTone(440, 0.06, 'sine', 0.08);
+            }
+        }, intervalMs);
+        return () => clearInterval(beatTimer);
+    }, [isPaused, selectedOption, referenceBPM]);
 
 
     const handleSelect = (index: number) => {

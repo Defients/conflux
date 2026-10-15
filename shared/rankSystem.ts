@@ -69,6 +69,8 @@ export function computeRatingChange(
 /**
  * Compute rating changes for a multi-player race.
  * Each player is compared against the average rating of all other players.
+ * Placement is 1-based (1 = 1st place, N = last place). If 0-based placements
+ * (containing 0) are supplied, they are automatically normalized to 1-based.
  */
 export function computeMultiPlayerRatingChanges(
   players: { playerId: number; rating: number; placement: number }[]
@@ -76,11 +78,29 @@ export function computeMultiPlayerRatingChanges(
   const changes = new Map<number, number>();
   const totalPlayers = players.length;
 
-  for (const player of players) {
-    const others = players.filter(p => p.playerId !== player.playerId);
+  if (totalPlayers < 2) {
+    for (const p of players) {
+      changes.set(p.playerId, 0);
+    }
+    return changes;
+  }
+
+  const isZeroBased = players.some(p => p.placement <= 0);
+  const normalized = players.map(p => ({
+    ...p,
+    rating: Number.isFinite(p.rating) ? p.rating : DEFAULT_RATING,
+    placement: Math.max(1, Math.min(totalPlayers, isZeroBased ? p.placement + 1 : p.placement)),
+  }));
+
+  for (const player of normalized) {
+    const others = normalized.filter(p => p.playerId !== player.playerId);
+    if (others.length === 0) {
+      changes.set(player.playerId, 0);
+      continue;
+    }
     const avgOpponentRating = others.reduce((sum, o) => sum + o.rating, 0) / others.length;
 
-    // Convert placement to score: 1st = 1.0, last = 0.0, linear interpolation
+    // Convert 1-based placement to score: 1st = 1.0, last = 0.0, linear interpolation
     const score = (totalPlayers - player.placement) / (totalPlayers - 1);
     const change = computeRatingChange(player.rating, avgOpponentRating, score);
     changes.set(player.playerId, change);

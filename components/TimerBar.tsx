@@ -15,15 +15,17 @@ export const TimerBar: React.FC<TimerBarProps> = ({ duration, totalDuration, isP
   const totalPausedDurationRef = useRef<number>(0);
   const animationFrameRef = useRef<number | null>(null);
 
+  // Reset timer refs only when duration/totalDuration changes (new tile/event), NOT on pause toggle
   useEffect(() => {
-    // Reset refs when duration changes (new tile/event)
     startTimeRef.current = null;
     pausedTimeRef.current = null;
     totalPausedDurationRef.current = 0;
+  }, [duration, totalDuration]);
 
+  useEffect(() => {
     // Wait until it's unpaused to start the timer, or track pause duration
     if (isPaused) {
-        if (pausedTimeRef.current === null) {
+        if (pausedTimeRef.current === null && startTimeRef.current !== null) {
             pausedTimeRef.current = performance.now();
         }
         if (animationFrameRef.current) {

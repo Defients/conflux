@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { EventProps } from '../types';
+import { SeededRNG } from '../services/seededRNG';
 
 type GameObject = {
     id: number;
@@ -11,9 +12,9 @@ type GameObject = {
 
 const PLAYER_WIDTH = 40;
 const PLAYER_HEIGHT = 20;
-const GAME_DURATION = 12000; // 12 seconds
 
 export const AsteroidDodge: React.FC<EventProps> = ({ onComplete, tile, isBlurred, event, settings, isPaused }) => {
+    const rng = useMemo(() => new SeededRNG(`asteroiddodge-${settings.seed}-${tile.tileIndex}`), [settings.seed, tile.tileIndex]);
     const [playerX, setPlayerX] = useState(50); // percentage
     const [asteroids, setAsteroids] = useState<GameObject[]>([]);
     const [hits, setHits] = useState(0);
@@ -67,10 +68,10 @@ export const AsteroidDodge: React.FC<EventProps> = ({ onComplete, tile, isBlurre
             lastSpawnTime.current = timestamp;
             const newAsteroid: GameObject = {
                 id: nextAsteroidId.current++,
-                x: Math.random() * 100, // percentage
+                x: rng.nextFloat() * 100, // percentage
                 y: -20,
-                size: Math.random() * 20 + 20, // 20px to 40px
-                speed: asteroidSpeed + Math.random() * 2,
+                size: rng.nextFloat() * 20 + 20, // 20px to 40px
+                speed: asteroidSpeed + rng.nextFloat() * 2,
             };
             setAsteroids(a => [...a, newAsteroid]);
         }
@@ -104,7 +105,7 @@ export const AsteroidDodge: React.FC<EventProps> = ({ onComplete, tile, isBlurre
         });
         
         gameLoopRef.current = requestAnimationFrame(gameLoop);
-    }, [spawnInterval, asteroidSpeed, playerSpeed, playerX]);
+    }, [spawnInterval, asteroidSpeed, playerSpeed, playerX, rng]);
     
     useEffect(() => {
         if (isPaused) return;

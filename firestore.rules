@@ -1,49 +1,156 @@
 rules_version = '2';
+
+// Conflux Circuit — Firestore security rules.
+//
+// Authority model:
+//   - Competitive/progression profile fields are SERVER-OWNED. Clients may
+//     only write cosmetic keys on their own profile; everything else is
+//     written by the Admin SDK (which bypasses these rules).
+//   - Leaderboards, match receipts, match history, and tournaments are
+//     server-written. Clients can only read.
+//   - Ghosts are client-created but schema-validated and UID-bound.
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ─── Profiles ───────────────────────────────────────────────────────
-    // Users can read and write only their own profile.
+    function isAuthed() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isAuthed() && request.auth.uid == uid;
+    }
+
+    // ─── Profiles ────────────────────────────────────────────────────────────
+
+    // Fields that only the game server may change. If any of these keys are
+    // added/modified/removed by a client write, the write is denied.
+    function progressionKeys() {
+      return ['circuitPoints', 'winStreak', 'unlockedChassis', 'unlockedAccolades',
+              'rivalData', 'gauntletHighScore', 'sponsorships', 'appliedMatchIds',
+              'dailyBests', 'skills', 'loadouts', 'unlockedModules',
+              'eventMastery', 'rank'];
+    }
+
+    function progressionUnchanged() {
+      return !request.resource.data.diff(resource.data)
+        .affectedKeys()
+        .hasAny(progressionKeys());
+    }
+
+    // Cosmetic fields the client is allowed to write.
+    function cosmeticsValid() {
+      return (!request.resource.data.keys().hasAny(['name'])
+              || (request.resource.data.name is string
+                  && request.resource.data.name.size() > 0
+                  && request.resource.data.name.size() <= 32))
+        && (!request.resource.data.keys().hasAny(['avatarId'])
+            || request.resource.data.avatarId is string)
+        && (!request.resource.data.keys().hasAny(['firebaseUid'])
+            || request.resource.data.firebaseUid == request.auth.uid)
+        && (!request.resource.data.keys().hasAny(['revision'])
+            || request.resource.data.revision is int)
+        && (!request.resource.data.keys().hasAny(['onboardingComplete'])
+            || request.resource.data.onboardingComplete is bool);
+    }
+
+    // A new profile may only carry starter progression values. Fields absent
+    // from the doc are unconstrained (minimal cosmetic docs are allowed).
+    function starterProgression() {
+      return (!request.resource.data.keys().hasAny(['circuitPoints'])
+              || request.resource.data.circuitPoints == 0)
+        && (!request.resource.data.keys().hasAny(['winStreak'])
+            || request.resource.data.winStreak == 0)
+        && (!request.resource.data.keys().hasAny(['gauntletHighScore'])
+            || request.resource.data.gauntletHighScore == 0)
+        && (!request.resource.data.keys().hasAny(['unlockedChassis'])
+            || request.resource.data.unlockedChassis == ['STANDARD'])
+        && (!request.resource.data.keys().hasAny(['unlockedAccolades'])
+            || request.resource.data.unlockedAccolades.size() == 0)
+        && (!request.resource.data.keys().hasAny(['unlockedModules'])
+            || request.resource.data.unlockedModules.size() == 0)
+        && (!request.resource.data.keys().hasAny(['appliedMatchIds'])
+            || request.resource.data.appliedMatchIds.size() == 0)
+        && (!request.resource.data.keys().hasAny(['dailyBests'])
+            || request.resource.data.dailyBests.size() == 0)
+        && (!request.resource.data.keys().hasAny(['eventMastery'])
+            || request.resource.data.eventMastery.size() == 0)
+        && (!request.resource.data.keys().hasAny(['loadouts'])
+            || request.resource.data.loadouts.size() == 0)
+        && (!request.resource.data.keys().hasAny(['skills'])
+            || request.resource.data.skills.availableCP == 0)
+        && (!request.resource.data.keys().hasAny(['rank'])
+            || (request.resource.data.rank.rating == 1000
+                && request.resource.data.rank.wins == 0
+                && request.resource.data.rank.losses == 0
+                && request.resource.data.rank.tier == 'bronze'));
+    }
+
     match /profiles/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && cosmeticsValid() && starterProgression();
+      allow update: if isOwner(userId) && cosmeticsValid() && progressionUnchanged();
+      allow delete: if false;
     }
 
-    // ─── Leaderboards ───────────────────────────────────────────────────
-    // Read-only for all authenticated users.
-    // Writes only via Admin SDK (server-side, bypasses rules).
-    match /leaderboards/{document=**} {
-      allow read: if request.auth != null;
+    // ─── Server-written player data ──────────────────────────────────────────
+    // Stored in subcollections under a per-user parent doc:
+    //   matchReceipts/{uid}/receipts/{matchId}
+    //   matchHistory/{uid}/matches/{matchId}
+
+    match /matchReceipts/{userId} {
+      allow read, write: if false;
+      match /receipts/{matchId} {
+        allow get, list: if isOwner(userId);
+        allow write: if false;
+      }
+    }
+
+    match /matchHistory/{userId} {
+      allow read, write: if false;
+      match /matches/{matchId} {
+        allow get, list: if isOwner(userId);
+        allow write: if false;
+      }
+    }
+
+    // ─── Leaderboards ────────────────────────────────────────────────────────
+    // e.g. leaderboards/allTime/entries/{userId}, leaderboards/daily_{seed}/entries/{userId}
+    match /leaderboards/{docId=**} {
+      allow read: if isAuthed();
       allow write: if false;
     }
 
-    // ─── Match History ──────────────────────────────────────────────────
-    // Users can read only their own match history.
-    // Writes only via Admin SDK (server-side, bypasses rules).
-    match /matchHistory/{userId}/matches/{matchId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow write: if false;
-    }
-
-    // ─── v5.0: Ghost Runs ───────────────────────────────────────────────
-    // All authenticated users can read ghost runs for async PvP.
-    // Users can only submit ghost runs under their own UID.
+    // ─── Ghosts ──────────────────────────────────────────────────────────────
     match /ghosts/{ghostId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null
-        && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null
+      allow get, list: if isAuthed();
+      allow create: if isAuthed()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.seed is string
+        && request.resource.data.seed.size() <= 128
+        && request.resource.data.schemaVersion is int
+        && request.resource.data.runLength is int
+        && request.resource.data.runLength >= 1
+        && request.resource.data.runLength <= 50
+        && request.resource.data.tileResults is list
+        && request.resource.data.tileResults.size() <= 50
+        && request.resource.data.ownerCircuitPoints is int
+        && request.resource.data.ownerCircuitPoints >= 0
+        && request.resource.data.submittedAt is int;
+      allow update: if isAuthed()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId;
+      allow delete: if isAuthed()
         && resource.data.userId == request.auth.uid;
     }
 
-    // ─── v5.0: Tournaments ──────────────────────────────────────────────
-    // Read-only for authenticated users (bracket state for spectators).
-    // Writes only via Admin SDK (server-side, bypasses rules).
-    match /tournaments/{document=**} {
-      allow read: if request.auth != null;
+    // ─── Tournaments ─────────────────────────────────────────────────────────
+    match /tournaments/{tournamentId} {
+      allow get, list: if isAuthed();
       allow write: if false;
     }
 
-    // ─── Default: deny all ──────────────────────────────────────────────
+    // ─── Default: deny ───────────────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;
     }

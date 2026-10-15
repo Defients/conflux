@@ -1,7 +1,7 @@
 
 
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { GameEvent, EventResult, GameSettings, Tile, ChassisId } from '../types';
 
 interface EventPlaytestRunnerProps {

@@ -112,7 +112,6 @@ describe('Tournament integration: join → bracket → report → champion', () 
       // Both players report (dual-report verification requires both to agree)
       const match1 = bracketStarted.bracket.rounds[0].matches[0];
       const p1Id = match1.participants[0];
-      const p2Id = match1.participants[1];
 
       const winnerRoom = p1Id === tournamentRooms[0]?.sessionId
         ? tournamentRooms[0]
@@ -134,7 +133,6 @@ describe('Tournament integration: join → bracket → report → champion', () 
       // Match 2: Player3 wins, Player4 loses
       const match2 = bracketStarted.bracket.rounds[0].matches[1];
       const p3Id = match2.participants[0];
-      const p4Id = match2.participants[1];
 
       const winnerRoom2 = p3Id === tournamentRooms[2]?.sessionId
         ? tournamentRooms[2]

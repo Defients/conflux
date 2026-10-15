@@ -1,7 +1,8 @@
 
 import React, { useMemo } from 'react';
-import { Player, Tile, Chassis, Anomaly } from '../types';
-import { TILE_MODIFIER_DEFINITIONS, CHASSIS_DEFINITIONS } from '../constants';
+import { Player, Tile, Anomaly } from '../types';
+import { TILE_MODIFIER_DEFINITIONS } from '../constants';
+import { eventRegistry } from '../events/eventRegistry';
 
 interface RaceTrackHUDProps {
   players: Player[];
@@ -9,6 +10,7 @@ interface RaceTrackHUDProps {
   currentTileIndex: number;
   overdrivingPlayerIds: number[];
   activeAnomaly: Anomaly | null;
+  localPlayerId?: number;
 }
 
 // --- Sub Components ---
@@ -17,32 +19,59 @@ const UpcomingTiles: React.FC<{ run: Tile[], currentTileIndex: number, player: P
     const isScrambled = player.statuses.some(s => s.type === 'SCRAMBLED');
     const tileSource = isScrambled ? (player.scrambledTileData || []) : run;
     const nextTiles = tileSource.slice(currentTileIndex + 1, currentTileIndex + 5);
+    const scanCount = Math.max(player._sensorScanTiles ?? 0, player._freeScanner ? 2 : 0);
 
     return (
         <div className={`hidden md:flex flex-col bg-black/40 sm:backdrop-blur-md rounded-xl border border-white/10 p-2 sm:p-3 relative overflow-hidden min-w-[120px] lg:min-w-[160px]`}>
             {isScrambled && <div className="absolute inset-0 bg-nebula-pink/10 animate-pulse pointer-events-none z-10 border border-nebula-pink/50 rounded-xl" />}
             <div className="flex justify-between items-center mb-1 sm:mb-2 border-b border-white/5 pb-1">
                 <h4 className="text-[10px] font-black uppercase tracking-widest text-galaxy-cyan">Sensor Log</h4>
-                {isScrambled && <span className="text-[10px] text-nebula-pink font-mono animate-pulse">JAMMED</span>}
+                {isScrambled ? (
+                    <span className="text-[10px] text-nebula-pink font-mono animate-pulse">JAMMED</span>
+                ) : scanCount > 0 ? (
+                    <span className="text-[9px] text-hyper-green font-mono font-bold">SCAN {scanCount}</span>
+                ) : null}
             </div>
             
             <div className="flex gap-1 sm:gap-2">
-                {nextTiles.map((tile, index) => (
+                {nextTiles.map((tile, index) => {
+                    const isScanned = !isScrambled && index < scanCount;
+                    const isFogged = tile.modifier === 'FOG_BANK' && !isScanned;
+                    const eventDef = isScanned ? eventRegistry.find(e => e.id === tile.eventId) : undefined;
+                    return (
                     <div key={index} className="group relative">
-                        <div className={`w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded border transition-colors ${tile.modifier ? 'bg-white/10 border-white/20' : 'bg-white/5 border-transparent'}`}>
-                            {tile.modifier ? (
+                        <div className={`w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded border transition-colors ${
+                            isScanned ? 'bg-hyper-green/15 border-hyper-green/50' :
+                            isFogged ? 'bg-purple-950/50 border-nebula-pink/40' :
+                            tile.modifier ? 'bg-white/10 border-white/20' : 'bg-white/5 border-transparent'
+                        }`}>
+                            {isFogged ? (
+                                <span className="text-xs sm:text-sm animate-pulse" aria-label="Fog Bank">🌫️</span>
+                            ) : tile.modifier ? (
                                 <span className="text-xs sm:text-sm filter drop-shadow-glow">{TILE_MODIFIER_DEFINITIONS[tile.modifier].icon}</span>
+                            ) : isScanned ? (
+                                <span className="text-[10px] font-bold text-hyper-green">📡</span>
                             ) : <span className="text-xs text-gray-600">·</span>}
                         </div>
                         {/* Tooltip — desktop only */}
-                        {tile.modifier && (
-                            <div className="hidden sm:block absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-max max-w-[150px] bg-gray-900 text-white text-[10px] px-2 py-1 rounded shadow-xl border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                                {TILE_MODIFIER_DEFINITIONS[tile.modifier].description}
+                        {(tile.modifier || isScanned) && (
+                            <div className="hidden sm:block absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-max max-w-[170px] bg-gray-900 text-white text-[10px] px-2 py-1 rounded shadow-xl border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                                {isScanned && eventDef && (
+                                    <div className="font-bold text-hyper-green mb-0.5">{eventDef.displayName} ({eventDef.performanceDimension})</div>
+                                )}
+                                {isFogged
+                                    ? 'Fog Bank: Event & difficulty hidden until start!'
+                                    : tile.modifier
+                                    ? TILE_MODIFIER_DEFINITIONS[tile.modifier].description
+                                    : 'Standard Circuit Tile'}
                             </div>
                         )}
-                        <div className="text-[9px] text-center text-gray-500 mt-0.5 font-mono">{tile.difficulty}★</div>
+                        <div className="text-[9px] text-center text-gray-500 mt-0.5 font-mono">
+                            {isFogged ? '?★' : `${tile.difficulty}★`}
+                        </div>
                     </div>
-                ))}
+                    );
+                })}
                 {nextTiles.length < 4 && Array(4 - nextTiles.length).fill(0).map((_, i) => (
                      <div key={`ph-${i}`} className="w-7 h-7 sm:w-8 sm:h-8 bg-black/20 rounded border border-white/5 opacity-30 flex items-center justify-center text-[8px] text-gray-600">END</div>
                 ))}
@@ -106,8 +135,11 @@ const PlayerMarker = React.memo(({ player, isOverdriving }: { player: Player; is
 });
 
 
-export const RaceTrackHUD: React.FC<RaceTrackHUDProps> = ({ players, run, currentTileIndex, overdrivingPlayerIds, activeAnomaly }) => {
-  const humanPlayer = players.find(p => !p.isBot);
+export const RaceTrackHUD: React.FC<RaceTrackHUDProps> = ({ players, run, currentTileIndex, overdrivingPlayerIds, activeAnomaly, localPlayerId }) => {
+  const humanPlayer = useMemo(
+    () => (localPlayerId !== undefined ? players.find(p => p.id === localPlayerId) : undefined) ?? players.find(p => !p.isBot) ?? players[0],
+    [players, localPlayerId]
+  );
   const leader = useMemo(() => [...players].sort((a,b) => b.position - a.position)[0], [players]);
   const isWinning = humanPlayer ? leader.id === humanPlayer.id : false;
   const rank = useMemo(() => {

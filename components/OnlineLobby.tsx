@@ -7,7 +7,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { PilotProfile, ChassisId, LobbyPlayer, GameSettings, RoomConfig } from '../types';
+import { PilotProfile, ChassisId, RoomConfig } from '../types';
 import { CHASSIS_DEFINITIONS } from '../constants';
 import { OnlineGameHook } from '../hooks/useOnlineGame';
 import { auth } from '../services/firebase';
@@ -116,9 +116,10 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
   useEffect(() => {
     if (pendingRoomCode && !isInRoom && !autoJoinAttempted.current) {
       autoJoinAttempted.current = true;
-      setJoinCode(pendingRoomCode.toUpperCase());
+      const targetCode = pendingRoomCode.length <= 4 ? pendingRoomCode.toUpperCase() : pendingRoomCode;
+      setJoinCode(targetCode);
       clearError();
-      buildConfig().then(config => joinRoom(pendingRoomCode.toUpperCase(), config));
+      buildConfig().then(config => joinRoom(targetCode, config));
     }
   }, [pendingRoomCode, isInRoom]);
 
@@ -143,7 +144,8 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
     if (!joinCode.trim()) return;
     clearError();
     if (online.spectateRoom) {
-      await online.spectateRoom(joinCode.trim().toUpperCase());
+      const config = await buildConfig();
+      await online.spectateRoom(joinCode.trim(), config);
     }
   };
 
@@ -511,8 +513,8 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
                 </select>
               </div>
             </div>
-            {/* Private Room Toggle */}
-            <div className="mt-3 pt-3 border-t border-white/10">
+            {/* Private Room & Team Mode Toggles */}
+            <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between gap-4">
               <button
                 onClick={() => sendTogglePrivate()}
                 className={`flex items-center gap-2 text-sm transition-colors ${lobbyState?.isPrivate ? 'text-solar-orange font-bold' : 'text-gray-400'}`}
@@ -522,6 +524,16 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({ profile, online, onBac
                   <span className={`pointer-events-none absolute h-3 w-3 rounded-full bg-white shadow-sm transition-transform ${lobbyState?.isPrivate ? 'translate-x-4' : 'translate-x-[2px]'}`} />
                 </span>
                 🔒 {lobbyState?.isPrivate ? 'Private Room' : 'Public Room'}
+              </button>
+              <button
+                onClick={() => sendUpdateSettings({ teamMode: !lobbyState?.settings.teamMode })}
+                className={`flex items-center gap-2 text-sm transition-colors ${lobbyState?.settings.teamMode ? 'text-galaxy-cyan font-bold' : 'text-gray-400'}`}
+                aria-label="Toggle team mode"
+              >
+                <span className={`relative inline-flex h-4 w-8 cursor-pointer items-center rounded-full transition-colors ${lobbyState?.settings.teamMode ? 'bg-galaxy-cyan/80' : 'bg-gray-700'}`}>
+                  <span className={`pointer-events-none absolute h-3 w-3 rounded-full bg-white shadow-sm transition-transform ${lobbyState?.settings.teamMode ? 'translate-x-4' : 'translate-x-[2px]'}`} />
+                </span>
+                🤝 {lobbyState?.settings.teamMode ? 'Team Mode' : 'Free-For-All'}
               </button>
             </div>
           </div>

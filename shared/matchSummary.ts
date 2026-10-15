@@ -10,14 +10,15 @@
 
 import {
   GameState, PilotProfile, AccoladeId, ChassisId, CorporationId,
-  Contract, ContractObjective, Player, Tile, PerformanceDimension,
+  Contract, ContractObjective, Player, Tile,
   EventMastery, RankInfo, TeamId,
 } from './types';
 import {
   CP_AWARD_RULES, CP_STREAK_MULTIPLIER,
 } from './constants';
 import { SeededRNG } from './seededRNG';
-import { computeMultiPlayerRatingChanges, applyRatingChange, ratingToTier, createDefaultRankInfo } from './rankSystem';
+import { computeMultiPlayerRatingChanges, applyRatingChange, ratingToTier, createDefaultRankInfo, DEFAULT_RATING } from './rankSystem';
+import { getTeamPositions } from './gameSetup';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -116,8 +117,15 @@ export interface MatchSummaryInput {
   currentDailyBest: number | null;
   /** Timestamp of match completion. Defaults to Date.now(). */
   timestamp?: number;
+  /** Explicit immutable match ID (overrides seed-timestamp fallback). */
+  matchId?: string;
   /** Specific player ID to generate summary for (vital for multiplayer). */
   targetPlayerId?: number;
+  /** Ranked match context for authoritative ELO computation. */
+  rankedContext?: {
+    isRanked: boolean;
+    participants?: { playerId: number; rating: number; placement: number }[];
+  };
 }
 
 // ─── Core computation ───────────────────────────────────────────────────────
@@ -133,8 +141,8 @@ export function computeMatchSummary(input: MatchSummaryInput): MatchSummary {
   const isGauntlet = !!settings.isGauntlet;
   const isDaily = dailySeed !== null && settings.seed === dailySeed;
 
-  // Generate a deterministic match ID from seed + timestamp
-  const matchId = `${settings.seed}-${timestamp}`;
+  // Use immutable matchId if provided on input or gameState, otherwise deterministic seed-timestamp
+  const matchId = input.matchId ?? gameState.matchId ?? `${settings.seed}-${timestamp}`;
 
   // ─── Standings ──────────────────────────────────────────────────────
   const sortedPlayers = [...gameState.players].sort((a, b) => b.position - a.position);
@@ -214,8 +222,9 @@ export function computeMatchSummary(input: MatchSummaryInput): MatchSummary {
   // ─── Sponsorship from sponsored tiles ──────────────────────────────
   const sponsorshipDeltas: SponsorshipDelta[] = [];
   const repRng = new SeededRNG(`rep-${settings.seed}`);
+  const isZeroIndexedHistory = humanPlayer.tileHistory.some(h => h.tileIndex === 0);
   humanPlayer.tileHistory.forEach(history => {
-    const tile = gameState.run[history.tileIndex - 1];
+    const tile = resolveHistoryTile(gameState.run, history.tileIndex, isZeroIndexedHistory);
     if (tile && tile.modifier === 'SPONSORED' && tile.sponsoringCorp) {
       if (history.stars >= 3) {
         const repGain = repRng.nextInt(3, 6);
@@ -271,7 +280,7 @@ export function computeMatchSummary(input: MatchSummaryInput): MatchSummary {
   if (humanPlayer.tileHistory.some(h => h.stars === 4)) checkAccolade(AccoladeId.Overdriver);
 
   const hazardTile = humanPlayer.tileHistory.find(h => {
-    const tile = gameState.run[h.tileIndex - 1];
+    const tile = resolveHistoryTile(gameState.run, h.tileIndex, isZeroIndexedHistory);
     return tile && tile.isHazard;
   });
   if (hazardTile && hazardTile.stars >= 3) checkAccolade(AccoladeId.HazardousDuty);
@@ -318,6 +327,43 @@ export function computeMatchSummary(input: MatchSummaryInput): MatchSummary {
     }
   }
 
+  // ─── Ranked rating computation ─────────────────────────────────────
+  let ratingChange: number | null = null;
+  let newRating: number | null = null;
+  let newTier: RankInfo['tier'] | null = null;
+  const isRankedMatch = input.rankedContext ? input.rankedContext.isRanked : Boolean(gameState.isRanked);
+
+  if (isRankedMatch) {
+    const participants = input.rankedContext?.participants ?? sortedPlayers
+      .filter(p => !p.isBot)
+      .map((p) => ({
+        playerId: p.id,
+        rating: p.id === humanPlayer.id ? (profile.rank?.rating ?? DEFAULT_RATING) : DEFAULT_RATING,
+        placement: sortedPlayers.indexOf(p) + 1,
+      }));
+    if (participants.length >= 2) {
+      const changes = computeMultiPlayerRatingChanges(participants);
+      const delta = changes.get(humanPlayer.id) ?? 0;
+      const baseRank = profile.rank ?? createDefaultRankInfo();
+      const updatedRank = applyRatingChange(baseRank, delta, humanPlacement === 0);
+      ratingChange = delta;
+      newRating = updatedRank.rating;
+      newTier = updatedRank.tier;
+    } else {
+      ratingChange = 0;
+      newRating = profile.rank?.rating ?? DEFAULT_RATING;
+      newTier = profile.rank?.tier ?? ratingToTier(newRating);
+    }
+  }
+
+  // ─── Team placement ────────────────────────────────────────────────
+  let teamPlacement: number | undefined;
+  if (humanPlayer.teamId) {
+    const teamStandings = getTeamPositions(gameState.players).sort((a, b) => b.position - a.position);
+    const idx = teamStandings.findIndex(t => t.teamId === humanPlayer.teamId);
+    if (idx >= 0) teamPlacement = idx + 1;
+  }
+
   return {
     matchId, mode, completedAt: timestamp, seed: settings.seed,
     runLength: gameState.run.length, isGauntlet: false, isDaily,
@@ -333,10 +379,11 @@ export function computeMatchSummary(input: MatchSummaryInput): MatchSummary {
     dailyPersonalBest,
     dailyIsNewBest,
     eventMasteryUpdates: computeEventMastery(gameState, humanPlayer, profile),
-    ratingChange: null,
-    newRating: null,
-    newTier: null,
+    ratingChange,
+    newRating,
+    newTier,
     teamId: humanPlayer.teamId,
+    teamPlacement,
   };
 }
 
@@ -379,6 +426,9 @@ export function applyMatchSummaryToProfile(
 
   // ─── CP ─────────────────────────────────────────────────────────────
   updated.circuitPoints += summary.cp.totalCp;
+  if (updated.skills) {
+    updated.skills.availableCP = updated.circuitPoints;
+  }
 
   // ─── Win streak ─────────────────────────────────────────────────────
   updated.winStreak = summary.streakDelta.newStreak;
@@ -389,12 +439,18 @@ export function applyMatchSummaryToProfile(
     updated.rivalData.losses += summary.rivalDelta.losses;
   }
 
-  // ─── Daily Challenge ──────────────────────────────────────────────────
+  // ─── Daily Challenge (bounded to 90 most recent days) ─────────────────
   if (summary.isDaily && summary.dailyIsNewBest && summary.dailyPersonalBest !== null) {
     if (!updated.dailyBests) {
       updated.dailyBests = {};
     }
     updated.dailyBests[summary.seed] = summary.dailyPersonalBest;
+    const keys = Object.keys(updated.dailyBests).sort();
+    if (keys.length > 90) {
+      for (const oldKey of keys.slice(0, keys.length - 90)) {
+        delete updated.dailyBests[oldKey];
+      }
+    }
   }
 
   // ─── Sponsorship reputation ───────────────────────────────────────────
@@ -423,14 +479,32 @@ export function applyMatchSummaryToProfile(
   // ─── v5.0: Ranked Rating ────────────────────────────────────────────
   if (summary.ratingChange !== null && summary.newRating !== null) {
     if (!updated.rank) updated.rank = createDefaultRankInfo();
-    const won = summary.ratingChange > 0;
+    const won = summary.humanPlacement === 0;
     updated.rank = applyRatingChange(updated.rank, summary.ratingChange, won);
   }
+
+  updated.revision = (updated.revision ?? 0) + 1;
 
   return updated;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
+
+/**
+ * Resolve a Tile from gameState.run given a tileHistory entry's tileIndex.
+ * Supports both 0-indexed runtime tileHistory (where tile 0 has tileIndex=0)
+ * and 1-indexed test fixtures (where tile 0 has tileIndex=1).
+ */
+export function resolveHistoryTile(
+  run: Tile[],
+  historyTileIndex: number,
+  isZeroIndexed: boolean
+): Tile | undefined {
+  if (isZeroIndexed) {
+    return run[historyTileIndex];
+  }
+  return run[historyTileIndex - 1] ?? run[historyTileIndex];
+}
 
 function evaluateContractsForSummary(
   contracts: Contract[],
@@ -443,6 +517,7 @@ function evaluateContractsForSummary(
   const avgStars = humanPlayer.tileHistory.length > 0
     ? humanPlayer.tileHistory.reduce((s, h) => s + h.stars, 0) / humanPlayer.tileHistory.length
     : 0;
+  const isZeroIndexed = humanPlayer.tileHistory.some(h => h.tileIndex === 0);
 
   return contracts.map(contract => {
     const evaluatedObjectives = contract.objectives.map(obj => {
@@ -457,7 +532,7 @@ function evaluateContractsForSummary(
         case 'GET_STARS_IN_DIMENSION':
           if (obj.dimension) {
             isComplete = humanPlayer.tileHistory.some(h => {
-              const tile = gameState.run[h.tileIndex - 1];
+              const tile = resolveHistoryTile(gameState.run, h.tileIndex, isZeroIndexed);
               if (!tile) return false;
               return eventDimensionMap[tile.eventId] === obj.dimension && h.stars >= obj.targetValue;
             });
@@ -490,14 +565,15 @@ function computeEventMastery(
   humanPlayer: Player,
   profile: PilotProfile,
 ): { eventId: string; mastery: EventMastery }[] {
-  const updates: { eventId: string; mastery: EventMastery }[] = [];
   const existingMastery = profile.eventMastery ?? {};
+  const workingMastery: Record<string, EventMastery> = {};
+  const isZeroIndexed = humanPlayer.tileHistory.some(h => h.tileIndex === 0);
 
   for (const history of humanPlayer.tileHistory) {
-    const tile = gameState.run[history.tileIndex];
+    const tile = resolveHistoryTile(gameState.run, history.tileIndex, isZeroIndexed);
     if (!tile) continue;
     const eventId = tile.eventId;
-    const current: EventMastery = existingMastery[eventId] ?? {
+    const current: EventMastery = workingMastery[eventId] ?? existingMastery[eventId] ?? {
       eventId,
       totalPlays: 0,
       totalStars: 0,
@@ -509,20 +585,23 @@ function computeEventMastery(
     const newTotalStars = current.totalStars + history.stars;
     const avgStars = newTotalStars / newTotalPlays;
     const newMasteryLevel = Math.min(5, Math.floor(avgStars * 1.5));
+    const bestMetric = typeof history.primaryMetric === 'number' && history.primaryMetric > 0
+      ? (current.bestMetric === 0 ? history.primaryMetric : Math.max(current.bestMetric, history.primaryMetric))
+      : current.bestMetric;
 
-    updates.push({
+    workingMastery[eventId] = {
       eventId,
-      mastery: {
-        eventId,
-        totalPlays: newTotalPlays,
-        totalStars: newTotalStars,
-        bestMetric: current.bestMetric,
-        masteryLevel: newMasteryLevel,
-      },
-    });
+      totalPlays: newTotalPlays,
+      totalStars: newTotalStars,
+      bestMetric,
+      masteryLevel: newMasteryLevel,
+    };
   }
 
-  return updates;
+  return Object.entries(workingMastery).map(([eventId, mastery]) => ({
+    eventId,
+    mastery,
+  }));
 }
 
 function createEmptySummary(

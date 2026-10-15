@@ -56,25 +56,31 @@ export const MazeMicro: React.FC<EventProps> = ({ onComplete, tile, event, setti
     
     const [playerPos, setPlayerPos] = useState<Position>({ r: 0, c: 0 });
     const [isFinished, setIsFinished] = useState(false);
+    const [didSolve, setDidSolve] = useState(false);
     
     const startTimeRef = useRef(performance.now());
     const isDoneRef = useRef(false);
 
-    const finishEvent = useCallback(() => {
+    const finishEvent = useCallback((solved: boolean) => {
         if (isDoneRef.current) return;
         isDoneRef.current = true;
+        setDidSolve(solved);
         setIsFinished(true);
         const timeTaken = performance.now() - startTimeRef.current;
-        onComplete({ primaryMetric: timeTaken });
+        onComplete({ primaryMetric: solved ? timeTaken : 99999 });
     }, [onComplete]);
     
     useEffect(() => {
-        const timeout = setTimeout(() => finishEvent(), event.durationSec(tile.difficulty, settings.accessibility) * 1000);
+        if (isPaused) {
+            startTimeRef.current = performance.now();
+            return;
+        }
+        const timeout = setTimeout(() => finishEvent(false), event.durationSec(tile.difficulty, settings.accessibility) * 1000);
         return () => clearTimeout(timeout);
-    }, [event, tile.difficulty, settings.accessibility, finishEvent]);
+    }, [event, tile.difficulty, settings.accessibility, finishEvent, isPaused]);
 
     const handleKeyDown = useCallback((e: KeyboardEvent) => {
-        if (isDoneRef.current) return;
+        if (isDoneRef.current || isPaused) return;
         
         setPlayerPos(prevPos => {
             const newPos = { ...prevPos };
@@ -86,12 +92,12 @@ export const MazeMicro: React.FC<EventProps> = ({ onComplete, tile, event, setti
             else if ((e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') && !currentCell.right && prevPos.c < gridSize - 1) newPos.c++;
             
             if (newPos.r === gridSize - 1 && newPos.c === gridSize - 1) {
-                finishEvent();
+                finishEvent(true);
             }
             return newPos;
         });
 
-    }, [maze, gridSize, finishEvent]);
+    }, [maze, gridSize, finishEvent, isPaused]);
 
     useEffect(() => {
         window.addEventListener('keydown', handleKeyDown);
@@ -108,7 +114,7 @@ export const MazeMicro: React.FC<EventProps> = ({ onComplete, tile, event, setti
     return (
         <div className={`w-full h-full flex flex-col items-center justify-center p-4 bg-cosmic-blue/50 select-none ${isBlurred ? 'filter blur-md' : ''}`}>
             <h3 className="text-2xl font-bold text-galaxy-cyan mb-4">
-                {isFinished ? 'Maze Complete!' : 'Reach the exit!'}
+                {isFinished ? (didSolve ? 'Maze Complete!' : 'Time Up!') : 'Reach the exit!'}
             </h3>
             <div className="bg-gray-900/50 p-2 rounded-lg">
                 <div className="relative" style={{ width: 'min(80vh, 500px)', height: 'min(80vh, 500px)' }}>

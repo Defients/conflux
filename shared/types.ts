@@ -168,6 +168,10 @@ export interface PilotProfile {
   rank?: RankInfo;
   /** Whether onboarding flow has been completed. */
   onboardingComplete?: boolean;
+  /** Bound Firebase Auth UID for local-to-cloud account mapping. */
+  firebaseUid?: string;
+  /** Monotonically increasing profile revision for sync conflict resolution. */
+  revision?: number;
 }
 
 export interface GameSettings {
@@ -182,13 +186,17 @@ export interface GameSettings {
   colorBlindMode: boolean;
   selectedChassis: ChassisId;
   isGauntlet?: boolean;
+  teamMode?: boolean;
+  activeSeasonId?: string | null;
+  customEventIds?: string[];
 }
 
-export type PowerUp = 'Clarity' | 'Mist Bomb' | 'Time Snare' | 'Shield' | 'Data Spike' | 'Overcharge' | 'Sludge' | 'Reflector';
+export type PowerUp = 'Clarity' | 'Mist Bomb' | 'Time Snare' | 'Shield' | 'Data Spike' | 'Overcharge' | 'Sludge' | 'Reflector' | 'Rally' | 'Shield Wall';
 
 export interface PlayerStatus {
   type: 'SLOWED' | 'FROZEN' | 'BLURRED' | 'SHIELDED' | 'STUNNED' | 'BOOSTED' | 'SCRAMBLED' | 'IMMUNE';
   duration: number;
+  charges?: number;
 }
 
 // ─── Player Model ────────────────────────────────────────────────────────────
@@ -208,7 +216,7 @@ export interface Player {
   position: number;
   powerUps: PowerUp[];
   statuses: PlayerStatus[];
-  tileHistory: { tileIndex: number; stars: number }[];
+  tileHistory: { tileIndex: number; stars: number; primaryMetric?: number }[];
   energy: number;
   overdriveCooldown: number;
   powerUpsUsed?: number;
@@ -236,12 +244,36 @@ export interface Player {
   _debuffResistance?: number;
   /** Internal: movement bonus from loadout modules. */
   _movementBonus?: number;
+  /** Internal: movement bonus specifically on 3★+ results (thrusters-speed / syndicate). */
+  _threeStarMovementBonus?: number;
   /** Internal: energy per star bonus from skills. */
   _energyPerStarBonus?: number;
   /** Internal: overdrive cooldown reduction from skills. */
   _overdriveCooldownReduction?: number;
   /** Internal: chance to start with a random power-up from skills. */
   _powerUpStartChance?: number;
+  /** Internal: speed-t3 Hyperdrive bonus movement on 4★ overdrive success. */
+  _hyperdriveBonus?: boolean;
+  /** Internal: tech-t3 Power Surge bonus duration/potency on power-ups. */
+  _powerUpBonus?: number;
+  /** Internal: tech-t4 Scanner free 2-tile reveal and 0-cost Pit Stop Analyze. */
+  _freeScanner?: boolean;
+  /** Internal: tech-t5 Data Override extra tile duration on Data Spike. */
+  _dataSpikeBonus?: number;
+  /** Internal: endurance-t3 Iron Will full movement on 1★ results. */
+  _ironWill?: boolean;
+  /** Internal: endurance-t4 Recovery +1 bonus energy on Pit Stop Recharge. */
+  _rechargeBonus?: number;
+  /** Internal: endurance-t5 Last Stand once-per-race 0★ -> 1★ upgrade. */
+  _lastStandAvailable?: boolean;
+  /** Internal: thrusters-utility guaranteed random starting power-up. */
+  _randomStartPowerUp?: boolean;
+  /** Internal: shielding-fortify 2-charge shield block. */
+  _fortifiedShield?: boolean;
+  /** Internal: Reflector power-up active to bounce next incoming debuff to sender. */
+  _reflectActive?: boolean;
+  /** Internal: number of upcoming tiles revealed by Pit Stop Analyze. */
+  _sensorScanTiles?: number;
 }
 
 export type TileModifier = 'BOOST_PAD' | 'POWER_SURGE' | 'STATIC_FIELD' | 'FOG_BANK' | 'SPONSORED' | 'ICE_PATCH' | 'NEBULA_DRIFT';
@@ -270,10 +302,13 @@ export interface RivalIntervention {
     type: InterventionType;
     hazardTile?: Tile;
     vetoSelection?: string[];
+    sabotageStatus?: PlayerStatus['type'];
     cpBonus: number;
 }
 
 export interface GameState {
+  matchId?: string;
+  isRanked?: boolean;
   settings: GameSettings;
   players: Player[];
   run: Tile[];
@@ -380,7 +415,7 @@ export interface LobbyPlayer {
 }
 
 /** Match phase tracked by the server room. */
-export type MatchPhase = 'lobby' | 'countdown' | 'playing' | 'tile_results' | 'finished';
+export type MatchPhase = 'lobby' | 'countdown' | 'playing' | 'tile_results' | 'pit_stop' | 'intervention' | 'finished';
 
 /**
  * Event result telemetry submitted by client to server.
@@ -440,6 +475,8 @@ export interface MatchHistoryEntry {
   gauntletTilesSurvived: number | null;
   /** Rating change for ranked matches. */
   ratingChange?: number;
+  /** Updated rating after a ranked match. */
+  newRating?: number;
   /** Team ID for team mode matches. */
   teamId?: TeamId;
 }
@@ -460,6 +497,8 @@ export interface GhostRun {
   submittedAt: number;
   ownerCircuitPoints: number;
   userId: string;
+  schemaVersion?: number;
+  chassisId?: ChassisId;
 }
 
 // ─── v5.0: Skill Tree Types ───────────────────────────────────────────────────
@@ -480,6 +519,13 @@ export interface SkillNode {
     shieldStart?: boolean;
     powerUpStartChance?: number;
     debuffResistance?: number;
+    hyperdriveBonus?: boolean;
+    powerUpEffectivenessBonus?: number;
+    freeScanner?: boolean;
+    dataSpikeBonus?: number;
+    ironWill?: boolean;
+    pitStopRechargeBonus?: number;
+    lastStand?: boolean;
   };
   prerequisites: string[];
 }
@@ -508,6 +554,8 @@ export interface ChassisModule {
     energyBonus?: number;
     startWithShield?: boolean;
     startWithPowerUp?: PowerUp;
+    randomStartPowerUp?: boolean;
+    fortifiedShield?: boolean;
   };
 }
 

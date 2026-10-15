@@ -27,18 +27,22 @@ export interface VerifiedIdentity {
  * @returns Verified identity with UID, or null if verification fails.
  */
 export async function verifyAuthToken(idToken?: string): Promise<VerifiedIdentity | null> {
-  // Development bypass: explicit, opt-in, non-production.
+  // Development bypass: explicit, opt-in, strictly non-production.
   if (process.env.FIREBASE_AUTH_DISABLED === '1') {
-    if (!idToken) {
-      // In dev bypass mode without a token, use a dev UID.
-      return { uid: 'dev-user', authBypassed: true };
-    }
-    // In dev bypass mode with a token, still try to verify but fall back gracefully.
-    try {
-      const decoded = await admin.auth().verifyIdToken(idToken, true);
-      return { uid: decoded.uid, authBypassed: true };
-    } catch {
-      return { uid: 'dev-user', authBypassed: true };
+    if (process.env.NODE_ENV === 'production') {
+      console.error('[Security] FIREBASE_AUTH_DISABLED=1 is forbidden when NODE_ENV=production. Rejecting auth bypass.');
+    } else {
+      if (!idToken) {
+        // In dev bypass mode without a token, use a dev UID.
+        return { uid: 'dev-user', authBypassed: true };
+      }
+      // In dev bypass mode with a token, still try to verify but fall back gracefully.
+      try {
+        const decoded = await admin.auth().verifyIdToken(idToken, true);
+        return { uid: decoded.uid, authBypassed: true };
+      } catch {
+        return { uid: 'dev-user', authBypassed: true };
+      }
     }
   }
 
@@ -50,7 +54,7 @@ export async function verifyAuthToken(idToken?: string): Promise<VerifiedIdentit
   try {
     const decoded = await admin.auth().verifyIdToken(idToken, true);
     return { uid: decoded.uid, authBypassed: false };
-  } catch (err) {
+  } catch {
     // Token is invalid, expired, revoked, or malformed.
     return null;
   }

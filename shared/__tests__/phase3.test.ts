@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateRun, generateCustomRun } from '../pathGenerator';
+import { generateRun } from '../pathGenerator';
 import { GameRules } from '../gameRules';
 import { computeMatchSummary, MatchSummaryInput } from '../matchSummary';
 import {
@@ -308,5 +308,71 @@ describe('New tile modifier types', () => {
   it('NEBULA_DRIFT is a valid TileModifier', () => {
     const m: TileModifier = 'NEBULA_DRIFT';
     expect(m).toBe('NEBULA_DRIFT');
+  });
+});
+
+// ─── 0-Indexed Runtime tileHistory & Cumulative Event Mastery ───────────────
+
+describe('0-indexed runtime tileHistory resolution & cumulative mastery', () => {
+  it('resolves tile 0 SPONSORED, isHazard, and repeated event mastery accurately', () => {
+    const state = makeGameState({
+      run: [
+        { tileIndex: 1, eventId: 'reaction-tap', difficulty: 2, modifier: 'SPONSORED', sponsoringCorp: CorporationId.Cyberex, isHazard: true },
+        { tileIndex: 2, eventId: 'reaction-tap', difficulty: 2 },
+      ],
+      players: [
+        {
+          id: 1, name: 'TestPilot', isBot: false, isRival: false, color: '#00dffc',
+          position: 100, powerUps: [], statuses: [],
+          // 0-indexed runtime tileHistory produced by GameRules.processRaceStep
+          tileHistory: [
+            { tileIndex: 0, stars: 3 },
+            { tileIndex: 1, stars: 3 },
+          ],
+          energy: 6, overdriveCooldown: 0,
+        },
+        {
+          id: 2, name: 'Bot1', isBot: true, isRival: false, color: '#d64f8a',
+          personality: BotPersonality.Easy, position: 50, powerUps: [], statuses: [],
+          tileHistory: [
+            { tileIndex: 0, stars: 1 },
+            { tileIndex: 1, stars: 1 },
+          ],
+          energy: 2, overdriveCooldown: 0,
+        },
+      ],
+    });
+
+    const summary = computeMatchSummary({
+      gameState: state,
+      profile: BASE_PROFILE,
+      mode: 'local',
+      contracts: [{
+        corporationId: CorporationId.Zenith,
+        cpReward: 25,
+        repReward: 3,
+        objectives: [{
+          type: 'GET_STARS_IN_DIMENSION',
+          description: 'Get 3+ stars in a reaction event',
+          targetValue: 3,
+          dimension: 'reaction',
+          isComplete: false,
+        }],
+      }],
+      eventDimensionMap: EVENT_DIM_MAP,
+      dailySeed: null,
+      currentDailyBest: null,
+    });
+
+    // Tile 0 SPONSORED should award Cyberex reputation
+    expect(summary.sponsorshipDeltas.some(d => d.corpId === CorporationId.Cyberex && d.source === 'sponsored_tile')).toBe(true);
+    // Tile 0 isHazard with 3 stars should unlock HazardousDuty
+    expect(summary.accoladeUnlocks).toContain(AccoladeId.HazardousDuty);
+    // Dimension contract on tile 0 should complete
+    expect(summary.contractOutcomes[0].allComplete).toBe(true);
+    // Repeated reaction-tap should accumulate to 2 totalPlays and 6 totalStars
+    const finalMastery = summary.eventMasteryUpdates[summary.eventMasteryUpdates.length - 1];
+    expect(finalMastery.mastery.totalPlays).toBe(2);
+    expect(finalMastery.mastery.totalStars).toBe(6);
   });
 });

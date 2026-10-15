@@ -14,6 +14,7 @@
 
 import { EventTelemetry } from '../../../shared/types';
 import { STAR_COMPUTERS } from '../eventDescriptors';
+import { EVENT_CATALOG_BY_ID } from '../../../shared/eventCatalog';
 
 export interface ValidationContext {
   tileIndex: number;
@@ -132,7 +133,10 @@ export const ServerEventValidator = {
   validate(telemetry: EventTelemetry, context: ValidationContext): ValidationResult {
     // 1. Shape check
     if (
+      !telemetry ||
+      typeof telemetry !== 'object' ||
       typeof telemetry.tileIndex !== 'number' ||
+      !Number.isInteger(telemetry.tileIndex) ||
       typeof telemetry.eventId !== 'string' ||
       typeof telemetry.primaryMetric !== 'number'
     ) {
@@ -179,8 +183,8 @@ export const ServerEventValidator = {
       return { valid: false, reason: 'secondaryMetric is not a finite number' };
     }
 
-    // 6. Per-event metric range bounds
-    const bounds = METRIC_BOUNDS[telemetry.eventId] ?? DEFAULT_BOUNDS;
+    // 6. Per-event metric range bounds (shared with EVENT_CATALOG_BY_ID)
+    const bounds = EVENT_CATALOG_BY_ID[telemetry.eventId]?.bounds ?? METRIC_BOUNDS[telemetry.eventId] ?? DEFAULT_BOUNDS;
     if (telemetry.primaryMetric < bounds.pmMin || telemetry.primaryMetric > bounds.pmMax) {
       return {
         valid: false,

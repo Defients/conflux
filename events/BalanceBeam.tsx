@@ -1,19 +1,22 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { EventProps } from '../types';
+import { SeededRNG } from '../services/seededRNG';
 
 const BEAM_WIDTH = 400;
 const BALL_RADIUS = 12;
 const GRAVITY = 0.15;
 const FALL_THRESHOLD = BEAM_WIDTH / 2 + 10;
 
-export const BalanceBeam: React.FC<EventProps> = ({ onComplete, tile, settings, event, isBlurred , isPaused }) => {
+export const BalanceBeam: React.FC<EventProps> = ({ onComplete, tile, settings, isBlurred, isPaused }) => {
+    const rng = useMemo(() => new SeededRNG(`balancebeam-${settings.seed}-${tile.tileIndex}`), [settings.seed, tile.tileIndex]);
     const [ballX, setBallX] = useState(0);
     const [beamAngle, setBeamAngle] = useState(0);
     const [timeBalanced, setTimeBalanced] = useState(0);
     const [isFallen, setIsFallen] = useState(false);
     const requestRef = useRef<number | null>(null);
-    const startTimeRef = useRef(Date.now());
+    const lastFrameTimeRef = useRef<number | null>(null);
     const inputRef = useRef(0);
+    const isDoneRef = useRef(false);
 
     const stateRef = useRef({
         ballX: 0,
@@ -29,44 +32,52 @@ export const BalanceBeam: React.FC<EventProps> = ({ onComplete, tile, settings, 
     const perturbStrength = 0.003 + difficultyScale * 0.002;
     const perturbInterval = Math.max(800, 2000 - difficultyScale * 400);
     const maxDuration = tile.difficulty === 1 ? 12000 : tile.difficulty === 2 ? 10000 : 8000;
+    const maxDurationSec = maxDuration / 1000;
 
     const handleFall = useCallback((elapsed: number) => {
+        if (isDoneRef.current) return;
+        isDoneRef.current = true;
         setIsFallen(true);
         setTimeBalanced(elapsed / 1000);
         if (requestRef.current) cancelAnimationFrame(requestRef.current);
         setTimeout(() => {
-            onComplete({ primaryMetric: elapsed / 1000 });
+            onComplete({ primaryMetric: elapsed / 1000, secondaryMetric: maxDurationSec });
         }, 800);
-    }, [onComplete]);
+    }, [onComplete, maxDurationSec]);
 
     const animate = useCallback(() => {
+        if (isDoneRef.current) return;
         const s = stateRef.current;
-        const now = Date.now();
-        const elapsed = now - startTimeRef.current;
+        const now = performance.now();
+        const dt = lastFrameTimeRef.current !== null ? Math.min(50, now - lastFrameTimeRef.current) : 16;
+        lastFrameTimeRef.current = now;
+        const elapsed = s.elapsed + dt;
         s.elapsed = elapsed;
 
         if (elapsed >= maxDuration) {
-            setTimeBalanced(maxDuration / 1000);
+            isDoneRef.current = true;
+            setTimeBalanced(maxDurationSec);
             setIsFallen(true);
-            onComplete({ primaryMetric: maxDuration / 1000 });
+            onComplete({ primaryMetric: maxDurationSec, secondaryMetric: maxDurationSec });
             return;
         }
 
-        s.perturbTimer += 16;
+        s.perturbTimer += dt;
         if (s.perturbTimer > perturbInterval) {
             s.perturbTimer = 0;
-            s.perturbForce = (Math.random() - 0.5) * perturbStrength * 2;
+            s.perturbForce = (rng.nextFloat() - 0.5) * perturbStrength * 2;
         }
 
-        s.beamAngularV += s.perturbForce + inputRef.current * 0.0008;
-        s.beamAngularV *= 0.95;
-        s.beamAngle += s.beamAngularV;
+        const stepScale = dt / 16;
+        s.beamAngularV += (s.perturbForce + inputRef.current * 0.0008) * stepScale;
+        s.beamAngularV *= Math.pow(0.95, stepScale);
+        s.beamAngle += s.beamAngularV * stepScale;
         s.beamAngle = Math.max(-0.35, Math.min(0.35, s.beamAngle));
 
-        const gravityComponent = Math.sin(s.beamAngle) * GRAVITY;
+        const gravityComponent = Math.sin(s.beamAngle) * GRAVITY * stepScale;
         s.ballVx += gravityComponent;
-        s.ballVx *= 0.985;
-        s.ballX += s.ballVx;
+        s.ballVx *= Math.pow(0.985, stepScale);
+        s.ballX += s.ballVx * stepScale;
 
         if (Math.abs(s.ballX) > FALL_THRESHOLD) {
             handleFall(elapsed);
@@ -78,11 +89,15 @@ export const BalanceBeam: React.FC<EventProps> = ({ onComplete, tile, settings, 
         setTimeBalanced(elapsed / 1000);
 
         requestRef.current = requestAnimationFrame(animate);
-    }, [handleFall, maxDuration, onComplete, perturbInterval, perturbStrength]);
+    }, [handleFall, maxDuration, maxDurationSec, onComplete, perturbInterval, perturbStrength, rng]);
 
     useEffect(() => {
-        if (isPaused) return;
-        startTimeRef.current = Date.now();
+        if (isPaused) {
+            lastFrameTimeRef.current = null;
+            if (requestRef.current) cancelAnimationFrame(requestRef.current);
+            return;
+        }
+        lastFrameTimeRef.current = performance.now();
         requestRef.current = requestAnimationFrame(animate);
         return () => {
             if (requestRef.current) cancelAnimationFrame(requestRef.current);
@@ -129,7 +144,7 @@ export const BalanceBeam: React.FC<EventProps> = ({ onComplete, tile, settings, 
     }, []);
 
     const beamRotateDeg = (beamAngle * 180) / Math.PI;
-    const progressPct = Math.min(100, (timeBalanced / (maxDuration / 1000)) * 100);
+    const progressPct = Math.min(100, (timeBalanced / maxDurationSec) * 100);
 
     return (
         <div className={`w-full h-full flex flex-col items-center justify-center p-4 bg-cosmic-blue/50 select-none ${isBlurred ? 'filter blur-md' : ''}`}>
@@ -191,7 +206,7 @@ export const BalanceBeam: React.FC<EventProps> = ({ onComplete, tile, settings, 
 
             {isFallen && (
                 <div className="mt-6 text-2xl font-bold animate-fade-in">
-                    {timeBalanced >= maxDuration / 1000 ? (
+                    {timeBalanced >= maxDurationSec ? (
                         <span className="text-hyper-green">Perfect Balance!</span>
                     ) : (
                         <span className="text-nebula-pink">Fell at {timeBalanced.toFixed(2)}s</span>

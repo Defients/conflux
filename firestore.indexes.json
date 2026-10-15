@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "ghosts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "seed", "order": "ASCENDING" },
+        { "fieldPath": "ownerCircuitPoints", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

@@ -1,0 +1,1179 @@
+{
+  "files": 192,
+  "sourceFiles": 165,
+  "events": [
+    {
+      "id": "balance-beam",
+      "name": "Balance Beam",
+      "purpose": "Keep the ball balanced on the beam as long as possible. The beam tilts randomly — counteract it!",
+      "component": "BalanceBeam",
+      "dimension": "precision",
+      "duration": [
+        12,
+        10,
+        8
+      ],
+      "accessibleDuration": [
+        12,
+        10,
+        8
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/BalanceBeam.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 1,
+      "feedback": false,
+      "lines": 204
+    },
+    {
+      "id": "reaction-tap",
+      "name": "Reaction Tap",
+      "purpose": "Tap when the panel turns green. Don't tap too early!",
+      "component": "ReactionTap",
+      "dimension": "reaction",
+      "duration": [
+        8,
+        8,
+        8
+      ],
+      "accessibleDuration": [
+        10,
+        10,
+        10
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/ReactionTap.tsx",
+      "pauseRefs": 5,
+      "randomCalls": 0,
+      "feedback": true,
+      "lines": 136
+    },
+    {
+      "id": "system-purge",
+      "name": "System Purge",
+      "purpose": "Type the valid commands. Use Spacebar to skip corrupted commands.",
+      "component": "SystemPurge",
+      "dimension": "typing",
+      "duration": [
+        14,
+        13,
+        12
+      ],
+      "accessibleDuration": [
+        14,
+        13,
+        12
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/SystemPurge.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 153
+    },
+    {
+      "id": "type-burst",
+      "name": "Type Burst",
+      "purpose": "Type the phrase exactly as shown. Correct errors to finish.",
+      "component": "TypeBurst",
+      "dimension": "typing",
+      "duration": [
+        12,
+        12,
+        12
+      ],
+      "accessibleDuration": [
+        15,
+        15,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/TypeBurst.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 1,
+      "feedback": false,
+      "lines": 121
+    },
+    {
+      "id": "quick-quiz",
+      "name": "Quick Quiz",
+      "purpose": "Answer 3 questions as quickly as possible.",
+      "component": "QuickQuiz",
+      "dimension": "logic",
+      "duration": [
+        12,
+        12,
+        12
+      ],
+      "accessibleDuration": [
+        12,
+        12,
+        12
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/QuickQuiz.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 136
+    },
+    {
+      "id": "aim-flick",
+      "name": "Aim Flick",
+      "purpose": "Drag and release to shoot the projectile into the goal.",
+      "component": "AimFlick",
+      "dimension": "precision",
+      "duration": [
+        10,
+        10,
+        10
+      ],
+      "accessibleDuration": [
+        10,
+        10,
+        10
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/AimFlick.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 184
+    },
+    {
+      "id": "memory-flip",
+      "name": "Memory Flip",
+      "purpose": "Find all the matching pairs of cards.",
+      "component": "MemoryFlip",
+      "dimension": "memory",
+      "duration": [
+        20,
+        20,
+        20
+      ],
+      "accessibleDuration": [
+        20,
+        20,
+        20
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/MemoryFlip.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 125
+    },
+    {
+      "id": "slider-precision",
+      "name": "Slider Precision",
+      "purpose": "Stop the slider at the target value.",
+      "component": "SliderPrecision",
+      "dimension": "precision",
+      "duration": [
+        10,
+        10,
+        10
+      ],
+      "accessibleDuration": [
+        10,
+        10,
+        10
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/SliderPrecision.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 107
+    },
+    {
+      "id": "pattern-recall",
+      "name": "Pattern Recall",
+      "purpose": "Memorize and repeat the sequence.",
+      "component": "PatternRecall",
+      "dimension": "memory",
+      "duration": [
+        15,
+        15,
+        15
+      ],
+      "accessibleDuration": [
+        15,
+        15,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/PatternRecall.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 100
+    },
+    {
+      "id": "evade-grid",
+      "name": "Evade Grid",
+      "purpose": "Survive the hazards until the timer runs out.",
+      "component": "EvadeGrid",
+      "dimension": "rhythm",
+      "duration": [
+        15,
+        15,
+        15
+      ],
+      "accessibleDuration": [
+        15,
+        15,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/EvadeGrid.tsx",
+      "pauseRefs": 5,
+      "randomCalls": 2,
+      "feedback": false,
+      "lines": 133
+    },
+    {
+      "id": "jump-bar",
+      "name": "Jump Bar",
+      "purpose": "Time your jump to clear the bar.",
+      "component": "JumpBar",
+      "dimension": "rhythm",
+      "duration": [
+        20,
+        25,
+        30
+      ],
+      "accessibleDuration": [
+        20,
+        25,
+        30
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/JumpBar.tsx",
+      "pauseRefs": 5,
+      "randomCalls": 1,
+      "feedback": false,
+      "lines": 182
+    },
+    {
+      "id": "wire-link",
+      "name": "Wire Link",
+      "purpose": "Connect the matching nodes without crossing wires.",
+      "component": "WireLink",
+      "dimension": "logic",
+      "duration": [
+        20,
+        25,
+        30
+      ],
+      "accessibleDuration": [
+        20,
+        25,
+        30
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/WireLink.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 200
+    },
+    {
+      "id": "maze-micro",
+      "name": "Maze Micro",
+      "purpose": "Use arrow keys to reach the exit as fast as possible.",
+      "component": "MazeMicro",
+      "dimension": "logic",
+      "duration": [
+        15,
+        18,
+        21
+      ],
+      "accessibleDuration": [
+        15,
+        18,
+        21
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/MazeMicro.tsx",
+      "pauseRefs": 1,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 145
+    },
+    {
+      "id": "find-pixel",
+      "name": "Find the Missing Pixel",
+      "purpose": "Spot the difference between the two images.",
+      "component": "FindPixel",
+      "dimension": "precision",
+      "duration": [
+        12,
+        12,
+        12
+      ],
+      "accessibleDuration": [
+        12,
+        12,
+        12
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/FindPixel.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 163
+    },
+    {
+      "id": "target-practice",
+      "name": "Target Practice",
+      "purpose": "Click on the targets as they appear. Don't miss!",
+      "component": "TargetPractice",
+      "dimension": "precision",
+      "duration": [
+        10,
+        10,
+        10
+      ],
+      "accessibleDuration": [
+        10,
+        10,
+        10
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/TargetPractice.tsx",
+      "pauseRefs": 5,
+      "randomCalls": 2,
+      "feedback": false,
+      "lines": 101
+    },
+    {
+      "id": "rhythm-tap",
+      "name": "Rhythm Tap",
+      "purpose": "Tap the spacebar in time with the pulse.",
+      "component": "RhythmTap",
+      "dimension": "rhythm",
+      "duration": [
+        12,
+        12,
+        12
+      ],
+      "accessibleDuration": [
+        12,
+        12,
+        12
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/RhythmTap.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 152
+    },
+    {
+      "id": "sequence-sort",
+      "name": "Sequence Sort",
+      "purpose": "Memorize the number sequence, then click them in the correct order.",
+      "component": "SequenceSort",
+      "dimension": "memory",
+      "duration": [
+        15,
+        15,
+        15
+      ],
+      "accessibleDuration": [
+        15,
+        15,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/SequenceSort.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 115
+    },
+    {
+      "id": "asteroid-dodge",
+      "name": "Asteroid Dodge",
+      "purpose": "Use the arrow keys to dodge the falling asteroids.",
+      "component": "AsteroidDodge",
+      "dimension": "reaction",
+      "duration": [
+        12,
+        12,
+        12
+      ],
+      "accessibleDuration": [
+        12,
+        12,
+        12
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/AsteroidDodge.tsx",
+      "pauseRefs": 5,
+      "randomCalls": 3,
+      "feedback": false,
+      "lines": 163
+    },
+    {
+      "id": "path-tracer",
+      "name": "Path Tracer",
+      "purpose": "Trace the path with your mouse without leaving the lines.",
+      "component": "PathTracer",
+      "dimension": "precision",
+      "duration": [
+        15,
+        15,
+        15
+      ],
+      "accessibleDuration": [
+        15,
+        15,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/PathTracer.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 175
+    },
+    {
+      "id": "code-breaker",
+      "name": "Code Breaker",
+      "purpose": "Guess the secret code using the clues provided.",
+      "component": "CodeBreaker",
+      "dimension": "logic",
+      "duration": [
+        25,
+        30,
+        35
+      ],
+      "accessibleDuration": [
+        25,
+        30,
+        35
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/CodeBreaker.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 158
+    },
+    {
+      "id": "quick-math",
+      "name": "Quick Math",
+      "purpose": "Solve as many math problems as you can before time runs out.",
+      "component": "QuickMath",
+      "dimension": "logic",
+      "duration": [
+        15,
+        15,
+        15
+      ],
+      "accessibleDuration": [
+        15,
+        15,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/QuickMath.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 124
+    },
+    {
+      "id": "color-math",
+      "name": "Color Math",
+      "purpose": "Adjust the sliders to match the target color.",
+      "component": "ColorMath",
+      "dimension": "precision",
+      "duration": [
+        13,
+        14,
+        15
+      ],
+      "accessibleDuration": [
+        13,
+        14,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/ColorMath.tsx",
+      "pauseRefs": 1,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 99
+    },
+    {
+      "id": "angle-nudge",
+      "name": "Angle Nudge",
+      "purpose": "Rotate the dial to the target angle and confirm.",
+      "component": "AngleNudge",
+      "dimension": "precision",
+      "duration": [
+        15,
+        15,
+        15
+      ],
+      "accessibleDuration": [
+        15,
+        15,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/AngleNudge.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 139
+    },
+    {
+      "id": "type-racer-snippet",
+      "name": "Type-Racer Snippet",
+      "purpose": "Type the short phrase as fast as possible. You must correct errors.",
+      "component": "TypeRacerSnippet",
+      "dimension": "typing",
+      "duration": [
+        8,
+        8,
+        8
+      ],
+      "accessibleDuration": [
+        10,
+        10,
+        10
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/TypeRacerSnippet.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 100
+    },
+    {
+      "id": "snapshot-memory",
+      "name": "Snapshot Memory",
+      "purpose": "Memorize the grid, then answer questions about the symbol locations.",
+      "component": "SnapshotMemory",
+      "dimension": "memory",
+      "duration": [
+        13,
+        14,
+        15
+      ],
+      "accessibleDuration": [
+        13,
+        14,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/SnapshotMemory.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 126
+    },
+    {
+      "id": "burst-clicks",
+      "name": "Burst Clicks",
+      "purpose": "Click the target as fast as you can for 5 seconds. Avoid inhuman speeds!",
+      "component": "BurstClicks",
+      "dimension": "reaction",
+      "duration": [
+        5,
+        5,
+        5
+      ],
+      "accessibleDuration": [
+        5,
+        5,
+        5
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/BurstClicks.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 80
+    },
+    {
+      "id": "sprint-mash",
+      "name": "Sprint Mash",
+      "purpose": "Alternate keys (A/D) with a steady rhythm to sprint. Spamming will stall you!",
+      "component": "SprintMash",
+      "dimension": "rhythm",
+      "duration": [
+        7,
+        7,
+        7
+      ],
+      "accessibleDuration": [
+        7,
+        7,
+        7
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/SprintMash.tsx",
+      "pauseRefs": 1,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 117
+    },
+    {
+      "id": "ghost-trajectory",
+      "name": "Ghost Trajectory",
+      "purpose": "Watch the launch, then click where you think the object will land.",
+      "component": "GhostTrajectory",
+      "dimension": "precision",
+      "duration": [
+        11,
+        12,
+        13
+      ],
+      "accessibleDuration": [
+        11,
+        12,
+        13
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/GhostTrajectory.tsx",
+      "pauseRefs": 5,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 167
+    },
+    {
+      "id": "emoji-cipher",
+      "name": "Emoji Cipher",
+      "purpose": "Use the legend to decode the secret word.",
+      "component": "EmojiCipher",
+      "dimension": "logic",
+      "duration": [
+        16,
+        17,
+        18
+      ],
+      "accessibleDuration": [
+        16,
+        17,
+        18
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/EmojiCipher.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 119
+    },
+    {
+      "id": "audio-beat",
+      "name": "Audio Beat Match",
+      "purpose": "Select the option that matches the reference beat.",
+      "component": "AudioBeat",
+      "dimension": "rhythm",
+      "duration": [
+        12,
+        12,
+        12
+      ],
+      "accessibleDuration": [
+        15,
+        15,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/AudioBeat.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 98
+    },
+    {
+      "id": "whack-a-mole",
+      "name": "Whack-a-Mole",
+      "purpose": "Click the moles before they retreat!",
+      "component": "WhackAMole",
+      "dimension": "reaction",
+      "duration": [
+        12,
+        12,
+        12
+      ],
+      "accessibleDuration": [
+        12,
+        12,
+        12
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/WhackAMole.tsx",
+      "pauseRefs": 7,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 129
+    },
+    {
+      "id": "stop-the-clock",
+      "name": "Stop the Clock",
+      "purpose": "Stop the timer at the exact target time. 3 rounds, lowest average error wins!",
+      "component": "StopTheClock",
+      "dimension": "reaction",
+      "duration": [
+        15,
+        15,
+        15
+      ],
+      "accessibleDuration": [
+        15,
+        15,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/StopTheClock.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 153
+    },
+    {
+      "id": "word-storm",
+      "name": "Word Storm",
+      "purpose": "Type the falling words to destroy them before they hit the bottom!",
+      "component": "WordStorm",
+      "dimension": "typing",
+      "duration": [
+        14,
+        13,
+        12
+      ],
+      "accessibleDuration": [
+        14,
+        13,
+        12
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/WordStorm.tsx",
+      "pauseRefs": 7,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 173
+    },
+    {
+      "id": "anagram-rush",
+      "name": "Anagram Rush",
+      "purpose": "Unscramble as many words as you can before time runs out!",
+      "component": "AnagramRush",
+      "dimension": "typing",
+      "duration": [
+        13,
+        14,
+        15
+      ],
+      "accessibleDuration": [
+        13,
+        14,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/AnagramRush.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 109
+    },
+    {
+      "id": "dial-lock",
+      "name": "Dial Lock",
+      "purpose": "Rotate the dial to find the hidden unlock position. Warm/cold feedback guides you. 3 locks!",
+      "component": "DialLock",
+      "dimension": "precision",
+      "duration": [
+        20,
+        25,
+        30
+      ],
+      "accessibleDuration": [
+        20,
+        25,
+        30
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/DialLock.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 165
+    },
+    {
+      "id": "pixel-push",
+      "name": "Pixel Push",
+      "purpose": "Push the block into the target zone. It has momentum — tap carefully! 3 rounds.",
+      "component": "PixelPush",
+      "dimension": "precision",
+      "duration": [
+        15,
+        15,
+        15
+      ],
+      "accessibleDuration": [
+        15,
+        15,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/PixelPush.tsx",
+      "pauseRefs": 5,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 159
+    },
+    {
+      "id": "mirror-draw",
+      "name": "Mirror Draw",
+      "purpose": "Trace the shape — but your cursor is mirrored horizontally!",
+      "component": "MirrorDraw",
+      "dimension": "precision",
+      "duration": [
+        13,
+        14,
+        15
+      ],
+      "accessibleDuration": [
+        13,
+        14,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/MirrorDraw.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 146
+    },
+    {
+      "id": "number-stack",
+      "name": "Number Stack",
+      "purpose": "Memorize the number sequence, then type it in REVERSE order!",
+      "component": "NumberStack",
+      "dimension": "memory",
+      "duration": [
+        13,
+        16,
+        19
+      ],
+      "accessibleDuration": [
+        13,
+        16,
+        19
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/NumberStack.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 148
+    },
+    {
+      "id": "symbol-match",
+      "name": "Symbol Match",
+      "purpose": "Memorize the symbol set, then click only those symbols from the grid.",
+      "component": "SymbolMatch",
+      "dimension": "memory",
+      "duration": [
+        12,
+        12,
+        12
+      ],
+      "accessibleDuration": [
+        15,
+        15,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/SymbolMatch.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 145
+    },
+    {
+      "id": "drum-echo",
+      "name": "Drum Echo",
+      "purpose": "Watch the drum pattern, then reproduce it on the pads with the same rhythm!",
+      "component": "DrumEcho",
+      "dimension": "rhythm",
+      "duration": [
+        13,
+        14,
+        15
+      ],
+      "accessibleDuration": [
+        13,
+        14,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/DrumEcho.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 146
+    },
+    {
+      "id": "wave-ride",
+      "name": "Wave Ride",
+      "purpose": "Keep your marker on the scrolling sine wave. The wave shifts over time!",
+      "component": "WaveRide",
+      "dimension": "rhythm",
+      "duration": [
+        11,
+        12,
+        13
+      ],
+      "accessibleDuration": [
+        11,
+        12,
+        13
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/WaveRide.tsx",
+      "pauseRefs": 5,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 136
+    },
+    {
+      "id": "color-sort",
+      "name": "Color Sort",
+      "purpose": "Click the matching colored bin to sort each falling orb. Speed up!",
+      "component": "ColorSort",
+      "dimension": "logic",
+      "duration": [
+        12,
+        12,
+        12
+      ],
+      "accessibleDuration": [
+        12,
+        12,
+        12
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/ColorSort.tsx",
+      "pauseRefs": 7,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 166
+    },
+    {
+      "id": "flow-connect",
+      "name": "Flow Connect",
+      "purpose": "Rotate the pipe tiles to connect the source to the destination.",
+      "component": "FlowConnect",
+      "dimension": "logic",
+      "duration": [
+        25,
+        30,
+        35
+      ],
+      "accessibleDuration": [
+        25,
+        30,
+        35
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/FlowConnect.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 177
+    },
+    {
+      "id": "logic-gates",
+      "name": "Logic Gates",
+      "purpose": "Determine the output of each logic gate circuit. Answer as many as you can!",
+      "component": "LogicGates",
+      "dimension": "logic",
+      "duration": [
+        13,
+        14,
+        15
+      ],
+      "accessibleDuration": [
+        13,
+        14,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/LogicGates.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 118
+    },
+    {
+      "id": "tilt-maze",
+      "name": "Tilt Maze",
+      "purpose": "Navigate the ball through the maze to the exit. Tilt with arrow keys or mouse movement!",
+      "component": "TiltMaze",
+      "dimension": "precision",
+      "duration": [
+        25,
+        20,
+        15
+      ],
+      "accessibleDuration": [
+        25,
+        20,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/TiltMaze.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 214
+    },
+    {
+      "id": "chord-memory",
+      "name": "Chord Memory",
+      "purpose": "Watch the sequence of colored notes light up, then replay them in order. The sequence grows!",
+      "component": "ChordMemory",
+      "dimension": "memory",
+      "duration": [
+        14,
+        16,
+        18
+      ],
+      "accessibleDuration": [
+        17,
+        19,
+        21
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/ChordMemory.tsx",
+      "pauseRefs": 5,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 131
+    },
+    {
+      "id": "word-scramble",
+      "name": "Word Scramble",
+      "purpose": "Unscramble the jumbled cyberpunk words as fast as you can!",
+      "component": "WordScramble",
+      "dimension": "typing",
+      "duration": [
+        20,
+        25,
+        30
+      ],
+      "accessibleDuration": [
+        20,
+        25,
+        30
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/WordScramble.tsx",
+      "pauseRefs": 5,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 142
+    }
+  ],
+  "scoringMismatches": 0,
+  "topFiles": [
+    {
+      "file": "server/src/rooms/ConfluxRoom.ts",
+      "lines": 1274
+    },
+    {
+      "file": "events/eventRegistry.ts",
+      "lines": 901
+    },
+    {
+      "file": "shared/botMind.ts",
+      "lines": 899
+    },
+    {
+      "file": "App.tsx",
+      "lines": 897
+    },
+    {
+      "file": "services/networkService.ts",
+      "lines": 719
+    },
+    {
+      "file": "shared/gameRules.ts",
+      "lines": 712
+    },
+    {
+      "file": "shared/matchSummary.test.ts",
+      "lines": 655
+    },
+    {
+      "file": "shared/types.ts",
+      "lines": 639
+    }
+  ],
+  "unreferenced": [
+    "eslint.config.js",
+    "hooks/useScreenTransition.ts",
+    "server/vitest.config.ts",
+    "services/rivalBanter.ts",
+    "shared/index.ts",
+    "tailwind.config.js",
+    "vite-env.d.ts",
+    "vite.config.ts"
+  ]
+}

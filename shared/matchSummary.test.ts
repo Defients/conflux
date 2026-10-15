@@ -12,7 +12,6 @@ import {
   computeMatchSummary,
   applyMatchSummaryToProfile,
   MatchSummaryInput,
-  MatchSummary,
 } from './matchSummary';
 import {
   GameState, GameSettings, Player, Tile, PilotProfile, Contract,

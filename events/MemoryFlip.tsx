@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { EventProps } from '../types';
 import { SeededRNG } from '../services/seededRNG';
 

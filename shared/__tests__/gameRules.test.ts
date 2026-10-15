@@ -9,7 +9,7 @@ import { describe, it, expect } from 'vitest';
 import { GameRules } from '../gameRules';
 import {
   GameState, GameSettings, Player, ChassisId, BotPersonality,
-  SharedEventDescriptor, EventResult, PowerUp,
+  SharedEventDescriptor, EventResult,
 } from '../types';
 
 const MOCK_EVENTS: SharedEventDescriptor[] = [
@@ -286,6 +286,124 @@ describe('GameRules.applyPowerUp', () => {
     // Should not add the status if the player didn't have the power-up
     const p1 = update.newState.players.find(p => p.id === 1)!;
     expect(p1.statuses.some(s => s.type === 'SHIELDED')).toBe(false);
+  });
+
+  it('should bounce incoming debuff back to sender when target has Reflector active', () => {
+    const state = makeGameState({
+      players: [
+        makePlayer({ id: 1, name: 'Defender', powerUps: ['Reflector'] }),
+        makePlayer({ id: 2, name: 'Attacker', isBot: true, personality: BotPersonality.Easy, powerUps: ['Mist Bomb'] }),
+      ],
+    });
+
+    // Player 1 activates Reflector
+    const step1 = GameRules.applyPowerUp(state, 1, 'Reflector');
+    const p1AfterReflect = step1.newState.players.find(p => p.id === 1)!;
+    expect(p1AfterReflect._reflectActive).toBe(true);
+    expect(p1AfterReflect.statuses.some(s => s.type === 'IMMUNE')).toBe(true);
+
+    // Player 2 fires Mist Bomb
+    const step2 = GameRules.applyPowerUp(step1.newState, 2, 'Mist Bomb');
+    const p1Final = step2.newState.players.find(p => p.id === 1)!;
+    const p2Final = step2.newState.players.find(p => p.id === 2)!;
+
+    // Defender is unblurred and reflect charge consumed; Attacker receives bounced BLURRED!
+    expect(p1Final.statuses.some(s => s.type === 'BLURRED')).toBe(false);
+    expect(p1Final._reflectActive).toBe(false);
+    expect(p2Final.statuses.some(s => s.type === 'BLURRED')).toBe(true);
+  });
+
+  it('should absorb two hits when player has _fortifiedShield', () => {
+    const state = makeGameState({
+      players: [
+        makePlayer({ id: 1, name: 'Tank', statuses: [{ type: 'SHIELDED', duration: 2 }], _fortifiedShield: true }),
+        makePlayer({ id: 2, name: 'Bot1', isBot: true, powerUps: ['Sludge'] }),
+      ],
+    });
+
+    const update = GameRules.applyPowerUp(state, 2, 'Sludge');
+    const p1 = update.newState.players.find(p => p.id === 1)!;
+    // First hit consumes _fortifiedShield but keeps SHIELDED active
+    expect(p1._fortifiedShield).toBe(false);
+    expect(p1.statuses.some(s => s.type === 'SHIELDED')).toBe(true);
+    expect(p1.statuses.some(s => s.type === 'SLOWED')).toBe(false);
+  });
+});
+
+describe('GameRules v5 Skill & Intervention Mechanics', () => {
+  it('upgrades 0★ to 1★ once per race with _lastStandAvailable', () => {
+    const state = makeGameState({
+      players: [
+        makePlayer({ id: 1, _lastStandAvailable: true }),
+        makePlayer({ id: 2, isBot: true, personality: BotPersonality.Easy }),
+      ],
+    });
+    const results: Record<number, EventResult> = {
+      1: { playerId: 1, stars: 0, primaryMetric: 999 },
+      2: { playerId: 2, stars: 1, primaryMetric: 300 },
+    };
+
+    const update = GameRules.processRaceStep(state, results, MOCK_EVENTS);
+    const p1 = update.newState.players.find(p => p.id === 1)!;
+    expect(p1._lastStandAvailable).toBe(false);
+    expect(p1.position).toBeGreaterThan(0);
+    expect(p1.tileHistory[0].stars).toBe(1);
+  });
+
+  it('applies _ironWill (2★ movement on 1★) and _hyperdriveBonus (+25% on 4★)', () => {
+    const state = makeGameState({
+      overdrivingPlayerIds: [1],
+      players: [
+        makePlayer({ id: 1, _hyperdriveBonus: true }),
+        makePlayer({ id: 2, isBot: true, _ironWill: true }),
+      ],
+    });
+    const results: Record<number, EventResult> = {
+      1: { playerId: 1, stars: 3, primaryMetric: 100 },
+      2: { playerId: 2, stars: 1, primaryMetric: 300 },
+    };
+
+    const update = GameRules.processRaceStep(state, results, MOCK_EVENTS);
+    const p1 = update.newState.players.find(p => p.id === 1)!;
+    const p2 = update.newState.players.find(p => p.id === 2)!;
+    // baseStep = 25; p1 = 25 * 3.0 * 1.25 = 93.75; p2 = 25 * 1.6 = 40 (+ 7.5 rubber-band since gap > 2 tiles = 47.5)
+    expect(p1.position).toBeCloseTo(93.75, 1);
+    expect(p2.position).toBeCloseTo(47.5, 1);
+  });
+
+  it('handles Pit Stop analyze with freeScanner and recharge with _rechargeBonus', () => {
+    const state = makeGameState({
+      players: [
+        makePlayer({ id: 1, energy: 0, _freeScanner: true, _rechargeBonus: 1 }),
+        makePlayer({ id: 2, isBot: true }),
+      ],
+    });
+
+    const scanUpdate = GameRules.processPitStop(state, 1, 'analyze');
+    const p1Scanned = scanUpdate.newState.players.find(p => p.id === 1)!;
+    expect(p1Scanned._sensorScanTiles).toBe(4);
+    expect(p1Scanned.energy).toBe(0);
+
+    const rechargeUpdate = GameRules.processPitStop(state, 1, 'recharge');
+    const p1Recharged = rechargeUpdate.newState.players.find(p => p.id === 1)!;
+    expect(p1Recharged.energy).toBeGreaterThanOrEqual(3);
+  });
+
+  it('applies sabotage status when accepting a SABOTAGE intervention', () => {
+    const state = makeGameState({
+      activeIntervention: {
+        type: 'SABOTAGE',
+        hazardTile: { tileIndex: 1, eventId: 'reaction-tap', difficulty: 2, isHazard: true },
+        sabotageStatus: 'BLURRED',
+        cpBonus: 50,
+      },
+    });
+
+    const update = GameRules.resolveIntervention(state, true);
+    const p1 = update.newState.players.find(p => p.id === 1)!;
+    expect(p1.statuses.some(s => s.type === 'BLURRED')).toBe(true);
+    expect(update.newState.run[0].isHazard).toBe(true);
+    expect(update.newState.activeIntervention).toBeNull();
   });
 });
 

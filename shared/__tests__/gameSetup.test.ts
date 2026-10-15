@@ -7,9 +7,10 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createPlayers, applySkillEffects, applyLoadoutEffects, assignTeams } from '../gameSetup';
+import { createPlayers, applySkillEffects, applyLoadoutEffects, applySyndicatePerks, rollStartingLoadoutPerks, assignTeams } from '../gameSetup';
+import { getSyndicateTier } from '../constants';
 import { SeededRNG } from '../seededRNG';
-import { ChassisId, BotPersonality, PilotSkills, ChassisLoadout, Player } from '../types';
+import { ChassisId, BotPersonality, PilotSkills, ChassisLoadout, Player, CorporationId, PilotProfile } from '../types';
 
 /** Create a baseline player for modifier tests. */
 function makeBaselinePlayer(overrides: Partial<Player> = {}): Player {
@@ -151,6 +152,48 @@ describe('gameSetup', () => {
       expect(result._energyPerStarBonus).toBe(1);
     });
 
+    it('speed-t3 (Hyperdrive): should set _hyperdriveBonus to true', () => {
+      const player = makeBaselinePlayer();
+      const result = applySkillEffects(player, skillsFrom('speed-t1', 'speed-t2', 'speed-t3'));
+      expect(result._hyperdriveBonus).toBe(true);
+    });
+
+    it('tech-t3 (Power Surge): should set _powerUpBonus to 1', () => {
+      const player = makeBaselinePlayer();
+      const result = applySkillEffects(player, skillsFrom('tech-t1', 'tech-t2', 'tech-t3'));
+      expect(result._powerUpBonus).toBe(1);
+    });
+
+    it('tech-t4 (Scanner): should set _freeScanner to true', () => {
+      const player = makeBaselinePlayer();
+      const result = applySkillEffects(player, skillsFrom('tech-t1', 'tech-t4'));
+      expect(result._freeScanner).toBe(true);
+    });
+
+    it('tech-t5 (Data Override): should set _dataSpikeBonus to 1', () => {
+      const player = makeBaselinePlayer();
+      const result = applySkillEffects(player, skillsFrom('tech-t1', 'tech-t2', 'tech-t5'));
+      expect(result._dataSpikeBonus).toBe(1);
+    });
+
+    it('endurance-t3 (Iron Will): should set _ironWill to true', () => {
+      const player = makeBaselinePlayer();
+      const result = applySkillEffects(player, skillsFrom('endurance-t1', 'endurance-t2', 'endurance-t3'));
+      expect(result._ironWill).toBe(true);
+    });
+
+    it('endurance-t4 (Recovery): should set _rechargeBonus to 1', () => {
+      const player = makeBaselinePlayer();
+      const result = applySkillEffects(player, skillsFrom('endurance-t1', 'endurance-t4'));
+      expect(result._rechargeBonus).toBe(1);
+    });
+
+    it('endurance-t5 (Last Stand): should set _lastStandAvailable to true', () => {
+      const player = makeBaselinePlayer();
+      const result = applySkillEffects(player, skillsFrom('endurance-t1', 'endurance-t2', 'endurance-t5'));
+      expect(result._lastStandAvailable).toBe(true);
+    });
+
     // --- Combination Tests ---
 
     it('should stack debuffResistance from tech-t2 and endurance-t1', () => {
@@ -243,6 +286,18 @@ describe('gameSetup', () => {
       expect(result.powerUps).toContain('Clarity');
     });
 
+    it('thrusters-utility: should set _randomStartPowerUp to true', () => {
+      const player = makeBaselinePlayer();
+      const result = applyLoadoutEffects(player, loadoutFrom(ChassisId.Standard, 'core-energy', 'thrusters-utility'));
+      expect(result._randomStartPowerUp).toBe(true);
+    });
+
+    it('shielding-fortify: should set _fortifiedShield to true', () => {
+      const player = makeBaselinePlayer();
+      const result = applyLoadoutEffects(player, loadoutFrom(ChassisId.Standard, 'core-energy', 'thrusters-momentum', 'shielding-fortify'));
+      expect(result._fortifiedShield).toBe(true);
+    });
+
     // --- Combination Tests ---
 
     it('should not duplicate Shield from core-shield and chassis Aegis', () => {
@@ -281,6 +336,42 @@ describe('gameSetup', () => {
       expect(result[1].teamId).toBe('OMEGA');
       expect(result[2].teamId).toBe('ALPHA');
       expect(result[3].teamId).toBe('OMEGA');
+    });
+  });
+
+  describe('applySyndicatePerks & rollStartingLoadoutPerks', () => {
+    it('computes syndicate tiers accurately from reputation', () => {
+      expect(getSyndicateTier(CorporationId.Cyberex, 0).level).toBe(0);
+      expect(getSyndicateTier(CorporationId.Cyberex, 30).level).toBe(1);
+      expect(getSyndicateTier(CorporationId.Zenith, 80).level).toBe(2);
+      expect(getSyndicateTier(CorporationId.Rogue, 160).level).toBe(3);
+    });
+
+    it('applies Cyberex, Zenith, and Rogue syndicate perks at high reputation', () => {
+      const player = makeBaselinePlayer();
+      const profile = {
+        sponsorships: {
+          [CorporationId.Cyberex]: { reputation: 80, activeContract: null },
+          [CorporationId.Zenith]: { reputation: 150, activeContract: null },
+          [CorporationId.Rogue]: { reputation: 150, activeContract: null },
+        },
+      } as unknown as PilotProfile;
+
+      const result = applySyndicatePerks(player, profile);
+      expect(result._threeStarMovementBonus).toBe(0.05);
+      expect(result.energy).toBe(1);
+      expect(result._energyPerStarBonus).toBe(0.25);
+      expect(result._movementBonus).toBe(0.05);
+      expect(result._overdriveCooldownReduction).toBe(1);
+      expect(result._debuffResistance).toBe(1);
+      expect(result._reflectActive).toBe(true);
+    });
+
+    it('grants a starting power-up when _randomStartPowerUp is true', () => {
+      const player = makeBaselinePlayer({ _randomStartPowerUp: true });
+      const rng = new SeededRNG('loadout-roll-seed');
+      const result = rollStartingLoadoutPerks(player, rng);
+      expect(result.powerUps.length).toBe(1);
     });
   });
 });

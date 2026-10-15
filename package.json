@@ -7,6 +7,7 @@
     "start": "vite",
     "dev": "vite",
     "build": "vite build",
+    "build:neocities": "vite build --base=./",
     "test": "vitest run",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
@@ -25,8 +26,6 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^10.8.0",
-    "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-hooks": "^7.1.1",
     "tailwindcss": "^4.3.3",
     "typescript": "~5.8.2",
     "typescript-eslint": "^8.66.0",

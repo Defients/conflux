@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { EventProps } from '../types';
 
-export const SliderPrecision: React.FC<EventProps> = ({ onComplete, tile, settings, event, isBlurred , isPaused }) => {
+export const SliderPrecision: React.FC<EventProps> = ({ onComplete, tile, isBlurred , isPaused }) => {
     const [position, setPosition] = useState(50);
     const [isStopped, setIsStopped] = useState(false);
     const requestRef = useRef<number | null>(null);

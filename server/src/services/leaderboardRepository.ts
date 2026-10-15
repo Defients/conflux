@@ -1,6 +1,9 @@
 import { db } from '../firebaseAdmin';
 import { LeaderboardEntry, LeaderboardCategory } from '../../../shared/types';
+import { getLeaderboardDocPath, getLeaderboardCollectionSegments } from '../../../shared/constants';
 import { withRetry } from './retry';
+
+export { getLeaderboardDocPath, getLeaderboardCollectionSegments };
 
 export const writeLeaderboardEntry = async (
   category: LeaderboardCategory,
@@ -10,15 +13,7 @@ export const writeLeaderboardEntry = async (
   if (!db) return;
   try {
     await withRetry(async () => {
-      let docPath: string;
-      if (category === 'allTime') {
-        docPath = `leaderboards/allTime/entries/${entry.userId}`;
-      } else if (category === 'daily') {
-        const seed = dailySeed ?? new Date().toISOString().split('T')[0];
-        docPath = `leaderboards/daily/${seed}/entries/${entry.userId}`;
-      } else {
-        docPath = `leaderboards/gauntlet/entries/${entry.userId}`;
-      }
+      const docPath = getLeaderboardDocPath(category, entry.userId, dailySeed);
       await db!.doc(docPath).set(entry, { merge: true });
     });
   } catch (err) {

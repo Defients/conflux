@@ -25,9 +25,6 @@ export default defineConfig(() => {
               if (id.includes('node_modules/colyseus')) {
                 return 'vendor-colyseus';
               }
-              if (id.includes('/events/') && id.endsWith('.tsx')) {
-                return 'events-bundle';
-              }
               if (id.includes('/shared/') && id.endsWith('.ts')) {
                 return 'shared-bundle';
               }

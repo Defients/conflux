@@ -1,0 +1,6595 @@
+{
+  "snapshot": "2026-10-15",
+  "files": [
+    {
+      "file": ".firebaserc",
+      "lines": 6,
+      "bytes": 55,
+      "imports": [],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Configures build, deployment or access policy",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Build/deploy or entry point",
+      "blockers": "Runtime deployment and production recovery unverified"
+    },
+    {
+      "file": ".github/workflows/ci.yml",
+      "lines": 69,
+      "bytes": 1404,
+      "imports": [],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Configures build, deployment or access policy",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Build/deploy or entry point",
+      "blockers": "Runtime deployment and production recovery unverified"
+    },
+    {
+      "file": ".gitignore",
+      "lines": 39,
+      "bytes": 351,
+      "imports": [],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Application entry, metadata, asset or build contract",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Build/deploy or entry point",
+      "blockers": "Runtime deployment and production recovery unverified"
+    },
+    {
+      "file": "App.tsx",
+      "lines": 897,
+      "bytes": 38392,
+      "imports": [
+        "react",
+        "./types",
+        "./shared/matchSummary",
+        "./hooks/useGameEngine",
+        "./hooks/useOnlineGame",
+        "./components/Lobby",
+        "./components/OnlineLobby",
+        "./components/EventRunner",
+        "./components/Countdown",
+        "./components/ResultsScreen",
+        "./events/eventRegistry",
+        "./components/Toast",
+        "./components/TileResultsScreen",
+        "./services/audioService",
+        "./services/hapticsService",
+        "./components/EventList",
+        "./components/EventPlaytestRunner",
+        "./components/PilotProfileSetup",
+        "./services/profileService",
+        "./services/firebaseProfileService",
+        "./services/firebase",
+        "./services/firebaseGhostService",
+        "./components/PitStopScreen",
+        "./constants",
+        "./components/RivalInterventionModal",
+        "./components/AccoladesScreen",
+        "./components/LeaderboardScreen",
+        "./components/MatchHistoryScreen",
+        "./components/RivalTauntOverlay",
+        "./components/WelcomePopup",
+        "./shared/contractService",
+        "./shared/dailyChallengeService",
+        "./types",
+        "./components/ModeSelector",
+        "./components/GhostRaceScreen",
+        "./components/SkillTreeScreen",
+        "./components/HangarScreen",
+        "./components/SettingsScreen",
+        "./components/OnboardingFlow",
+        "./components/TournamentScreen",
+        "./services/networkService",
+        "./components/RankBadge",
+        "./components/ConnectionIndicator",
+        "./hooks/useConnectionStatus",
+        "./hooks/useOnlineScreenSync",
+        "./components/SpectatorOverlay"
+      ],
+      "symbols": [
+        {
+          "name": "AppScreen",
+          "line": 51
+        }
+      ],
+      "timers": 3,
+      "random": 2,
+      "pauseRefs": 1,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Coordinates screens, profiles, local/online races and completion",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "CHANGELOG.md",
+      "lines": 121,
+      "bytes": 8006,
+      "imports": [],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 1,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Documents development behavior/plans",
+      "status": "Partial",
+      "completion": 40,
+      "reachability": "Developer documentation",
+      "blockers": "Stale claims must be reconciled against current source"
+    },
+    {
+      "file": "MULTIPLAYER_ARCHITECTURE.md",
+      "lines": 281,
+      "bytes": 11724,
+      "imports": [],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Documents development behavior/plans",
+      "status": "Partial",
+      "completion": 40,
+      "reachability": "Developer documentation",
+      "blockers": "Stale claims must be reconciled against current source"
+    },
+    {
+      "file": "PATCH_NOTES.md",
+      "lines": 511,
+      "bytes": 31161,
+      "imports": [],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 3,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Documents development behavior/plans",
+      "status": "Partial",
+      "completion": 40,
+      "reachability": "Developer documentation",
+      "blockers": "Stale claims must be reconciled against current source"
+    },
+    {
+      "file": "README.md",
+      "lines": 87,
+      "bytes": 3080,
+      "imports": [],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Documents development behavior/plans",
+      "status": "Partial",
+      "completion": 40,
+      "reachability": "Developer documentation",
+      "blockers": "Stale claims must be reconciled against current source"
+    },
+    {
+      "file": "REMEDIATION_LEDGER.md",
+      "lines": 147,
+      "bytes": 7579,
+      "imports": [],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": true,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Documents development behavior/plans",
+      "status": "Partial",
+      "completion": 40,
+      "reachability": "Developer documentation",
+      "blockers": "Stale claims must be reconciled against current source"
+    },
+    {
+      "file": "TODO.md",
+      "lines": 151,
+      "bytes": 10398,
+      "imports": [],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 1,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Documents development behavior/plans",
+      "status": "Partial",
+      "completion": 40,
+      "reachability": "Developer documentation",
+      "blockers": "Stale claims must be reconciled against current source"
+    },
+    {
+      "file": "components/AccoladesScreen.tsx",
+      "lines": 57,
+      "bytes": 3158,
+      "imports": [
+        "react",
+        "../types",
+        "../constants",
+        "../hooks/useSound"
+      ],
+      "symbols": [
+        {
+          "name": "AccoladesScreenProps",
+          "line": 7
+        },
+        {
+          "name": "AccoladesScreen",
+          "line": 12
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Displays unlocked achievements",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "components/ConnectionIndicator.tsx",
+      "lines": 54,
+      "bytes": 1594,
+      "imports": [
+        "react",
+        "../shared/types"
+      ],
+      "symbols": [
+        {
+          "name": "ConnectionIndicatorProps",
+          "line": 10
+        },
+        {
+          "name": "ConnectionIndicator",
+          "line": 24
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Displays connection quality and reconnect state",
+      "status": "Partial",
+      "completion": 40,
+      "reachability": "Online UI and socket events",
+      "blockers": "B05/B10: identity, subscribers, reconnect and cache"
+    },
+    {
+      "file": "components/Countdown.tsx",
+      "lines": 118,
+      "bytes": 5637,
+      "imports": [
+        "react",
+        "../hooks/useSound",
+        "../types",
+        "../constants"
+      ],
+      "symbols": [
+        {
+          "name": "CountdownProps",
+          "line": 6
+        },
+        {
+          "name": "Countdown",
+          "line": 64
+        }
+      ],
+      "timers": 2,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Presents the pre-event countdown",
+      "status": "Partial",
+      "completion": 45,
+      "reachability": "Active race/practice",
+      "blockers": "B02/B04/B05: phases, clock and player identity"
+    },
+    {
+      "file": "components/DebugPanel.tsx",
+      "lines": 33,
+      "bytes": 1522,
+      "imports": [
+        "react",
+        "../types"
+      ],
+      "symbols": [
+        {
+          "name": "DebugPanelProps",
+          "line": 6
+        },
+        {
+          "name": "DebugPanel",
+          "line": 10
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Displays/copies complete race state",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "components/ErrorBoundary.tsx",
+      "lines": 86,
+      "bytes": 3598,
+      "imports": [
+        "react"
+      ],
+      "symbols": [
+        {
+          "name": "Props",
+          "line": 3
+        },
+        {
+          "name": "State",
+          "line": 7
+        },
+        {
+          "name": "ErrorBoundary",
+          "line": 13
+        }
+      ],
+      "timers": 1,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Catches React rendering failures",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "components/EventList.tsx",
+      "lines": 225,
+      "bytes": 14043,
+      "imports": [
+        "react",
+        "../types",
+        "../events/eventRegistry",
+        "../services/presetService",
+        "../hooks/useSound"
+      ],
+      "symbols": [
+        {
+          "name": "EventListProps",
+          "line": 8
+        },
+        {
+          "name": "EventList",
+          "line": 35
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Filters/selects event pool and manages presets and practice entry",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "components/EventPlaytestRunner.tsx",
+      "lines": 115,
+      "bytes": 5601,
+      "imports": [
+        "react",
+        "../types"
+      ],
+      "symbols": [
+        {
+          "name": "EventPlaytestRunnerProps",
+          "line": 7
+        },
+        {
+          "name": "EventPlaytestRunner",
+          "line": 34
+        }
+      ],
+      "timers": 1,
+      "random": 1,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Verifies EventPlaytestRunner with unit/integration fixtures",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "components/EventRunner.tsx",
+      "lines": 366,
+      "bytes": 19784,
+      "imports": [
+        "react",
+        "../types",
+        "../events/eventRegistry",
+        "./RaceTrackHUD",
+        "../services/botMind",
+        "./PowerUpIcon",
+        "./DebugPanel",
+        "./ExplainEventModal",
+        "../constants",
+        "../shared/contractService",
+        "./TimerBar"
+      ],
+      "symbols": [
+        {
+          "name": "EventRunnerProps",
+          "line": 14
+        },
+        {
+          "name": "EventRunner",
+          "line": 32
+        }
+      ],
+      "timers": 5,
+      "random": 3,
+      "pauseRefs": 12,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Hosts events, telemetry, powers and race interactions",
+      "status": "Partial",
+      "completion": 45,
+      "reachability": "Active race/practice",
+      "blockers": "B02/B04/B05: phases, clock and player identity"
+    },
+    {
+      "file": "components/ExplainEventModal.tsx",
+      "lines": 90,
+      "bytes": 3757,
+      "imports": [
+        "react",
+        "../types",
+        "../constants"
+      ],
+      "symbols": [
+        {
+          "name": "ExplainEventModalProps",
+          "line": 5
+        },
+        {
+          "name": "ExplainEventModal",
+          "line": 10
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Explains event instructions and scoring",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "components/GhostRaceScreen.tsx",
+      "lines": 137,
+      "bytes": 5096,
+      "imports": [
+        "react",
+        "../types",
+        "../constants"
+      ],
+      "symbols": [
+        {
+          "name": "GhostRaceScreenProps",
+          "line": 12
+        },
+        {
+          "name": "GhostRaceScreen",
+          "line": 18
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Fetches and selects a ghost opponent",
+      "status": "Partial",
+      "completion": 30,
+      "reachability": "Code path exists; UI entry disconnected",
+      "blockers": "See B12: replay contract and lifecycle isolation"
+    },
+    {
+      "file": "components/HangarScreen.tsx",
+      "lines": 374,
+      "bytes": 18676,
+      "imports": [
+        "react",
+        "../shared/types",
+        "../shared/constants",
+        "../hooks/useSound"
+      ],
+      "symbols": [
+        {
+          "name": "HangarScreenProps",
+          "line": 12
+        },
+        {
+          "name": "HangarScreen",
+          "line": 27
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Purchases and equips chassis modules",
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Lobby/navigation",
+      "blockers": "B08/B13/B15: currency, persistence and semantic drift"
+    },
+    {
+      "file": "components/LeaderboardScreen.tsx",
+      "lines": 110,
+      "bytes": 4395,
+      "imports": [
+        "react",
+        "../shared/types",
+        "../services/leaderboardService"
+      ],
+      "symbols": [
+        {
+          "name": "LeaderboardScreenProps",
+          "line": 5
+        },
+        {
+          "name": "LeaderboardScreen",
+          "line": 9
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Displays all-time, daily and gauntlet rankings",
+      "status": "Partial",
+      "completion": 40,
+      "reachability": "Cloud UI or finish projection",
+      "blockers": "B09: paths, missing mode publishing and silent errors"
+    },
+    {
+      "file": "components/Lobby.tsx",
+      "lines": 556,
+      "bytes": 36322,
+      "imports": [
+        "react",
+        "../types",
+        "../services/shareService",
+        "../hooks/useSound",
+        "../shared/dailyChallengeService",
+        "../constants",
+        "../services/profileService",
+        "./RankBadge"
+      ],
+      "symbols": [
+        {
+          "name": "LobbyProps",
+          "line": 10
+        },
+        {
+          "name": "Lobby",
+          "line": 94
+        }
+      ],
+      "timers": 1,
+      "random": 3,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Configures local races and exposes progression/navigation",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "components/MatchHistoryScreen.tsx",
+      "lines": 101,
+      "bytes": 4570,
+      "imports": [
+        "react",
+        "../shared/types",
+        "../services/matchHistoryService"
+      ],
+      "symbols": [
+        {
+          "name": "MatchHistoryScreenProps",
+          "line": 5
+        },
+        {
+          "name": "MatchHistoryScreen",
+          "line": 11
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Reads finished match history and replays seeds",
+      "status": "Partial",
+      "completion": 40,
+      "reachability": "Cloud UI or finish projection",
+      "blockers": "B09: paths, missing mode publishing and silent errors"
+    },
+    {
+      "file": "components/ModeSelector.tsx",
+      "lines": 135,
+      "bytes": 4801,
+      "imports": [
+        "react",
+        "../hooks/useSound"
+      ],
+      "symbols": [
+        {
+          "name": "GameModeSelection",
+          "line": 10
+        },
+        {
+          "name": "ModeSelectorProps",
+          "line": 12
+        },
+        {
+          "name": "ModeCard",
+          "line": 18
+        },
+        {
+          "name": "ModeSelector",
+          "line": 70
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Selects local, online, ranked, ghost and tournament modes",
+      "status": "Partial",
+      "completion": 25,
+      "reachability": "No ordinary lobby entry",
+      "blockers": "Navigation is disconnected"
+    },
+    {
+      "file": "components/OnboardingFlow.tsx",
+      "lines": 136,
+      "bytes": 5106,
+      "imports": [
+        "react",
+        "../shared/types",
+        "../shared/constants",
+        "../constants"
+      ],
+      "symbols": [
+        {
+          "name": "OnboardingFlowProps",
+          "line": 12
+        },
+        {
+          "name": "Step",
+          "line": 16
+        },
+        {
+          "name": "OnboardingFlow",
+          "line": 20
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Introduces pilot setup and gameplay",
+      "status": "Partial",
+      "completion": 25,
+      "reachability": "No ordinary lobby entry",
+      "blockers": "Navigation is disconnected"
+    },
+    {
+      "file": "components/OnlineLobby.tsx",
+      "lines": 567,
+      "bytes": 25708,
+      "imports": [
+        "react",
+        "../types",
+        "../constants",
+        "../hooks/useOnlineGame",
+        "../services/firebase",
+        "../services/networkService",
+        "./RankBadge"
+      ],
+      "symbols": [
+        {
+          "name": "OnlineLobbyProps",
+          "line": 17
+        },
+        {
+          "name": "OnlineLobby",
+          "line": 24
+        }
+      ],
+      "timers": 1,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Creates/joins/discovers rooms, queues, moderates and exposes spectating",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "components/PilotProfileSetup.tsx",
+      "lines": 150,
+      "bytes": 7780,
+      "imports": [
+        "react",
+        "../constants",
+        "../services/profileService"
+      ],
+      "symbols": [
+        {
+          "name": "PilotProfileSetupProps",
+          "line": 5
+        },
+        {
+          "name": "PilotProfileSetup",
+          "line": 12
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Creates/selects a local pilot",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "components/PitStopScreen.tsx",
+      "lines": 226,
+      "bytes": 14907,
+      "imports": [
+        "react",
+        "../types",
+        "../constants",
+        "../events/eventRegistry",
+        "../hooks/useSound"
+      ],
+      "symbols": [
+        {
+          "name": "PitStopAction",
+          "line": 8
+        },
+        {
+          "name": "PitStopScreenProps",
+          "line": 10
+        },
+        {
+          "name": "PitStopScreen",
+          "line": 38
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Chooses energy-funded recovery/utility actions",
+      "status": "Partial",
+      "completion": 45,
+      "reachability": "Active race/practice",
+      "blockers": "B02/B04/B05: phases, clock and player identity"
+    },
+    {
+      "file": "components/PowerUpIcon.tsx",
+      "lines": 43,
+      "bytes": 1490,
+      "imports": [
+        "react",
+        "../types",
+        "../constants",
+        "../hooks/useSound"
+      ],
+      "symbols": [
+        {
+          "name": "PowerUpIconProps",
+          "line": 6
+        },
+        {
+          "name": "PowerUpIcon",
+          "line": 13
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Renders power-up symbols",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "components/RaceTrackHUD.tsx",
+      "lines": 236,
+      "bytes": 13822,
+      "imports": [
+        "react",
+        "../types",
+        "../constants",
+        "../events/eventRegistry"
+      ],
+      "symbols": [
+        {
+          "name": "RaceTrackHUDProps",
+          "line": 7
+        },
+        {
+          "name": "RaceTrackHUD",
+          "line": 137
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Shows track, standings, energy, status and commands",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "components/RankBadge.tsx",
+      "lines": 61,
+      "bytes": 1591,
+      "imports": [
+        "react",
+        "../shared/types",
+        "../shared/rankSystem"
+      ],
+      "symbols": [
+        {
+          "name": "RankBadgeProps",
+          "line": 11
+        },
+        {
+          "name": "RankBadge",
+          "line": 18
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Displays rating tier",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "components/ResultsScreen.tsx",
+      "lines": 277,
+      "bytes": 16678,
+      "imports": [
+        "react",
+        "../types",
+        "../shared/matchSummary",
+        "../services/shareService",
+        "../hooks/useSound",
+        "../shared/dailyChallengeService",
+        "../constants",
+        "./RankBadge",
+        "../shared/rankSystem"
+      ],
+      "symbols": [
+        {
+          "name": "ResultsScreenProps",
+          "line": 12
+        },
+        {
+          "name": "ResultsScreen",
+          "line": 24
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Displays final standings and reward summary",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "components/RivalInterventionModal.tsx",
+      "lines": 135,
+      "bytes": 6147,
+      "imports": [
+        "react",
+        "../types",
+        "../events/eventRegistry",
+        "../constants",
+        "../hooks/useSound"
+      ],
+      "symbols": [
+        {
+          "name": "RivalInterventionModalProps",
+          "line": 8
+        },
+        {
+          "name": "RivalInterventionModal",
+          "line": 50
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Accepts/rejects rival hazard/sabotage/veto offer",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "components/RivalTauntOverlay.tsx",
+      "lines": 38,
+      "bytes": 1458,
+      "imports": [
+        "react"
+      ],
+      "symbols": [
+        {
+          "name": "RivalTauntOverlayProps",
+          "line": 3
+        },
+        {
+          "name": "RivalTauntOverlay",
+          "line": 7
+        }
+      ],
+      "timers": 1,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Displays timed rival dialogue",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "components/SettingsScreen.tsx",
+      "lines": 160,
+      "bytes": 6412,
+      "imports": [
+        "react",
+        "../hooks/useSound"
+      ],
+      "symbols": [
+        {
+          "name": "UISettings",
+          "line": 10
+        },
+        {
+          "name": "SettingsScreenProps",
+          "line": 19
+        },
+        {
+          "name": "loadSettings",
+          "line": 28
+        },
+        {
+          "name": "saveSettings",
+          "line": 55
+        },
+        {
+          "name": "SettingsScreen",
+          "line": 76
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Edits sound, haptic and accessibility preferences",
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Lobby/navigation",
+      "blockers": "B08/B13/B15: currency, persistence and semantic drift"
+    },
+    {
+      "file": "components/SkillTreeScreen.tsx",
+      "lines": 275,
+      "bytes": 12286,
+      "imports": [
+        "react",
+        "../shared/types",
+        "../shared/constants",
+        "../hooks/useSound"
+      ],
+      "symbols": [
+        {
+          "name": "SkillTreeScreenProps",
+          "line": 13
+        },
+        {
+          "name": "Branch",
+          "line": 19
+        },
+        {
+          "name": "SkillTreeScreen",
+          "line": 51
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Purchases skill nodes with prerequisites",
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Lobby/navigation",
+      "blockers": "B08/B13/B15: currency, persistence and semantic drift"
+    },
+    {
+      "file": "components/SpectatorOverlay.tsx",
+      "lines": 70,
+      "bytes": 2551,
+      "imports": [
+        "react",
+        "../shared/types",
+        "../constants"
+      ],
+      "symbols": [
+        {
+          "name": "SpectatorOverlayProps",
+          "line": 12
+        },
+        {
+          "name": "SpectatorOverlay",
+          "line": 18
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Selects observed player and presents spectator controls",
+      "status": "Partial",
+      "completion": 25,
+      "reachability": "Button/code exists; complete admission blocked",
+      "blockers": "See B12: auth, ID and lock barriers"
+    },
+    {
+      "file": "components/TileResultsScreen.tsx",
+      "lines": 146,
+      "bytes": 6818,
+      "imports": [
+        "react",
+        "../types",
+        "../constants"
+      ],
+      "symbols": [
+        {
+          "name": "TileResultsScreenProps",
+          "line": 5
+        },
+        {
+          "name": "TileResultsScreen",
+          "line": 12
+        }
+      ],
+      "timers": 3,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Displays tile performance and movement",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "components/TimerBar.tsx",
+      "lines": 112,
+      "bytes": 4091,
+      "imports": [
+        "react"
+      ],
+      "symbols": [
+        {
+          "name": "TimerBarProps",
+          "line": 4
+        },
+        {
+          "name": "TimerBar",
+          "line": 10
+        }
+      ],
+      "timers": 2,
+      "random": 0,
+      "pauseRefs": 5,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Shows event countdown progress",
+      "status": "Partial",
+      "completion": 45,
+      "reachability": "Active race/practice",
+      "blockers": "B02/B04/B05: phases, clock and player identity"
+    },
+    {
+      "file": "components/Toast.tsx",
+      "lines": 34,
+      "bytes": 1448,
+      "imports": [
+        "react",
+        "../types"
+      ],
+      "symbols": [
+        {
+          "name": "ToastContainerProps",
+          "line": 5
+        },
+        {
+          "name": "ToastContainer",
+          "line": 15
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Presents temporary effect notifications",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "components/TournamentScreen.tsx",
+      "lines": 335,
+      "bytes": 12954,
+      "imports": [
+        "react",
+        "../types",
+        "../constants",
+        "../services/networkService",
+        "../services/firebase"
+      ],
+      "symbols": [
+        {
+          "name": "TournamentScreenProps",
+          "line": 14
+        },
+        {
+          "name": "TournamentScreen",
+          "line": 23
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Displays bracket, joins and enters tournament matches",
+      "status": "Partial",
+      "completion": 25,
+      "reachability": "Server callable; UI entry disconnected",
+      "blockers": "See B11: authority, persistence, admission and return flow"
+    },
+    {
+      "file": "components/WelcomePopup.tsx",
+      "lines": 117,
+      "bytes": 4313,
+      "imports": [
+        "react"
+      ],
+      "symbols": [
+        {
+          "name": "WelcomePopupProps",
+          "line": 3
+        },
+        {
+          "name": "WelcomePopup",
+          "line": 10
+        },
+        {
+          "name": "hasSeenWelcome",
+          "line": 110
+        }
+      ],
+      "timers": 3,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Presents first-visit introduction",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "constants.ts",
+      "lines": 8,
+      "bytes": 169,
+      "imports": [
+        "./shared/constants"
+      ],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Defines game content, balance values and configuration catalogs",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "eslint.config.js",
+      "lines": 39,
+      "bytes": 1092,
+      "imports": [
+        "@eslint/js",
+        "typescript-eslint"
+      ],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Configures build, deployment or access policy",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Build/deploy or entry point",
+      "blockers": "Runtime deployment and production recovery unverified"
+    },
+    {
+      "file": "events/EventStub.tsx",
+      "lines": 34,
+      "bytes": 1346,
+      "imports": [
+        "react",
+        "../services/seededRNG",
+        "../types"
+      ],
+      "symbols": [
+        {
+          "name": "EventStub",
+          "line": 6
+        }
+      ],
+      "timers": 1,
+      "random": 0,
+      "pauseRefs": 3,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Application entry, metadata, asset or build contract",
+      "status": "Deprecated",
+      "completion": 15,
+      "reachability": "No ordinary active path",
+      "blockers": "Unused scaffold/compatibility export; verify references before removal"
+    },
+    {
+      "file": "events/eventRegistry.ts",
+      "lines": 901,
+      "bytes": 32722,
+      "imports": [
+        "react",
+        "../types",
+        "./ReactionTap",
+        "./TypeBurst",
+        "./EventStub",
+        "./SliderPrecision",
+        "./PatternRecall",
+        "./EvadeGrid",
+        "./JumpBar",
+        "./WireLink",
+        "./FindPixel",
+        "./TargetPractice",
+        "./RhythmTap",
+        "./SequenceSort",
+        "./AsteroidDodge",
+        "./PathTracer",
+        "./CodeBreaker",
+        "./QuickMath",
+        "./QuickQuiz",
+        "./MemoryFlip",
+        "./AimFlick",
+        "./MazeMicro",
+        "./ColorMath",
+        "./AngleNudge",
+        "./TypeRacerSnippet",
+        "./SnapshotMemory",
+        "./BurstClicks",
+        "./SprintMash",
+        "./GhostTrajectory",
+        "./EmojiCipher",
+        "./AudioBeat",
+        "./SystemPurge",
+        "./BalanceBeam",
+        "./WhackAMole",
+        "./StopTheClock",
+        "./WordStorm",
+        "./AnagramRush",
+        "./DialLock",
+        "./PixelPush",
+        "./MirrorDraw",
+        "./NumberStack",
+        "./SymbolMatch",
+        "./DrumEcho",
+        "./WaveRide",
+        "./ColorSort",
+        "./FlowConnect",
+        "./LogicGates",
+        "./TiltMaze",
+        "./ChordMemory",
+        "./WordScramble"
+      ],
+      "symbols": [
+        {
+          "name": "eventRegistry",
+          "line": 55
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Registers all 47 event descriptions, durations, scoring and lazy components",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "firebase.json",
+      "lines": 20,
+      "bytes": 287,
+      "imports": [],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Initializes Firebase client and anonymous sessions",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Build/deploy or entry point",
+      "blockers": "Runtime deployment and production recovery unverified"
+    },
+    {
+      "file": "firestore.rules",
+      "lines": 52,
+      "bytes": 2599,
+      "imports": [],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Configures build, deployment or access policy",
+      "status": "Partial",
+      "completion": 35,
+      "reachability": "Indirect: finish/auth/storage",
+      "blockers": "See B06–B09 and R13: authority, identity, receipts"
+    },
+    {
+      "file": "hooks/useConnectionStatus.ts",
+      "lines": 50,
+      "bytes": 1346,
+      "imports": [
+        "react",
+        "../services/networkService",
+        "../shared/types"
+      ],
+      "symbols": [
+        {
+          "name": "useConnectionStatus",
+          "line": 12
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Subscribes to connection metrics",
+      "status": "Partial",
+      "completion": 40,
+      "reachability": "Online UI and socket events",
+      "blockers": "B05/B10: identity, subscribers, reconnect and cache"
+    },
+    {
+      "file": "hooks/useEventFeedback.ts",
+      "lines": 61,
+      "bytes": 1989,
+      "imports": [
+        "react",
+        "./useSound",
+        "../services/hapticsService"
+      ],
+      "symbols": [
+        {
+          "name": "EventFeedback",
+          "line": 20
+        },
+        {
+          "name": "useEventFeedback",
+          "line": 33
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": true,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Unifies event sound/haptic feedback",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "hooks/useGameEngine.ts",
+      "lines": 430,
+      "bytes": 16518,
+      "imports": [
+        "react",
+        "../types",
+        "../services/pathGenerator",
+        "../events/eventRegistry",
+        "../constants",
+        "../services/seededRNG",
+        "./useSound",
+        "../services/hapticsService",
+        "../services/nebulaGenerator",
+        "../components/PitStopScreen",
+        "../services/gameRules",
+        "../shared/gameSetup",
+        "../shared/botMind"
+      ],
+      "symbols": [
+        {
+          "name": "useGameEngine",
+          "line": 16
+        }
+      ],
+      "timers": 2,
+      "random": 1,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Constructs local/ghost/gauntlet state and applies rules/effects",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "hooks/useOnlineGame.ts",
+      "lines": 387,
+      "bytes": 12704,
+      "imports": [
+        "react",
+        "../services/networkService",
+        "../types",
+        "../shared/protocol",
+        "../shared/matchSummary",
+        "../shared/types"
+      ],
+      "symbols": [
+        {
+          "name": "GameMode",
+          "line": 19
+        },
+        {
+          "name": "OnlineLobbyState",
+          "line": 21
+        },
+        {
+          "name": "OnlineMatchPhase",
+          "line": 31
+        },
+        {
+          "name": "OnlineGameHook",
+          "line": 41
+        },
+        {
+          "name": "useOnlineGame",
+          "line": 98
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Maps network events to online state and commands",
+      "status": "Partial",
+      "completion": 40,
+      "reachability": "Online UI and socket events",
+      "blockers": "B05/B10: identity, subscribers, reconnect and cache"
+    },
+    {
+      "file": "hooks/useOnlineScreenSync.ts",
+      "lines": 88,
+      "bytes": 2108,
+      "imports": [
+        "react",
+        "../shared/types",
+        "./useOnlineGame"
+      ],
+      "symbols": [
+        {
+          "name": "UseOnlineScreenSyncOptions",
+          "line": 12
+        },
+        {
+          "name": "useOnlineScreenSync",
+          "line": 19
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Maps online phases into App screens",
+      "status": "Partial",
+      "completion": 40,
+      "reachability": "Online UI and socket events",
+      "blockers": "B05/B10: identity, subscribers, reconnect and cache"
+    },
+    {
+      "file": "hooks/useScreenTransition.ts",
+      "lines": 59,
+      "bytes": 1503,
+      "imports": [
+        "react"
+      ],
+      "symbols": [
+        {
+          "name": "ScreenName",
+          "line": 9
+        },
+        {
+          "name": "ScreenTransitionState",
+          "line": 11
+        },
+        {
+          "name": "useScreenTransition",
+          "line": 17
+        }
+      ],
+      "timers": 3,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Unused transition abstraction",
+      "status": "Deprecated",
+      "completion": 15,
+      "reachability": "No ordinary active path",
+      "blockers": "Unused scaffold/compatibility export; verify references before removal"
+    },
+    {
+      "file": "hooks/useSound.ts",
+      "lines": 10,
+      "bytes": 310,
+      "imports": [
+        "../services/audioService",
+        "../types"
+      ],
+      "symbols": [
+        {
+          "name": "useSound",
+          "line": 4
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Exposes audio singleton to components",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "index.css",
+      "lines": 724,
+      "bytes": 20595,
+      "imports": [],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Defines application styles and animation",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Build/deploy or entry point",
+      "blockers": "Runtime deployment and production recovery unverified"
+    },
+    {
+      "file": "index.html",
+      "lines": 38,
+      "bytes": 2146,
+      "imports": [],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Application entry, metadata, asset or build contract",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Build/deploy or entry point",
+      "blockers": "Runtime deployment and production recovery unverified"
+    },
+    {
+      "file": "index.tsx",
+      "lines": 22,
+      "bytes": 522,
+      "imports": [
+        "react",
+        "react-dom/client",
+        "./index.css",
+        "./styles.css",
+        "./App",
+        "./components/ErrorBoundary"
+      ],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Application entry, metadata, asset or build contract",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Build/deploy or entry point",
+      "blockers": "Runtime deployment and production recovery unverified"
+    },
+    {
+      "file": "manifest.json",
+      "lines": 20,
+      "bytes": 662,
+      "imports": [],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Application entry, metadata, asset or build contract",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Build/deploy or entry point",
+      "blockers": "Runtime deployment and production recovery unverified"
+    },
+    {
+      "file": "metadata.json",
+      "lines": 5,
+      "bytes": 289,
+      "imports": [],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Application entry, metadata, asset or build contract",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Build/deploy or entry point",
+      "blockers": "Runtime deployment and production recovery unverified"
+    },
+    {
+      "file": "netlify.toml",
+      "lines": 13,
+      "bytes": 210,
+      "imports": [],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Configures build, deployment or access policy",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Build/deploy or entry point",
+      "blockers": "Runtime deployment and production recovery unverified"
+    },
+    {
+      "file": "package-lock.json",
+      "lines": 7224,
+      "bytes": 252403,
+      "imports": [],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Pins transitive dependencies",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Build/deploy or entry point",
+      "blockers": "Runtime deployment and production recovery unverified"
+    },
+    {
+      "file": "package.json",
+      "lines": 38,
+      "bytes": 911,
+      "imports": [],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Application entry, metadata, asset or build contract",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Build/deploy or entry point",
+      "blockers": "Runtime deployment and production recovery unverified"
+    },
+    {
+      "file": "public/_redirects",
+      "lines": 2,
+      "bytes": 24,
+      "imports": [],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Application entry, metadata, asset or build contract",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Build/deploy or entry point",
+      "blockers": "Runtime deployment and production recovery unverified"
+    },
+    {
+      "file": "render.yaml",
+      "lines": 18,
+      "bytes": 490,
+      "imports": [],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Configures build, deployment or access policy",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Build/deploy or entry point",
+      "blockers": "Runtime deployment and production recovery unverified"
+    },
+    {
+      "file": "server/RENDER_DEPLOY.md",
+      "lines": 123,
+      "bytes": 4569,
+      "imports": [],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Documents development behavior/plans",
+      "status": "Partial",
+      "completion": 40,
+      "reachability": "Developer documentation",
+      "blockers": "Stale claims must be reconciled against current source"
+    },
+    {
+      "file": "server/package-lock.json",
+      "lines": 5627,
+      "bytes": 203094,
+      "imports": [],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Pins transitive dependencies",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Build/deploy or entry point",
+      "blockers": "Runtime deployment and production recovery unverified"
+    },
+    {
+      "file": "server/package.json",
+      "lines": 34,
+      "bytes": 806,
+      "imports": [],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Application entry, metadata, asset or build contract",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Build/deploy or entry point",
+      "blockers": "Runtime deployment and production recovery unverified"
+    },
+    {
+      "file": "server/src/__tests__/ConfluxRoom.test.ts",
+      "lines": 343,
+      "bytes": 12956,
+      "imports": [
+        "vitest",
+        "../rooms/ConfluxRoom",
+        "../../../shared/protocol",
+        "../../../shared/types"
+      ],
+      "symbols": [
+        {
+          "name": "createMockClient",
+          "line": 6
+        },
+        {
+          "name": "createMockRoom",
+          "line": 15
+        },
+        {
+          "name": "makeRoomConfig",
+          "line": 82
+        }
+      ],
+      "timers": 2,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": true,
+      "runtimeImportReachable": false,
+      "purpose": "Verifies ConfluxRoom with unit/integration fixtures",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Developer: test runner",
+      "blockers": "Existing suite passes; does not establish journey completeness"
+    },
+    {
+      "file": "server/src/__tests__/eventValidator.test.ts",
+      "lines": 224,
+      "bytes": 7828,
+      "imports": [
+        "vitest",
+        "../validation/eventValidator",
+        "../../../shared/types"
+      ],
+      "symbols": [
+        {
+          "name": "makeTelemetry",
+          "line": 20
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": true,
+      "runtimeImportReachable": false,
+      "purpose": "Verifies eventValidator with unit/integration fixtures",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Developer: test runner",
+      "blockers": "Existing suite passes; does not establish journey completeness"
+    },
+    {
+      "file": "server/src/__tests__/matchmaking.integration.test.ts",
+      "lines": 199,
+      "bytes": 7529,
+      "imports": [
+        "vitest",
+        "http",
+        "colyseus",
+        "@colyseus/ws-transport",
+        "colyseus.js",
+        "../gameServerConfig",
+        "../../../shared/protocol",
+        "../../../shared/types"
+      ],
+      "symbols": [
+        {
+          "name": "makeConfig",
+          "line": 24
+        }
+      ],
+      "timers": 7,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": true,
+      "runtimeImportReachable": false,
+      "purpose": "Verifies matchmaking.integration with unit/integration fixtures",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Developer: test runner",
+      "blockers": "Existing suite passes; does not establish journey completeness"
+    },
+    {
+      "file": "server/src/__tests__/restApi.test.ts",
+      "lines": 104,
+      "bytes": 3450,
+      "imports": [
+        "vitest",
+        "http",
+        "colyseus",
+        "@colyseus/ws-transport",
+        "../gameServerConfig",
+        "../createExpressApp"
+      ],
+      "symbols": [
+        {
+          "name": "httpRequest",
+          "line": 23
+        }
+      ],
+      "timers": 1,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": true,
+      "runtimeImportReachable": false,
+      "purpose": "Verifies restApi with unit/integration fixtures",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Developer: test runner",
+      "blockers": "Existing suite passes; does not establish journey completeness"
+    },
+    {
+      "file": "server/src/__tests__/retry.test.ts",
+      "lines": 88,
+      "bytes": 3286,
+      "imports": [
+        "vitest",
+        "../services/retry"
+      ],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": true,
+      "runtimeImportReachable": false,
+      "purpose": "Verifies retry with unit/integration fixtures",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Developer: test runner",
+      "blockers": "Existing suite passes; does not establish journey completeness"
+    },
+    {
+      "file": "server/src/__tests__/tournament.integration.test.ts",
+      "lines": 219,
+      "bytes": 8098,
+      "imports": [
+        "vitest",
+        "http",
+        "colyseus",
+        "@colyseus/ws-transport",
+        "colyseus.js",
+        "../gameServerConfig",
+        "../../../shared/protocol",
+        "../../../shared/types"
+      ],
+      "symbols": [
+        {
+          "name": "makeConfig",
+          "line": 28
+        },
+        {
+          "name": "waitForMessage",
+          "line": 36
+        }
+      ],
+      "timers": 1,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": true,
+      "runtimeImportReachable": false,
+      "purpose": "Verifies tournament.integration with unit/integration fixtures",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Developer: test runner",
+      "blockers": "Existing suite passes; does not establish journey completeness"
+    },
+    {
+      "file": "server/src/__tests__/verifyToken.test.ts",
+      "lines": 117,
+      "bytes": 4476,
+      "imports": [
+        "vitest",
+        "../auth/verifyToken"
+      ],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": true,
+      "runtimeImportReachable": false,
+      "purpose": "Verifies verifyToken with unit/integration fixtures",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Developer: test runner",
+      "blockers": "Existing suite passes; does not establish journey completeness"
+    },
+    {
+      "file": "server/src/auth/verifyToken.ts",
+      "lines": 67,
+      "bytes": 2189,
+      "imports": [
+        "../firebaseAdmin"
+      ],
+      "symbols": [
+        {
+          "name": "VerifiedIdentity",
+          "line": 17
+        },
+        {
+          "name": "verifyAuthToken",
+          "line": 29
+        },
+        {
+          "name": "validateUserIdClaim",
+          "line": 63
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Verifies Firebase tokens and development bypass",
+      "status": "Partial",
+      "completion": 35,
+      "reachability": "Indirect: finish/auth/storage",
+      "blockers": "See B06–B09 and R13: authority, identity, receipts"
+    },
+    {
+      "file": "server/src/createExpressApp.ts",
+      "lines": 114,
+      "bytes": 3743,
+      "imports": [
+        "express",
+        "cors",
+        "colyseus",
+        "../../shared/protocol",
+        "./gameServerConfig",
+        "./firebaseAdmin"
+      ],
+      "symbols": [
+        {
+          "name": "createExpressApp",
+          "line": 44
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Configures CORS/JSON and health, diagnostics, discovery endpoints",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "server/src/eventDescriptors.ts",
+      "lines": 356,
+      "bytes": 12127,
+      "imports": [
+        "../../shared/types"
+      ],
+      "symbols": [
+        {
+          "name": "StarComputer",
+          "line": 14
+        },
+        {
+          "name": "STAR_COMPUTERS",
+          "line": 17
+        },
+        {
+          "name": "EVENT_DESCRIPTORS",
+          "line": 307
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Duplicates event descriptors/scoring for server use",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "server/src/firebaseAdmin.ts",
+      "lines": 102,
+      "bytes": 4150,
+      "imports": [
+        "firebase-admin",
+        "fs"
+      ],
+      "symbols": [
+        {
+          "name": "authReady",
+          "line": 30
+        },
+        {
+          "name": "authInitReason",
+          "line": 35
+        },
+        {
+          "name": "resolveCredential",
+          "line": 41
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Initializes Admin SDK and exposes readiness state",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "server/src/gameServerConfig.ts",
+      "lines": 36,
+      "bytes": 1447,
+      "imports": [
+        "colyseus",
+        "../../shared/protocol",
+        "./rooms/ConfluxRoom",
+        "./rooms/MatchmakingRoom",
+        "./rooms/TournamentRoom"
+      ],
+      "symbols": [
+        {
+          "name": "REGISTERED_ROOMS",
+          "line": 19
+        },
+        {
+          "name": "defineRooms",
+          "line": 30
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Registers gameplay, queue and tournament rooms",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "server/src/index.ts",
+      "lines": 45,
+      "bytes": 1795,
+      "imports": [
+        "colyseus",
+        "@colyseus/ws-transport",
+        "http",
+        "./gameServerConfig",
+        "./createExpressApp",
+        "./firebaseAdmin"
+      ],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Application entry, metadata, asset or build contract",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Build/deploy or entry point",
+      "blockers": "Runtime deployment and production recovery unverified"
+    },
+    {
+      "file": "server/src/rooms/ConfluxRoom.ts",
+      "lines": 1274,
+      "bytes": 47306,
+      "imports": [
+        "colyseus",
+        "../../../shared/types",
+        "../../../shared/constants",
+        "../../../shared/seededRNG",
+        "../../../shared/pathGenerator",
+        "../../../shared/gameRules",
+        "../../../shared/botMind",
+        "../../../shared/protocol",
+        "../../../shared/protocol",
+        "../eventDescriptors",
+        "../validation/eventValidator",
+        "../validation/rateLimiter",
+        "../../../shared/matchSummary",
+        "../../../shared/rankSystem",
+        "../../../shared/gameSetup",
+        "../../../shared/contractService",
+        "../services/profileRepository",
+        "../services/matchSummaryPipeline",
+        "../services/leaderboardRepository",
+        "../services/matchHistoryRepository",
+        "../../../shared/types",
+        "../auth/verifyToken"
+      ],
+      "symbols": [
+        {
+          "name": "RoomPlayer",
+          "line": 50
+        },
+        {
+          "name": "ConfluxRoomState",
+          "line": 70
+        },
+        {
+          "name": "generateRoomCode",
+          "line": 86
+        },
+        {
+          "name": "ConfluxRoom",
+          "line": 108
+        }
+      ],
+      "timers": 6,
+      "random": 4,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Owns authoritative match lifecycle and gameplay commands",
+      "status": "Partial",
+      "completion": 35,
+      "reachability": "WebSocket match room",
+      "blockers": "B01–B07: command/phase/clock/receipt integrity"
+    },
+    {
+      "file": "server/src/rooms/MatchmakingRoom.ts",
+      "lines": 235,
+      "bytes": 8130,
+      "imports": [
+        "colyseus",
+        "../../../shared/protocol",
+        "../../../shared/types",
+        "../../../shared/rankSystem"
+      ],
+      "symbols": [
+        {
+          "name": "QueuePlayer",
+          "line": 13
+        },
+        {
+          "name": "MatchmakingRoom",
+          "line": 43
+        }
+      ],
+      "timers": 2,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Groups waiting players and reserves gameplay seats",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "server/src/rooms/TournamentRoom.ts",
+      "lines": 328,
+      "bytes": 12050,
+      "imports": [
+        "colyseus",
+        "../../../shared/protocol",
+        "../../../shared/types",
+        "../services/tournamentRepository"
+      ],
+      "symbols": [
+        {
+          "name": "TournamentRoom",
+          "line": 19
+        }
+      ],
+      "timers": 2,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Builds/advances tournament brackets and child rooms",
+      "status": "Partial",
+      "completion": 25,
+      "reachability": "Server callable; UI entry disconnected",
+      "blockers": "See B11: authority, persistence, admission and return flow"
+    },
+    {
+      "file": "server/src/services/leaderboardRepository.ts",
+      "lines": 28,
+      "bytes": 923,
+      "imports": [
+        "../firebaseAdmin",
+        "../../../shared/types",
+        "./retry"
+      ],
+      "symbols": [
+        {
+          "name": "writeLeaderboardEntry",
+          "line": 5
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Writes ranking projection documents",
+      "status": "Partial",
+      "completion": 40,
+      "reachability": "Cloud UI or finish projection",
+      "blockers": "B09: paths, missing mode publishing and silent errors"
+    },
+    {
+      "file": "server/src/services/matchHistoryRepository.ts",
+      "lines": 13,
+      "bytes": 444,
+      "imports": [
+        "../firebaseAdmin",
+        "../../../shared/types",
+        "./retry"
+      ],
+      "symbols": [
+        {
+          "name": "writeMatchHistory",
+          "line": 5
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Writes personal match history",
+      "status": "Partial",
+      "completion": 40,
+      "reachability": "Cloud UI or finish projection",
+      "blockers": "B09: paths, missing mode publishing and silent errors"
+    },
+    {
+      "file": "server/src/services/matchSummaryPipeline.ts",
+      "lines": 176,
+      "bytes": 6494,
+      "imports": [
+        "colyseus",
+        "../../../shared/protocol",
+        "../../../shared/types",
+        "../../../shared/matchSummary",
+        "../../../shared/rankSystem",
+        "../../../shared/contractService",
+        "./profileRepository",
+        "./leaderboardRepository",
+        "./matchHistoryRepository"
+      ],
+      "symbols": [
+        {
+          "name": "RoomPlayerInfo",
+          "line": 29
+        },
+        {
+          "name": "SummaryPipelineContext",
+          "line": 37
+        },
+        {
+          "name": "runMatchSummaryPipeline",
+          "line": 57
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Coordinates profile transaction, projections and summary delivery",
+      "status": "Partial",
+      "completion": 35,
+      "reachability": "Indirect: finish/auth/storage",
+      "blockers": "See B06–B09 and R13: authority, identity, receipts"
+    },
+    {
+      "file": "server/src/services/profileRepository.ts",
+      "lines": 62,
+      "bytes": 2119,
+      "imports": [
+        "../firebaseAdmin",
+        "../../../shared/types",
+        "./retry"
+      ],
+      "symbols": [
+        {
+          "name": "getProfile",
+          "line": 5
+        },
+        {
+          "name": "saveProfile",
+          "line": 21
+        },
+        {
+          "name": "updateProfileTransaction",
+          "line": 39
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Reads/writes/transacts authoritative profiles",
+      "status": "Partial",
+      "completion": 35,
+      "reachability": "Indirect: finish/auth/storage",
+      "blockers": "See B06–B09 and R13: authority, identity, receipts"
+    },
+    {
+      "file": "server/src/services/retry.ts",
+      "lines": 100,
+      "bytes": 2932,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "RetryConfig",
+          "line": 10
+        },
+        {
+          "name": "isTransientError",
+          "line": 32
+        },
+        {
+          "name": "sleep",
+          "line": 50
+        },
+        {
+          "name": "withRetry",
+          "line": 62
+        }
+      ],
+      "timers": 1,
+      "random": 1,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Retries transient persistence errors with backoff",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "server/src/services/tournamentRepository.ts",
+      "lines": 60,
+      "bytes": 1922,
+      "imports": [
+        "../firebaseAdmin",
+        "../../../shared/types",
+        "./retry"
+      ],
+      "symbols": [
+        {
+          "name": "saveTournamentBracket",
+          "line": 16
+        },
+        {
+          "name": "loadTournamentBracket",
+          "line": 29
+        },
+        {
+          "name": "deleteTournamentBracket",
+          "line": 52
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Saves, loads and deletes tournament brackets",
+      "status": "Partial",
+      "completion": 25,
+      "reachability": "Server callable; UI entry disconnected",
+      "blockers": "See B11: authority, persistence, admission and return flow"
+    },
+    {
+      "file": "server/src/validation/eventValidator.ts",
+      "lines": 230,
+      "bytes": 8612,
+      "imports": [
+        "../../../shared/types",
+        "../eventDescriptors"
+      ],
+      "symbols": [
+        {
+          "name": "ValidationContext",
+          "line": 18
+        },
+        {
+          "name": "ValidationResult",
+          "line": 25
+        },
+        {
+          "name": "ServerEventValidator",
+          "line": 127
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Checks event telemetry plausibility",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "server/src/validation/rateLimiter.ts",
+      "lines": 98,
+      "bytes": 2984,
+      "imports": [
+        "../../../shared/protocol"
+      ],
+      "symbols": [
+        {
+          "name": "TokenBucket",
+          "line": 9
+        },
+        {
+          "name": "ClientRateLimiter",
+          "line": 49
+        },
+        {
+          "name": "RATE_LIMITS",
+          "line": 84
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Limits selected commands with per-client token buckets",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "server/tsconfig.json",
+      "lines": 33,
+      "bytes": 828,
+      "imports": [],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Configures build, deployment or access policy",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Build/deploy or entry point",
+      "blockers": "Runtime deployment and production recovery unverified"
+    },
+    {
+      "file": "server/vitest.config.ts",
+      "lines": 15,
+      "bytes": 362,
+      "imports": [
+        "vitest/config"
+      ],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Verifies vitest.config with unit/integration fixtures",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Build/deploy or entry point",
+      "blockers": "Runtime deployment and production recovery unverified"
+    },
+    {
+      "file": "services/__tests__/firebaseGhostService.test.ts",
+      "lines": 99,
+      "bytes": 2933,
+      "imports": [
+        "vitest",
+        "../firebaseGhostService",
+        "../../types"
+      ],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": true,
+      "runtimeImportReachable": false,
+      "purpose": "Verifies firebaseGhostService with unit/integration fixtures",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Developer: test runner",
+      "blockers": "Existing suite passes; does not establish journey completeness"
+    },
+    {
+      "file": "services/__tests__/networkService.test.ts",
+      "lines": 137,
+      "bytes": 4436,
+      "imports": [
+        "vitest",
+        "../networkService"
+      ],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": true,
+      "runtimeImportReachable": false,
+      "purpose": "Verifies networkService with unit/integration fixtures",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Developer: test runner",
+      "blockers": "Existing suite passes; does not establish journey completeness"
+    },
+    {
+      "file": "services/audioService.ts",
+      "lines": 204,
+      "bytes": 8837,
+      "imports": [
+        "../types"
+      ],
+      "symbols": [
+        {
+          "name": "AudioService",
+          "line": 5
+        },
+        {
+          "name": "audioService",
+          "line": 203
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Loads external sounds and synthesizes fallback feedback",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "services/botMind.ts",
+      "lines": 42,
+      "bytes": 1432,
+      "imports": [
+        "../types",
+        "../shared/botMind"
+      ],
+      "symbols": [
+        {
+          "name": "toBotEventInfo",
+          "line": 17
+        },
+        {
+          "name": "simulateBotPerformance",
+          "line": 30
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Simulates bot metrics and strategic commands",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "services/firebase.ts",
+      "lines": 59,
+      "bytes": 1866,
+      "imports": [
+        "firebase/app",
+        "firebase/auth",
+        "firebase/firestore"
+      ],
+      "symbols": [
+        {
+          "name": "signIn",
+          "line": 32
+        },
+        {
+          "name": "signOut",
+          "line": 46
+        },
+        {
+          "name": "resetAnonymousSession",
+          "line": 55
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Initializes Firebase client and anonymous sessions",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "services/firebaseGhostService.ts",
+      "lines": 76,
+      "bytes": 2035,
+      "imports": [
+        "firebase/firestore",
+        "./firebase",
+        "../types"
+      ],
+      "symbols": [
+        {
+          "name": "submitGhostRun",
+          "line": 16
+        },
+        {
+          "name": "fetchGhostRuns",
+          "line": 40
+        },
+        {
+          "name": "fetchRandomGhost",
+          "line": 60
+        }
+      ],
+      "timers": 0,
+      "random": 1,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Reads and publishes ghost run documents",
+      "status": "Partial",
+      "completion": 30,
+      "reachability": "Code path exists; UI entry disconnected",
+      "blockers": "See B12: replay contract and lifecycle isolation"
+    },
+    {
+      "file": "services/firebaseProfileService.ts",
+      "lines": 46,
+      "bytes": 1550,
+      "imports": [
+        "../shared/types",
+        "./firebase",
+        "firebase/firestore",
+        "./profileService"
+      ],
+      "symbols": [
+        {
+          "name": "syncProfile",
+          "line": 6
+        },
+        {
+          "name": "syncProfileMerge",
+          "line": 18
+        },
+        {
+          "name": "fetchProfile",
+          "line": 30
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Fetches and writes complete cloud profiles",
+      "status": "Partial",
+      "completion": 35,
+      "reachability": "Indirect: finish/auth/storage",
+      "blockers": "See B06–B09 and R13: authority, identity, receipts"
+    },
+    {
+      "file": "services/gameRules.ts",
+      "lines": 44,
+      "bytes": 1708,
+      "imports": [
+        "../types",
+        "../shared/gameRules",
+        "../events/eventRegistry",
+        "../shared/gameRules"
+      ],
+      "symbols": [
+        {
+          "name": "GameRules",
+          "line": 30
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Processes race steps, powers, overdrive, pit stops and interventions",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "services/hapticsService.ts",
+      "lines": 48,
+      "bytes": 1425,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "HapticsService",
+          "line": 1
+        },
+        {
+          "name": "hapticsService",
+          "line": 47
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Provides browser vibration patterns",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "services/leaderboardService.ts",
+      "lines": 26,
+      "bytes": 1124,
+      "imports": [
+        "./firebase",
+        "../shared/types",
+        "firebase/firestore"
+      ],
+      "symbols": [
+        {
+          "name": "fetchLeaderboard",
+          "line": 7
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Reads ranking queries",
+      "status": "Partial",
+      "completion": 40,
+      "reachability": "Cloud UI or finish projection",
+      "blockers": "B09: paths, missing mode publishing and silent errors"
+    },
+    {
+      "file": "services/matchHistoryService.ts",
+      "lines": 22,
+      "bytes": 676,
+      "imports": [
+        "./firebase",
+        "../shared/types",
+        "firebase/firestore"
+      ],
+      "symbols": [
+        {
+          "name": "fetchMatchHistory",
+          "line": 7
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Reads personal match documents",
+      "status": "Partial",
+      "completion": 40,
+      "reachability": "Cloud UI or finish projection",
+      "blockers": "B09: paths, missing mode publishing and silent errors"
+    },
+    {
+      "file": "services/nebulaGenerator.ts",
+      "lines": 109,
+      "bytes": 3538,
+      "imports": [
+        "./seededRNG"
+      ],
+      "symbols": [
+        {
+          "name": "createNoise",
+          "line": 4
+        },
+        {
+          "name": "generateNebula",
+          "line": 40
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Generates seeded procedural background texture",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "services/networkService.ts",
+      "lines": 719,
+      "bytes": 25657,
+      "imports": [
+        "colyseus.js",
+        "../types",
+        "../shared/protocol",
+        "../shared/types",
+        "../shared/protocol"
+      ],
+      "symbols": [
+        {
+          "name": "OpenRoomInfo",
+          "line": 33
+        },
+        {
+          "name": "NetworkEventHandlers",
+          "line": 43
+        },
+        {
+          "name": "NetworkService",
+          "line": 81
+        },
+        {
+          "name": "networkService",
+          "line": 718
+        }
+      ],
+      "timers": 4,
+      "random": 1,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Owns room/queue/tournament sockets, callbacks, reconnect and telemetry cache",
+      "status": "Partial",
+      "completion": 40,
+      "reachability": "Online UI and socket events",
+      "blockers": "B05/B10: identity, subscribers, reconnect and cache"
+    },
+    {
+      "file": "services/pathGenerator.ts",
+      "lines": 7,
+      "bytes": 256,
+      "imports": [
+        "../shared/pathGenerator"
+      ],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Generates seeded tile/event/modifier paths",
+      "status": "Partial",
+      "completion": 45,
+      "reachability": "Race setup",
+      "blockers": "B03: bounded generation and input validation"
+    },
+    {
+      "file": "services/presetService.ts",
+      "lines": 29,
+      "bytes": 968,
+      "imports": [
+        "../types"
+      ],
+      "symbols": [
+        {
+          "name": "savePresets",
+          "line": 5
+        },
+        {
+          "name": "loadPresets",
+          "line": 13
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Persists Workshop event pools",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "services/profileService.ts",
+      "lines": 329,
+      "bytes": 11582,
+      "imports": [
+        "../types",
+        "./seededRNG",
+        "../constants"
+      ],
+      "symbols": [
+        {
+          "name": "StoredPilotAccount",
+          "line": 11
+        },
+        {
+          "name": "PilotAccountSummary",
+          "line": 17
+        },
+        {
+          "name": "listProfiles",
+          "line": 219
+        },
+        {
+          "name": "loadProfile",
+          "line": 231
+        },
+        {
+          "name": "saveProfile",
+          "line": 241
+        },
+        {
+          "name": "createProfileAccount",
+          "line": 259
+        },
+        {
+          "name": "setActiveProfile",
+          "line": 272
+        },
+        {
+          "name": "deleteProfileAccount",
+          "line": 280
+        },
+        {
+          "name": "clearProfile",
+          "line": 294
+        },
+        {
+          "name": "createDefaultProfile",
+          "line": 298
+        }
+      ],
+      "timers": 0,
+      "random": 1,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Manages local accounts, normalization, migration and purchases",
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Lobby/navigation",
+      "blockers": "B08/B13/B15: currency, persistence and semantic drift"
+    },
+    {
+      "file": "services/rivalBanter.ts",
+      "lines": 7,
+      "bytes": 226,
+      "imports": [
+        "../shared/rivalBanter",
+        "../shared/rivalBanter"
+      ],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Selects contextual rival dialogue",
+      "status": "Deprecated",
+      "completion": 15,
+      "reachability": "No ordinary active path",
+      "blockers": "Unused scaffold/compatibility export; verify references before removal"
+    },
+    {
+      "file": "services/seededRNG.ts",
+      "lines": 6,
+      "bytes": 158,
+      "imports": [
+        "../shared/seededRNG"
+      ],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Produces deterministic pseudo-random values",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "services/shareService.ts",
+      "lines": 83,
+      "bytes": 2603,
+      "imports": [
+        "../types"
+      ],
+      "symbols": [
+        {
+          "name": "CompactSettings",
+          "line": 4
+        },
+        {
+          "name": "toCompact",
+          "line": 18
+        },
+        {
+          "name": "fromCompact",
+          "line": 34
+        },
+        {
+          "name": "encodeSettings",
+          "line": 50
+        },
+        {
+          "name": "decodeSettings",
+          "line": 61
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Encodes/decodes race settings in URL-safe workflow",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "shared/__tests__/botMind.test.ts",
+      "lines": 220,
+      "bytes": 8628,
+      "imports": [
+        "vitest",
+        "../botMind",
+        "../seededRNG",
+        "../types"
+      ],
+      "symbols": [
+        {
+          "name": "makeRivalBot",
+          "line": 22
+        },
+        {
+          "name": "makeHuman",
+          "line": 41
+        },
+        {
+          "name": "makeGameState",
+          "line": 59
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": true,
+      "runtimeImportReachable": false,
+      "purpose": "Verifies botMind with unit/integration fixtures",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Developer: test runner",
+      "blockers": "Existing suite passes; does not establish journey completeness"
+    },
+    {
+      "file": "shared/__tests__/contractService.test.ts",
+      "lines": 172,
+      "bytes": 5447,
+      "imports": [
+        "vitest",
+        "../contractService",
+        "../types"
+      ],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": true,
+      "runtimeImportReachable": false,
+      "purpose": "Verifies contractService with unit/integration fixtures",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Developer: test runner",
+      "blockers": "Existing suite passes; does not establish journey completeness"
+    },
+    {
+      "file": "shared/__tests__/gameRules.test.ts",
+      "lines": 411,
+      "bytes": 16514,
+      "imports": [
+        "vitest",
+        "../gameRules",
+        "../types"
+      ],
+      "symbols": [
+        {
+          "name": "makePlayer",
+          "line": 29
+        },
+        {
+          "name": "makeGameState",
+          "line": 38
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": true,
+      "runtimeImportReachable": false,
+      "purpose": "Verifies gameRules with unit/integration fixtures",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Developer: test runner",
+      "blockers": "Existing suite passes; does not establish journey completeness"
+    },
+    {
+      "file": "shared/__tests__/gameSetup.test.ts",
+      "lines": 378,
+      "bytes": 15713,
+      "imports": [
+        "vitest",
+        "../gameSetup",
+        "../constants",
+        "../seededRNG",
+        "../types"
+      ],
+      "symbols": [
+        {
+          "name": "makeBaselinePlayer",
+          "line": 16
+        },
+        {
+          "name": "skillsFrom",
+          "line": 34
+        },
+        {
+          "name": "loadoutFrom",
+          "line": 45
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": true,
+      "runtimeImportReachable": false,
+      "purpose": "Verifies gameSetup with unit/integration fixtures",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Developer: test runner",
+      "blockers": "Existing suite passes; does not establish journey completeness"
+    },
+    {
+      "file": "shared/__tests__/matchSummary.test.ts",
+      "lines": 265,
+      "bytes": 9008,
+      "imports": [
+        "vitest",
+        "../matchSummary",
+        "../types"
+      ],
+      "symbols": [
+        {
+          "name": "makeGameState",
+          "line": 41
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": true,
+      "runtimeImportReachable": false,
+      "purpose": "Verifies matchSummary with unit/integration fixtures",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Developer: test runner",
+      "blockers": "Existing suite passes; does not establish journey completeness"
+    },
+    {
+      "file": "shared/__tests__/pathGenerator.test.ts",
+      "lines": 88,
+      "bytes": 3309,
+      "imports": [
+        "vitest",
+        "../pathGenerator",
+        "../types"
+      ],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": true,
+      "runtimeImportReachable": false,
+      "purpose": "Verifies pathGenerator with unit/integration fixtures",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Developer: test runner",
+      "blockers": "Existing suite passes; does not establish journey completeness"
+    },
+    {
+      "file": "shared/__tests__/phase3.test.ts",
+      "lines": 379,
+      "bytes": 15330,
+      "imports": [
+        "vitest",
+        "../pathGenerator",
+        "../gameRules",
+        "../matchSummary",
+        "../types"
+      ],
+      "symbols": [
+        {
+          "name": "makeGameState",
+          "line": 40
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": true,
+      "runtimeImportReachable": false,
+      "purpose": "Verifies phase3 with unit/integration fixtures",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Developer: test runner",
+      "blockers": "Existing suite passes; does not establish journey completeness"
+    },
+    {
+      "file": "shared/__tests__/rankSystem.test.ts",
+      "lines": 132,
+      "bytes": 4200,
+      "imports": [
+        "vitest",
+        "../rankSystem"
+      ],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": true,
+      "runtimeImportReachable": false,
+      "purpose": "Verifies rankSystem with unit/integration fixtures",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Developer: test runner",
+      "blockers": "Existing suite passes; does not establish journey completeness"
+    },
+    {
+      "file": "shared/__tests__/seededRNG.test.ts",
+      "lines": 63,
+      "bytes": 2145,
+      "imports": [
+        "vitest",
+        "../seededRNG"
+      ],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": true,
+      "runtimeImportReachable": false,
+      "purpose": "Verifies seededRNG with unit/integration fixtures",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Developer: test runner",
+      "blockers": "Existing suite passes; does not establish journey completeness"
+    },
+    {
+      "file": "shared/botMind.ts",
+      "lines": 899,
+      "bytes": 40877,
+      "imports": [
+        "./types",
+        "./seededRNG",
+        "./constants"
+      ],
+      "symbols": [
+        {
+          "name": "applyRivalTraits",
+          "line": 15
+        },
+        {
+          "name": "applyRivalTraitsToPlayer",
+          "line": 54
+        },
+        {
+          "name": "getBotResult",
+          "line": 76
+        },
+        {
+          "name": "simulateBotPerformance",
+          "line": 768
+        },
+        {
+          "name": "decideBotPowerUp",
+          "line": 786
+        },
+        {
+          "name": "decideBotOverdrive",
+          "line": 864
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Simulates bot metrics and strategic commands",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "shared/constants.ts",
+      "lines": 383,
+      "bytes": 23718,
+      "imports": [
+        "./types"
+      ],
+      "symbols": [
+        {
+          "name": "ANOMALY_DEFINITIONS",
+          "line": 16
+        },
+        {
+          "name": "PLAYER_COLORS",
+          "line": 28
+        },
+        {
+          "name": "RIVAL_NAMES",
+          "line": 37
+        },
+        {
+          "name": "POWERUP_DEFINITIONS",
+          "line": 39
+        },
+        {
+          "name": "TILE_MODIFIER_DEFINITIONS",
+          "line": 50
+        },
+        {
+          "name": "STAR_MOVEMENT_MULTIPLIERS",
+          "line": 60
+        },
+        {
+          "name": "RUBBER_BAND_THRESHOLD",
+          "line": 68
+        },
+        {
+          "name": "RUBBER_BAND_BOOST",
+          "line": 69
+        },
+        {
+          "name": "BOT_NAMES",
+          "line": 71
+        },
+        {
+          "name": "BOT_PROFILES",
+          "line": 75
+        },
+        {
+          "name": "POWERUP_AWARD_RULES",
+          "line": 93
+        },
+        {
+          "name": "SHIELD_UPGRADE_CHANCE",
+          "line": 98
+        },
+        {
+          "name": "TYPING_PHRASES",
+          "line": 100
+        },
+        {
+          "name": "TYPING_GLITCH_WORDS",
+          "line": 119
+        },
+        {
+          "name": "CP_AWARD_RULES",
+          "line": 124
+        },
+        {
+          "name": "AVATARS",
+          "line": 131
+        },
+        {
+          "name": "CHASSIS_DEFINITIONS",
+          "line": 135
+        },
+        {
+          "name": "ACCOLADE_DEFINITIONS",
+          "line": 143
+        },
+        {
+          "name": "RIVAL_TRAIT_DEFINITIONS",
+          "line": 156
+        },
+        {
+          "name": "CORPORATION_DEFINITIONS",
+          "line": 164
+        },
+        {
+          "name": "RIVAL_BANTER",
+          "line": 170
+        },
+        {
+          "name": "PIT_STOP_CONFIG",
+          "line": 191
+        },
+        {
+          "name": "OVERDRIVE_COOLDOWN",
+          "line": 203
+        },
+        {
+          "name": "OVERDRIVE_ENERGY_COST",
+          "line": 204
+        },
+        {
+          "name": "IMMUNITY_DURATION",
+          "line": 205
+        },
+        {
+          "name": "DEBUFF_PRIORITY",
+          "line": 207
+        },
+        {
+          "name": "CP_STREAK_MULTIPLIER",
+          "line": 215
+        },
+        {
+          "name": "GAUNTLET_CONFIG",
+          "line": 217
+        },
+        {
+          "name": "WEEKLY_CUP_PRESETS",
+          "line": 225
+        },
+        {
+          "name": "MAX_ROOM_PLAYERS",
+          "line": 234
+        },
+        {
+          "name": "EVENT_RESULT_TIMEOUT_MS",
+          "line": 237
+        },
+        {
+          "name": "RECONNECT_GRACE_PERIOD_MS",
+          "line": 240
+        },
+        {
+          "name": "ROOM_CODE_LENGTH",
+          "line": 243
+        },
+        {
+          "name": "RECONNECT_GRACE_PERIOD_V5_MS",
+          "line": 246
+        },
+        {
+          "name": "MAX_RECONNECT_ATTEMPTS_V5",
+          "line": 249
+        },
+        {
+          "name": "SKILL_TREE_NODES",
+          "line": 253
+        },
+        {
+          "name": "getSkillNode",
+          "line": 276
+        },
+        {
+          "name": "getSkillsByTree",
+          "line": 280
+        },
+        {
+          "name": "CHASSIS_MODULES",
+          "line": 286
+        },
+        {
+          "name": "getChassisModule",
+          "line": 303
+        },
+        {
+          "name": "getModulesBySlot",
+          "line": 307
+        },
+        {
+          "name": "SEASONAL_MODIFIERS",
+          "line": 313
+        },
+        {
+          "name": "getActiveSeasonalModifier",
+          "line": 326
+        },
+        {
+          "name": "TEAM_POWERUP_DEFINITIONS",
+          "line": 337
+        },
+        {
+          "name": "SyndicateTierInfo",
+          "line": 344
+        },
+        {
+          "name": "SYNDICATE_PERK_DESCRIPTIONS",
+          "line": 352
+        },
+        {
+          "name": "getSyndicateTier",
+          "line": 370
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Defines game content, balance values and configuration catalogs",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "shared/contractService.ts",
+      "lines": 122,
+      "bytes": 4761,
+      "imports": [
+        "./types",
+        "./seededRNG"
+      ],
+      "symbols": [
+        {
+          "name": "generateContracts",
+          "line": 48
+        },
+        {
+          "name": "evaluateContracts",
+          "line": 77
+        },
+        {
+          "name": "allObjectivesComplete",
+          "line": 119
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Generates and evaluates sponsor objectives",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "shared/dailyChallengeService.ts",
+      "lines": 54,
+      "bytes": 1828,
+      "imports": [
+        "./types",
+        "./constants",
+        "./seededRNG"
+      ],
+      "symbols": [
+        {
+          "name": "getDailySeed",
+          "line": 5
+        },
+        {
+          "name": "saveDailyPersonalBest",
+          "line": 17
+        },
+        {
+          "name": "getDailyPersonalBest",
+          "line": 25
+        },
+        {
+          "name": "getWeeklySeed",
+          "line": 41
+        },
+        {
+          "name": "getWeeklyPreset",
+          "line": 49
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Derives daily/weekly seeds and stores personal best",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "shared/gameRules.ts",
+      "lines": 712,
+      "bytes": 34235,
+      "imports": [
+        "./types",
+        "./constants",
+        "./seededRNG",
+        "./pathGenerator",
+        "./rivalBanter",
+        "./gameSetup"
+      ],
+      "symbols": [
+        {
+          "name": "GameEffect",
+          "line": 28
+        },
+        {
+          "name": "GameUpdate",
+          "line": 34
+        },
+        {
+          "name": "GameRules",
+          "line": 105
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Processes race steps, powers, overdrive, pit stops and interventions",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "shared/gameSetup.ts",
+      "lines": 525,
+      "bytes": 17749,
+      "imports": [
+        "./types",
+        "./constants",
+        "./seededRNG"
+      ],
+      "symbols": [
+        {
+          "name": "HumanPlayerConfig",
+          "line": 24
+        },
+        {
+          "name": "BotSlotConfig",
+          "line": 34
+        },
+        {
+          "name": "createPlayers",
+          "line": 45
+        },
+        {
+          "name": "applySkillEffects",
+          "line": 157
+        },
+        {
+          "name": "applyLoadoutEffects",
+          "line": 252
+        },
+        {
+          "name": "applySyndicatePerks",
+          "line": 314
+        },
+        {
+          "name": "rollStartingLoadoutPerks",
+          "line": 377
+        },
+        {
+          "name": "assignTeams",
+          "line": 412
+        },
+        {
+          "name": "getTeamPositions",
+          "line": 442
+        },
+        {
+          "name": "applySeasonalModifierToSettings",
+          "line": 468
+        },
+        {
+          "name": "applySeasonalModifierToPlayer",
+          "line": 491
+        },
+        {
+          "name": "getSeasonalEnergyMultiplier",
+          "line": 510
+        },
+        {
+          "name": "getSeasonalAnomalyChance",
+          "line": 520
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Builds players and applies skills/loadouts/syndicates/seasons",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "shared/index.ts",
+      "lines": 21,
+      "bytes": 559,
+      "imports": [
+        "./types",
+        "./constants",
+        "./seededRNG",
+        "./pathGenerator",
+        "./gameRules",
+        "./gameSetup",
+        "./rankSystem",
+        "./rivalBanter",
+        "./protocol",
+        "./botMind",
+        "./matchSummary",
+        "./contractService",
+        "./dailyChallengeService"
+      ],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Application entry, metadata, asset or build contract",
+      "status": "Deprecated",
+      "completion": 15,
+      "reachability": "No ordinary active path",
+      "blockers": "Unused scaffold/compatibility export; verify references before removal"
+    },
+    {
+      "file": "shared/matchSummary.test.ts",
+      "lines": 655,
+      "bytes": 25290,
+      "imports": [
+        "vitest",
+        "./matchSummary",
+        "./types"
+      ],
+      "symbols": [
+        {
+          "name": "makeSettings",
+          "line": 24
+        },
+        {
+          "name": "makePlayer",
+          "line": 40
+        },
+        {
+          "name": "makeRivalPlayer",
+          "line": 64
+        },
+        {
+          "name": "makeBotPlayer",
+          "line": 85
+        },
+        {
+          "name": "makeTiles",
+          "line": 105
+        },
+        {
+          "name": "makeProfile",
+          "line": 113
+        },
+        {
+          "name": "makeGameState",
+          "line": 140
+        },
+        {
+          "name": "makeInput",
+          "line": 162
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": true,
+      "runtimeImportReachable": false,
+      "purpose": "Verifies matchSummary with unit/integration fixtures",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Developer: test runner",
+      "blockers": "Existing suite passes; does not establish journey completeness"
+    },
+    {
+      "file": "shared/matchSummary.ts",
+      "lines": 571,
+      "bytes": 24281,
+      "imports": [
+        "./types",
+        "./constants",
+        "./seededRNG",
+        "./rankSystem"
+      ],
+      "symbols": [
+        {
+          "name": "MatchMode",
+          "line": 24
+        },
+        {
+          "name": "SponsorshipDelta",
+          "line": 26
+        },
+        {
+          "name": "ContractOutcome",
+          "line": 32
+        },
+        {
+          "name": "CpBreakdown",
+          "line": 40
+        },
+        {
+          "name": "MatchSummary",
+          "line": 52
+        },
+        {
+          "name": "MatchSummaryInput",
+          "line": 106
+        },
+        {
+          "name": "computeMatchSummary",
+          "line": 129
+        },
+        {
+          "name": "applyMatchSummaryToProfile",
+          "line": 354
+        },
+        {
+          "name": "resolveHistoryTile",
+          "line": 444
+        },
+        {
+          "name": "evaluateContractsForSummary",
+          "line": 455
+        },
+        {
+          "name": "emptyCpBreakdown",
+          "line": 502
+        },
+        {
+          "name": "computeEventMastery",
+          "line": 509
+        },
+        {
+          "name": "createEmptySummary",
+          "line": 554
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Computes/applies reward, mastery, accolade and progression summaries",
+      "status": "Partial",
+      "completion": 35,
+      "reachability": "Indirect: finish/auth/storage",
+      "blockers": "See B06–B09 and R13: authority, identity, receipts"
+    },
+    {
+      "file": "shared/pathGenerator.ts",
+      "lines": 158,
+      "bytes": 5372,
+      "imports": [
+        "./types",
+        "./seededRNG"
+      ],
+      "symbols": [
+        {
+          "name": "assignDifficultyAndModifiers",
+          "line": 11
+        },
+        {
+          "name": "generateRun",
+          "line": 68
+        },
+        {
+          "name": "generateCustomRun",
+          "line": 112
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Generates seeded tile/event/modifier paths",
+      "status": "Partial",
+      "completion": 45,
+      "reachability": "Race setup",
+      "blockers": "B03: bounded generation and input validation"
+    },
+    {
+      "file": "shared/protocol.ts",
+      "lines": 240,
+      "bytes": 9182,
+      "imports": [
+        "./types",
+        "./matchSummary"
+      ],
+      "symbols": [
+        {
+          "name": "ReadyPayload",
+          "line": 45
+        },
+        {
+          "name": "UpdateSettingsPayload",
+          "line": 49
+        },
+        {
+          "name": "UsePowerUpPayload",
+          "line": 53
+        },
+        {
+          "name": "ActivateOverdrivePayload",
+          "line": 58
+        },
+        {
+          "name": "InterventionChoicePayload",
+          "line": 62
+        },
+        {
+          "name": "PitStopActionPayload",
+          "line": 66
+        },
+        {
+          "name": "KickPlayerPayload",
+          "line": 70
+        },
+        {
+          "name": "BanPlayerPayload",
+          "line": 74
+        },
+        {
+          "name": "RoomCreatedPayload",
+          "line": 80
+        },
+        {
+          "name": "RoomErrorPayload",
+          "line": 84
+        },
+        {
+          "name": "TileStartPayload",
+          "line": 88
+        },
+        {
+          "name": "TileResultsPayload",
+          "line": 100
+        },
+        {
+          "name": "RaceFinishedPayload",
+          "line": 106
+        },
+        {
+          "name": "InterventionPayload",
+          "line": 117
+        },
+        {
+          "name": "PlayerConnectionPayload",
+          "line": 126
+        },
+        {
+          "name": "MatchSummaryPayload",
+          "line": 132
+        },
+        {
+          "name": "MatchFoundPayload",
+          "line": 143
+        },
+        {
+          "name": "QueueStatusPayload",
+          "line": 152
+        },
+        {
+          "name": "QueueTimeoutPayload",
+          "line": 161
+        },
+        {
+          "name": "RoomNames",
+          "line": 167
+        },
+        {
+          "name": "RoomName",
+          "line": 174
+        },
+        {
+          "name": "REGISTERED_ROOM_NAMES",
+          "line": 177
+        },
+        {
+          "name": "ClientMessages",
+          "line": 186
+        },
+        {
+          "name": "ServerMessages",
+          "line": 212
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Defines room names, commands and server payloads",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "shared/rankSystem.ts",
+      "lines": 118,
+      "bytes": 3850,
+      "imports": [
+        "./types"
+      ],
+      "symbols": [
+        {
+          "name": "DEFAULT_RATING",
+          "line": 20
+        },
+        {
+          "name": "K_FACTOR",
+          "line": 21
+        },
+        {
+          "name": "ratingToTier",
+          "line": 25
+        },
+        {
+          "name": "getTierIcon",
+          "line": 33
+        },
+        {
+          "name": "getTierColor",
+          "line": 43
+        },
+        {
+          "name": "computeRatingChange",
+          "line": 59
+        },
+        {
+          "name": "computeMultiPlayerRatingChanges",
+          "line": 73
+        },
+        {
+          "name": "createDefaultRankInfo",
+          "line": 94
+        },
+        {
+          "name": "applyRatingChange",
+          "line": 104
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Computes rating changes and tier presentation",
+      "status": "Partial",
+      "completion": 30,
+      "reachability": "Queue/results/profile",
+      "blockers": "B07: placement and eligibility"
+    },
+    {
+      "file": "shared/rivalBanter.ts",
+      "lines": 18,
+      "bytes": 514,
+      "imports": [
+        "./constants",
+        "./seededRNG"
+      ],
+      "symbols": [
+        {
+          "name": "BanterEvent",
+          "line": 11
+        },
+        {
+          "name": "getRivalBanter",
+          "line": 13
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Selects contextual rival dialogue",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "shared/seededRNG.ts",
+      "lines": 61,
+      "bytes": 1802,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "SeededRNG",
+          "line": 7
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Produces deterministic pseudo-random values",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "shared/types.ts",
+      "lines": 639,
+      "bytes": 19788,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "GameScreen",
+          "line": 10
+        },
+        {
+          "name": "BotPersonality",
+          "line": 24
+        },
+        {
+          "name": "ChassisId",
+          "line": 30
+        },
+        {
+          "name": "AccoladeId",
+          "line": 38
+        },
+        {
+          "name": "RivalTraitId",
+          "line": 51
+        },
+        {
+          "name": "CorporationId",
+          "line": 59
+        },
+        {
+          "name": "AnomalyId",
+          "line": 65
+        },
+        {
+          "name": "Chassis",
+          "line": 79
+        },
+        {
+          "name": "Accolade",
+          "line": 91
+        },
+        {
+          "name": "RivalTrait",
+          "line": 98
+        },
+        {
+          "name": "RivalData",
+          "line": 105
+        },
+        {
+          "name": "Corporation",
+          "line": 114
+        },
+        {
+          "name": "ObjectiveType",
+          "line": 121
+        },
+        {
+          "name": "ContractObjective",
+          "line": 123
+        },
+        {
+          "name": "Contract",
+          "line": 131
+        },
+        {
+          "name": "PilotProfile",
+          "line": 138
+        },
+        {
+          "name": "GameSettings",
+          "line": 173
+        },
+        {
+          "name": "PowerUp",
+          "line": 187
+        },
+        {
+          "name": "PlayerStatus",
+          "line": 189
+        },
+        {
+          "name": "PlayerType",
+          "line": 198
+        },
+        {
+          "name": "Player",
+          "line": 200
+        },
+        {
+          "name": "TileModifier",
+          "line": 271
+        },
+        {
+          "name": "Tile",
+          "line": 273
+        },
+        {
+          "name": "InterventionType",
+          "line": 283
+        },
+        {
+          "name": "Anomaly",
+          "line": 285
+        },
+        {
+          "name": "RivalIntervention",
+          "line": 293
+        },
+        {
+          "name": "GameState",
+          "line": 301
+        },
+        {
+          "name": "EventResult",
+          "line": 314
+        },
+        {
+          "name": "PerformanceDimension",
+          "line": 321
+        },
+        {
+          "name": "SharedEventDescriptor",
+          "line": 329
+        },
+        {
+          "name": "BotEventInfo",
+          "line": 341
+        },
+        {
+          "name": "BotProfile",
+          "line": 348
+        },
+        {
+          "name": "ToastMessage",
+          "line": 354
+        },
+        {
+          "name": "SoundEvent",
+          "line": 360
+        },
+        {
+          "name": "EventPreset",
+          "line": 362
+        },
+        {
+          "name": "RoomConfig",
+          "line": 370
+        },
+        {
+          "name": "LobbyPlayer",
+          "line": 393
+        },
+        {
+          "name": "MatchPhase",
+          "line": 408
+        },
+        {
+          "name": "EventTelemetry",
+          "line": 414
+        },
+        {
+          "name": "RoomStateSummary",
+          "line": 428
+        },
+        {
+          "name": "LeaderboardCategory",
+          "line": 441
+        },
+        {
+          "name": "LeaderboardEntry",
+          "line": 443
+        },
+        {
+          "name": "MatchHistoryEntry",
+          "line": 453
+        },
+        {
+          "name": "TeamId",
+          "line": 474
+        },
+        {
+          "name": "GhostRun",
+          "line": 478
+        },
+        {
+          "name": "SkillTreeId",
+          "line": 492
+        },
+        {
+          "name": "SkillNode",
+          "line": 494
+        },
+        {
+          "name": "PilotSkills",
+          "line": 519
+        },
+        {
+          "name": "LoadoutSlot",
+          "line": 528
+        },
+        {
+          "name": "ChassisModule",
+          "line": 530
+        },
+        {
+          "name": "ChassisLoadout",
+          "line": 548
+        },
+        {
+          "name": "EventMastery",
+          "line": 555
+        },
+        {
+          "name": "RankTier",
+          "line": 565
+        },
+        {
+          "name": "RankInfo",
+          "line": 567
+        },
+        {
+          "name": "SeasonalModifier",
+          "line": 577
+        },
+        {
+          "name": "TournamentBracket",
+          "line": 594
+        },
+        {
+          "name": "TournamentRound",
+          "line": 604
+        },
+        {
+          "name": "TournamentMatch",
+          "line": 610
+        },
+        {
+          "name": "TournamentParticipant",
+          "line": 618
+        },
+        {
+          "name": "RoomPreset",
+          "line": 629
+        },
+        {
+          "name": "ConnectionQuality",
+          "line": 638
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Declares shared entities, profiles, telemetry and state contracts",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "styles.css",
+      "lines": 231,
+      "bytes": 7677,
+      "imports": [],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Defines application styles and animation",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Build/deploy or entry point",
+      "blockers": "Runtime deployment and production recovery unverified"
+    },
+    {
+      "file": "tailwind.config.js",
+      "lines": 88,
+      "bytes": 3319,
+      "imports": [],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Configures build, deployment or access policy",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Build/deploy or entry point",
+      "blockers": "Runtime deployment and production recovery unverified"
+    },
+    {
+      "file": "tsconfig.json",
+      "lines": 42,
+      "bytes": 965,
+      "imports": [],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Configures build, deployment or access policy",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Build/deploy or entry point",
+      "blockers": "Runtime deployment and production recovery unverified"
+    },
+    {
+      "file": "tsconfig.node.json",
+      "lines": 12,
+      "bytes": 233,
+      "imports": [],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Configures build, deployment or access policy",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Build/deploy or entry point",
+      "blockers": "Runtime deployment and production recovery unverified"
+    },
+    {
+      "file": "types.ts",
+      "lines": 39,
+      "bytes": 1287,
+      "imports": [
+        "react",
+        "./shared/types",
+        "./shared/types"
+      ],
+      "symbols": [
+        {
+          "name": "GameEvent",
+          "line": 16
+        },
+        {
+          "name": "EventProps",
+          "line": 29
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 1,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": true,
+      "purpose": "Declares shared entities, profiles, telemetry and state contracts",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Yes: entry-point import graph",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "vite-env.d.ts",
+      "lines": 18,
+      "bytes": 598,
+      "imports": [],
+      "symbols": [
+        {
+          "name": "ImportMetaEnv",
+          "line": 3
+        },
+        {
+          "name": "ImportMeta",
+          "line": 15
+        }
+      ],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Application entry, metadata, asset or build contract",
+      "status": "Partial",
+      "completion": 60,
+      "reachability": "Developer/helper or no entry import",
+      "blockers": "See subsystem matrix; no independent end-to-end certification"
+    },
+    {
+      "file": "vite.config.ts",
+      "lines": 40,
+      "bytes": 1250,
+      "imports": [
+        "vitest/config",
+        "@vitejs/plugin-react",
+        "@tailwindcss/vite"
+      ],
+      "symbols": [],
+      "timers": 0,
+      "random": 0,
+      "pauseRefs": 0,
+      "feedback": false,
+      "test": false,
+      "runtimeImportReachable": false,
+      "purpose": "Configures build, deployment or access policy",
+      "status": "Integrated",
+      "completion": 65,
+      "reachability": "Build/deploy or entry point",
+      "blockers": "Runtime deployment and production recovery unverified"
+    }
+  ],
+  "events": [
+    {
+      "id": "balance-beam",
+      "name": "Balance Beam",
+      "purpose": "Keep the ball balanced on the beam as long as possible. The beam tilts randomly — counteract it!",
+      "component": "BalanceBeam",
+      "dimension": "precision",
+      "duration": [
+        12,
+        10,
+        8
+      ],
+      "accessibleDuration": [
+        12,
+        10,
+        8
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/BalanceBeam.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 1,
+      "feedback": false,
+      "lines": 204,
+      "status": "Partial",
+      "completion": 45,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "B14: unattainable top score at harder difficulties",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "reaction-tap",
+      "name": "Reaction Tap",
+      "purpose": "Tap when the panel turns green. Don't tap too early!",
+      "component": "ReactionTap",
+      "dimension": "reaction",
+      "duration": [
+        8,
+        8,
+        8
+      ],
+      "accessibleDuration": [
+        10,
+        10,
+        10
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/ReactionTap.tsx",
+      "pauseRefs": 5,
+      "randomCalls": 0,
+      "feedback": true,
+      "lines": 136,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "system-purge",
+      "name": "System Purge",
+      "purpose": "Type the valid commands. Use Spacebar to skip corrupted commands.",
+      "component": "SystemPurge",
+      "dimension": "typing",
+      "duration": [
+        14,
+        13,
+        12
+      ],
+      "accessibleDuration": [
+        14,
+        13,
+        12
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/SystemPurge.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 153,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "type-burst",
+      "name": "Type Burst",
+      "purpose": "Type the phrase exactly as shown. Correct errors to finish.",
+      "component": "TypeBurst",
+      "dimension": "typing",
+      "duration": [
+        12,
+        12,
+        12
+      ],
+      "accessibleDuration": [
+        15,
+        15,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/TypeBurst.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 1,
+      "feedback": false,
+      "lines": 121,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "quick-quiz",
+      "name": "Quick Quiz",
+      "purpose": "Answer 3 questions as quickly as possible.",
+      "component": "QuickQuiz",
+      "dimension": "logic",
+      "duration": [
+        12,
+        12,
+        12
+      ],
+      "accessibleDuration": [
+        12,
+        12,
+        12
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/QuickQuiz.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 136,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "aim-flick",
+      "name": "Aim Flick",
+      "purpose": "Drag and release to shoot the projectile into the goal.",
+      "component": "AimFlick",
+      "dimension": "precision",
+      "duration": [
+        10,
+        10,
+        10
+      ],
+      "accessibleDuration": [
+        10,
+        10,
+        10
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/AimFlick.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 184,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "memory-flip",
+      "name": "Memory Flip",
+      "purpose": "Find all the matching pairs of cards.",
+      "component": "MemoryFlip",
+      "dimension": "memory",
+      "duration": [
+        20,
+        20,
+        20
+      ],
+      "accessibleDuration": [
+        20,
+        20,
+        20
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/MemoryFlip.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 125,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "slider-precision",
+      "name": "Slider Precision",
+      "purpose": "Stop the slider at the target value.",
+      "component": "SliderPrecision",
+      "dimension": "precision",
+      "duration": [
+        10,
+        10,
+        10
+      ],
+      "accessibleDuration": [
+        10,
+        10,
+        10
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/SliderPrecision.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 107,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "pattern-recall",
+      "name": "Pattern Recall",
+      "purpose": "Memorize and repeat the sequence.",
+      "component": "PatternRecall",
+      "dimension": "memory",
+      "duration": [
+        15,
+        15,
+        15
+      ],
+      "accessibleDuration": [
+        15,
+        15,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/PatternRecall.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 100,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "evade-grid",
+      "name": "Evade Grid",
+      "purpose": "Survive the hazards until the timer runs out.",
+      "component": "EvadeGrid",
+      "dimension": "rhythm",
+      "duration": [
+        15,
+        15,
+        15
+      ],
+      "accessibleDuration": [
+        15,
+        15,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/EvadeGrid.tsx",
+      "pauseRefs": 5,
+      "randomCalls": 2,
+      "feedback": false,
+      "lines": 133,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "jump-bar",
+      "name": "Jump Bar",
+      "purpose": "Time your jump to clear the bar.",
+      "component": "JumpBar",
+      "dimension": "rhythm",
+      "duration": [
+        20,
+        25,
+        30
+      ],
+      "accessibleDuration": [
+        20,
+        25,
+        30
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/JumpBar.tsx",
+      "pauseRefs": 5,
+      "randomCalls": 1,
+      "feedback": false,
+      "lines": 182,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "wire-link",
+      "name": "Wire Link",
+      "purpose": "Connect the matching nodes without crossing wires.",
+      "component": "WireLink",
+      "dimension": "logic",
+      "duration": [
+        20,
+        25,
+        30
+      ],
+      "accessibleDuration": [
+        20,
+        25,
+        30
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/WireLink.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 200,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "maze-micro",
+      "name": "Maze Micro",
+      "purpose": "Use arrow keys to reach the exit as fast as possible.",
+      "component": "MazeMicro",
+      "dimension": "logic",
+      "duration": [
+        15,
+        18,
+        21
+      ],
+      "accessibleDuration": [
+        15,
+        18,
+        21
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/MazeMicro.tsx",
+      "pauseRefs": 1,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 145,
+      "status": "Partial",
+      "completion": 45,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "B14: pause ignored and unsolved timeout presentation",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "find-pixel",
+      "name": "Find the Missing Pixel",
+      "purpose": "Spot the difference between the two images.",
+      "component": "FindPixel",
+      "dimension": "precision",
+      "duration": [
+        12,
+        12,
+        12
+      ],
+      "accessibleDuration": [
+        12,
+        12,
+        12
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/FindPixel.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 163,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "target-practice",
+      "name": "Target Practice",
+      "purpose": "Click on the targets as they appear. Don't miss!",
+      "component": "TargetPractice",
+      "dimension": "precision",
+      "duration": [
+        10,
+        10,
+        10
+      ],
+      "accessibleDuration": [
+        10,
+        10,
+        10
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/TargetPractice.tsx",
+      "pauseRefs": 5,
+      "randomCalls": 2,
+      "feedback": false,
+      "lines": 101,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "rhythm-tap",
+      "name": "Rhythm Tap",
+      "purpose": "Tap the spacebar in time with the pulse.",
+      "component": "RhythmTap",
+      "dimension": "rhythm",
+      "duration": [
+        12,
+        12,
+        12
+      ],
+      "accessibleDuration": [
+        12,
+        12,
+        12
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/RhythmTap.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 152,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "sequence-sort",
+      "name": "Sequence Sort",
+      "purpose": "Memorize the number sequence, then click them in the correct order.",
+      "component": "SequenceSort",
+      "dimension": "memory",
+      "duration": [
+        15,
+        15,
+        15
+      ],
+      "accessibleDuration": [
+        15,
+        15,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/SequenceSort.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 115,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "asteroid-dodge",
+      "name": "Asteroid Dodge",
+      "purpose": "Use the arrow keys to dodge the falling asteroids.",
+      "component": "AsteroidDodge",
+      "dimension": "reaction",
+      "duration": [
+        12,
+        12,
+        12
+      ],
+      "accessibleDuration": [
+        12,
+        12,
+        12
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/AsteroidDodge.tsx",
+      "pauseRefs": 5,
+      "randomCalls": 3,
+      "feedback": false,
+      "lines": 163,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "path-tracer",
+      "name": "Path Tracer",
+      "purpose": "Trace the path with your mouse without leaving the lines.",
+      "component": "PathTracer",
+      "dimension": "precision",
+      "duration": [
+        15,
+        15,
+        15
+      ],
+      "accessibleDuration": [
+        15,
+        15,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/PathTracer.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 175,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "code-breaker",
+      "name": "Code Breaker",
+      "purpose": "Guess the secret code using the clues provided.",
+      "component": "CodeBreaker",
+      "dimension": "logic",
+      "duration": [
+        25,
+        30,
+        35
+      ],
+      "accessibleDuration": [
+        25,
+        30,
+        35
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/CodeBreaker.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 158,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "quick-math",
+      "name": "Quick Math",
+      "purpose": "Solve as many math problems as you can before time runs out.",
+      "component": "QuickMath",
+      "dimension": "logic",
+      "duration": [
+        15,
+        15,
+        15
+      ],
+      "accessibleDuration": [
+        15,
+        15,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/QuickMath.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 124,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "color-math",
+      "name": "Color Math",
+      "purpose": "Adjust the sliders to match the target color.",
+      "component": "ColorMath",
+      "dimension": "precision",
+      "duration": [
+        13,
+        14,
+        15
+      ],
+      "accessibleDuration": [
+        13,
+        14,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/ColorMath.tsx",
+      "pauseRefs": 1,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 99,
+      "status": "Partial",
+      "completion": 45,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "B14: pause ignored",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "angle-nudge",
+      "name": "Angle Nudge",
+      "purpose": "Rotate the dial to the target angle and confirm.",
+      "component": "AngleNudge",
+      "dimension": "precision",
+      "duration": [
+        15,
+        15,
+        15
+      ],
+      "accessibleDuration": [
+        15,
+        15,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/AngleNudge.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 139,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "type-racer-snippet",
+      "name": "Type-Racer Snippet",
+      "purpose": "Type the short phrase as fast as possible. You must correct errors.",
+      "component": "TypeRacerSnippet",
+      "dimension": "typing",
+      "duration": [
+        8,
+        8,
+        8
+      ],
+      "accessibleDuration": [
+        10,
+        10,
+        10
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/TypeRacerSnippet.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 100,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "snapshot-memory",
+      "name": "Snapshot Memory",
+      "purpose": "Memorize the grid, then answer questions about the symbol locations.",
+      "component": "SnapshotMemory",
+      "dimension": "memory",
+      "duration": [
+        13,
+        14,
+        15
+      ],
+      "accessibleDuration": [
+        13,
+        14,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/SnapshotMemory.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 126,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "burst-clicks",
+      "name": "Burst Clicks",
+      "purpose": "Click the target as fast as you can for 5 seconds. Avoid inhuman speeds!",
+      "component": "BurstClicks",
+      "dimension": "reaction",
+      "duration": [
+        5,
+        5,
+        5
+      ],
+      "accessibleDuration": [
+        5,
+        5,
+        5
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/BurstClicks.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 80,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "sprint-mash",
+      "name": "Sprint Mash",
+      "purpose": "Alternate keys (A/D) with a steady rhythm to sprint. Spamming will stall you!",
+      "component": "SprintMash",
+      "dimension": "rhythm",
+      "duration": [
+        7,
+        7,
+        7
+      ],
+      "accessibleDuration": [
+        7,
+        7,
+        7
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/SprintMash.tsx",
+      "pauseRefs": 1,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 117,
+      "status": "Partial",
+      "completion": 45,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "B14: pause ignored",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "ghost-trajectory",
+      "name": "Ghost Trajectory",
+      "purpose": "Watch the launch, then click where you think the object will land.",
+      "component": "GhostTrajectory",
+      "dimension": "precision",
+      "duration": [
+        11,
+        12,
+        13
+      ],
+      "accessibleDuration": [
+        11,
+        12,
+        13
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/GhostTrajectory.tsx",
+      "pauseRefs": 5,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 167,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "emoji-cipher",
+      "name": "Emoji Cipher",
+      "purpose": "Use the legend to decode the secret word.",
+      "component": "EmojiCipher",
+      "dimension": "logic",
+      "duration": [
+        16,
+        17,
+        18
+      ],
+      "accessibleDuration": [
+        16,
+        17,
+        18
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/EmojiCipher.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 119,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "audio-beat",
+      "name": "Audio Beat Match",
+      "purpose": "Select the option that matches the reference beat.",
+      "component": "AudioBeat",
+      "dimension": "rhythm",
+      "duration": [
+        12,
+        12,
+        12
+      ],
+      "accessibleDuration": [
+        15,
+        15,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/AudioBeat.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 98,
+      "status": "Partial",
+      "completion": 50,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "B14: visual rhythm without tone playback",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "whack-a-mole",
+      "name": "Whack-a-Mole",
+      "purpose": "Click the moles before they retreat!",
+      "component": "WhackAMole",
+      "dimension": "reaction",
+      "duration": [
+        12,
+        12,
+        12
+      ],
+      "accessibleDuration": [
+        12,
+        12,
+        12
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/WhackAMole.tsx",
+      "pauseRefs": 7,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 129,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "stop-the-clock",
+      "name": "Stop the Clock",
+      "purpose": "Stop the timer at the exact target time. 3 rounds, lowest average error wins!",
+      "component": "StopTheClock",
+      "dimension": "reaction",
+      "duration": [
+        15,
+        15,
+        15
+      ],
+      "accessibleDuration": [
+        15,
+        15,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/StopTheClock.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 153,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "word-storm",
+      "name": "Word Storm",
+      "purpose": "Type the falling words to destroy them before they hit the bottom!",
+      "component": "WordStorm",
+      "dimension": "typing",
+      "duration": [
+        14,
+        13,
+        12
+      ],
+      "accessibleDuration": [
+        14,
+        13,
+        12
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/WordStorm.tsx",
+      "pauseRefs": 7,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 173,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "anagram-rush",
+      "name": "Anagram Rush",
+      "purpose": "Unscramble as many words as you can before time runs out!",
+      "component": "AnagramRush",
+      "dimension": "typing",
+      "duration": [
+        13,
+        14,
+        15
+      ],
+      "accessibleDuration": [
+        13,
+        14,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/AnagramRush.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 109,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "dial-lock",
+      "name": "Dial Lock",
+      "purpose": "Rotate the dial to find the hidden unlock position. Warm/cold feedback guides you. 3 locks!",
+      "component": "DialLock",
+      "dimension": "precision",
+      "duration": [
+        20,
+        25,
+        30
+      ],
+      "accessibleDuration": [
+        20,
+        25,
+        30
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/DialLock.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 165,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "pixel-push",
+      "name": "Pixel Push",
+      "purpose": "Push the block into the target zone. It has momentum — tap carefully! 3 rounds.",
+      "component": "PixelPush",
+      "dimension": "precision",
+      "duration": [
+        15,
+        15,
+        15
+      ],
+      "accessibleDuration": [
+        15,
+        15,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/PixelPush.tsx",
+      "pauseRefs": 5,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 159,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "mirror-draw",
+      "name": "Mirror Draw",
+      "purpose": "Trace the shape — but your cursor is mirrored horizontally!",
+      "component": "MirrorDraw",
+      "dimension": "precision",
+      "duration": [
+        13,
+        14,
+        15
+      ],
+      "accessibleDuration": [
+        13,
+        14,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/MirrorDraw.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 146,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "number-stack",
+      "name": "Number Stack",
+      "purpose": "Memorize the number sequence, then type it in REVERSE order!",
+      "component": "NumberStack",
+      "dimension": "memory",
+      "duration": [
+        13,
+        16,
+        19
+      ],
+      "accessibleDuration": [
+        13,
+        16,
+        19
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/NumberStack.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 148,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "symbol-match",
+      "name": "Symbol Match",
+      "purpose": "Memorize the symbol set, then click only those symbols from the grid.",
+      "component": "SymbolMatch",
+      "dimension": "memory",
+      "duration": [
+        12,
+        12,
+        12
+      ],
+      "accessibleDuration": [
+        15,
+        15,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/SymbolMatch.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 145,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "drum-echo",
+      "name": "Drum Echo",
+      "purpose": "Watch the drum pattern, then reproduce it on the pads with the same rhythm!",
+      "component": "DrumEcho",
+      "dimension": "rhythm",
+      "duration": [
+        13,
+        14,
+        15
+      ],
+      "accessibleDuration": [
+        13,
+        14,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/DrumEcho.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 146,
+      "status": "Partial",
+      "completion": 50,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "B14: visual rhythm without tone playback",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "wave-ride",
+      "name": "Wave Ride",
+      "purpose": "Keep your marker on the scrolling sine wave. The wave shifts over time!",
+      "component": "WaveRide",
+      "dimension": "rhythm",
+      "duration": [
+        11,
+        12,
+        13
+      ],
+      "accessibleDuration": [
+        11,
+        12,
+        13
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/WaveRide.tsx",
+      "pauseRefs": 5,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 136,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "color-sort",
+      "name": "Color Sort",
+      "purpose": "Click the matching colored bin to sort each falling orb. Speed up!",
+      "component": "ColorSort",
+      "dimension": "logic",
+      "duration": [
+        12,
+        12,
+        12
+      ],
+      "accessibleDuration": [
+        12,
+        12,
+        12
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/ColorSort.tsx",
+      "pauseRefs": 7,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 166,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "flow-connect",
+      "name": "Flow Connect",
+      "purpose": "Rotate the pipe tiles to connect the source to the destination.",
+      "component": "FlowConnect",
+      "dimension": "logic",
+      "duration": [
+        25,
+        30,
+        35
+      ],
+      "accessibleDuration": [
+        25,
+        30,
+        35
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/FlowConnect.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 177,
+      "status": "Partial",
+      "completion": 40,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "B14: solvability, visual/logical rotation and stale success closure",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "logic-gates",
+      "name": "Logic Gates",
+      "purpose": "Determine the output of each logic gate circuit. Answer as many as you can!",
+      "component": "LogicGates",
+      "dimension": "logic",
+      "duration": [
+        13,
+        14,
+        15
+      ],
+      "accessibleDuration": [
+        13,
+        14,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/LogicGates.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 118,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "tilt-maze",
+      "name": "Tilt Maze",
+      "purpose": "Navigate the ball through the maze to the exit. Tilt with arrow keys or mouse movement!",
+      "component": "TiltMaze",
+      "dimension": "precision",
+      "duration": [
+        25,
+        20,
+        15
+      ],
+      "accessibleDuration": [
+        25,
+        20,
+        15
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/TiltMaze.tsx",
+      "pauseRefs": 3,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 214,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "chord-memory",
+      "name": "Chord Memory",
+      "purpose": "Watch the sequence of colored notes light up, then replay them in order. The sequence grows!",
+      "component": "ChordMemory",
+      "dimension": "memory",
+      "duration": [
+        14,
+        16,
+        18
+      ],
+      "accessibleDuration": [
+        17,
+        19,
+        21
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/ChordMemory.tsx",
+      "pauseRefs": 5,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 131,
+      "status": "Partial",
+      "completion": 50,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "B14: progression differs from description",
+      "duplication": "Client/server scoring descriptors"
+    },
+    {
+      "id": "word-scramble",
+      "name": "Word Scramble",
+      "purpose": "Unscramble the jumbled cyberpunk words as fast as you can!",
+      "component": "WordScramble",
+      "dimension": "typing",
+      "duration": [
+        20,
+        25,
+        30
+      ],
+      "accessibleDuration": [
+        20,
+        25,
+        30
+      ],
+      "stub": false,
+      "serverDescriptor": true,
+      "source": "events/WordScramble.tsx",
+      "pauseRefs": 5,
+      "randomCalls": 0,
+      "feedback": false,
+      "lines": 142,
+      "status": "Partial",
+      "completion": 55,
+      "reachability": "Yes: Workshop/generated race",
+      "dependencies": [
+        "EventProps",
+        "React",
+        "eventRegistry",
+        "server/eventDescriptors",
+        "race rules"
+      ],
+      "blockers": "Canonical clock and browser acceptance coverage",
+      "duplication": "Client/server scoring descriptors"
+    }
+  ]
+}

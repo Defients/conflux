@@ -21,7 +21,7 @@ function generateCirclePath(rng: SeededRNG): Point[] {
   return points;
 }
 
-function generateZigzagPath(rng: SeededRNG): Point[] {
+function generateZigzagPath(_rng: SeededRNG): Point[] {
   const points: Point[] = [];
   const segments = 5;
   const segW = CANVAS_W / segments;

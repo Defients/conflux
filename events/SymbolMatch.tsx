@@ -14,7 +14,7 @@ export const SymbolMatch: React.FC<EventProps> = ({ onComplete, tile, settings, 
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [correctSel, setCorrectSel] = useState(0);
   const [wrongSel, setWrongSel] = useState(0);
-  const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
+  const [_feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
   const correctRef = useRef(0);
   const wrongRef = useRef(0);
   const isDoneRef = useRef(false);
@@ -40,7 +40,6 @@ export const SymbolMatch: React.FC<EventProps> = ({ onComplete, tile, settings, 
     targetSetRef.current = targets;
     setTargetSet(targets);
 
-    const gridSymbols: string[] = [];
     const allSymbols = [...targets];
     while (allSymbols.length < GRID_SIZE) {
       const s = SYMBOLS[rng.nextInt(0, SYMBOLS.length)];

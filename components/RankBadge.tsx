@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { RankInfo, RankTier } from '../shared/types';
+import { RankInfo } from '../shared/types';
 import { getTierColor, getTierIcon } from '../shared/rankSystem';
 
 interface RankBadgeProps {

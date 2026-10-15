@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { GameSettings, PilotProfile, ChassisId } from '../types';
+import { GameSettings, PilotProfile, ChassisId, CorporationId } from '../types';
 import { decodeSettings } from '../services/shareService';
 import { useSound } from '../hooks/useSound';
 import { getDailySeed, getWeeklySeed, getWeeklyPreset } from '../shared/dailyChallengeService';
-import { CHASSIS_DEFINITIONS } from '../constants';
+import { CHASSIS_DEFINITIONS, CORPORATION_DEFINITIONS, getSyndicateTier } from '../constants';
+import { sanitizeGameSettings } from '../shared/gameSetup';
 import { saveProfile } from '../services/profileService';
+import { syncProfile } from '../services/firebaseProfileService';
 import { RankBadge } from './RankBadge';
 
 interface LobbyProps {
@@ -94,14 +96,15 @@ const Toggle = ({ label, checked, onChange, id }: { label: string, checked: bool
 export const Lobby: React.FC<LobbyProps> = ({ profile, setProfile, onStartGame, onStartGauntlet, onGoToEventList, onGoToAccolades, onGoToOnline, onGoToLeaderboard, onGoToMatchHistory, onSwitchPilot, onGoToModeSelect, onGoToSkillTree, onGoToHangar, onGoToSettings }) => {
     const [settings, setSettings] = useState<GameSettings>(() => {
         const loaded = loadSettings();
+        const sanitized = sanitizeGameSettings(loaded);
         const chassis = loaded.selectedChassis && profile.unlockedChassis.includes(loaded.selectedChassis)
             ? loaded.selectedChassis
             : profile.unlockedChassis[0];
             
         return {
             ...defaultSettings,
-            ...loaded,
-            seed: loaded.seed || String(Math.floor(Math.random() * 1000000)),
+            ...sanitized,
+            seed: sanitized.seed || String(Math.floor(Math.random() * 1000000)),
             selectedChassis: chassis,
         };
     });
@@ -205,12 +208,15 @@ export const Lobby: React.FC<LobbyProps> = ({ profile, setProfile, onStartGame, 
       playSound('ui-click');
       const chassis = CHASSIS_DEFINITIONS[chassisId];
       if (profile.circuitPoints >= chassis.cost && !profile.unlockedChassis.includes(chassisId)) {
-          const updatedProfile = {
+          const remainingCp = profile.circuitPoints - chassis.cost;
+          const updatedProfile: PilotProfile = {
               ...profile,
-              circuitPoints: profile.circuitPoints - chassis.cost,
-              unlockedChassis: [...profile.unlockedChassis, chassisId]
+              circuitPoints: remainingCp,
+              unlockedChassis: [...profile.unlockedChassis, chassisId],
+              skills: profile.skills ? { ...profile.skills, availableCP: remainingCp } : undefined,
           };
           saveProfile(updatedProfile);
+          syncProfile(updatedProfile);
           setProfile(updatedProfile);
       }
   }
@@ -226,7 +232,7 @@ export const Lobby: React.FC<LobbyProps> = ({ profile, setProfile, onStartGame, 
                 <p className="text-xs sm:text-sm text-nebula-pink font-mono tracking-widest uppercase">Hyper-Competitive Racing Simulation</p>
             </div>
             <div className="text-right hidden md:block">
-                <p className="text-sm text-gray-400">Version 3.2</p>
+                <p className="text-sm text-gray-400">Version 4.0</p>
                 <div className="flex gap-2 text-xs text-gray-500">
                     <span>REACT</span>
                     <span>TAILWIND</span>
@@ -302,9 +308,14 @@ export const Lobby: React.FC<LobbyProps> = ({ profile, setProfile, onStartGame, 
                           🛠️ Hangar
                         </button>
                     </div>
-                    <button onClick={() => onGoToSettings?.()} className="w-full mt-2 py-3 sm:py-2 text-sm bg-white/5 active:bg-white/15 sm:hover:bg-white/10 border border-white/10 rounded transition-colors text-gray-300" aria-label="Settings">
-                      ⚙️ Settings
-                    </button>
+                    <div className="flex gap-2 mt-2">
+                        <button onClick={() => onGoToModeSelect?.()} className="flex-1 py-3 sm:py-2 text-sm bg-galaxy-cyan/15 active:bg-galaxy-cyan/25 sm:hover:bg-galaxy-cyan/20 border border-galaxy-cyan/30 rounded transition-colors text-galaxy-cyan font-bold" aria-label="Circuit Modes">
+                          🎮 Modes
+                        </button>
+                        <button onClick={() => onGoToSettings?.()} className="flex-1 py-3 sm:py-2 text-sm bg-white/5 active:bg-white/15 sm:hover:bg-white/10 border border-white/10 rounded transition-colors text-gray-300" aria-label="Settings">
+                          ⚙️ Settings
+                        </button>
+                    </div>
                 </div>
 
                 {/* Chassis Selector */}
@@ -487,6 +498,7 @@ export const Lobby: React.FC<LobbyProps> = ({ profile, setProfile, onStartGame, 
                         <Toggle id="uiEffects" label="Visual FX" checked={settings.uiEffects} onChange={e => { playSound('ui-click'); setSettings(s => ({ ...s, uiEffects: e.target.checked })); }} />
                         <Toggle id="colorBlind" label="Color Blind Mode" checked={settings.colorBlindMode} onChange={e => { playSound('ui-click'); setSettings(s => ({ ...s, colorBlindMode: e.target.checked })); }} />
                         <Toggle id="accessibility" label="Reduced Motion" checked={settings.accessibility} onChange={e => { playSound('ui-click'); setSettings(s => ({ ...s, accessibility: e.target.checked })); }} />
+                        <Toggle id="teamMode" label="Team Mode (Alpha vs Omega)" checked={!!settings.teamMode} onChange={e => { playSound('ui-click'); setSettings(s => ({ ...s, teamMode: e.target.checked })); }} />
                      </div>
 
                      {profile.gauntletHighScore > 0 && (
@@ -495,6 +507,45 @@ export const Lobby: React.FC<LobbyProps> = ({ profile, setProfile, onStartGame, 
                             <p className="text-2xl font-black text-white">{profile.gauntletHighScore} <span className="text-sm text-gray-400 font-normal">tiles survived</span></p>
                         </div>
                      )}
+
+                     {/* Syndicate Allegiance Panel */}
+                     <div className="mt-4 p-3 sm:p-4 bg-cosmic-blue/40 rounded-lg border border-white/10">
+                        <h3 className="text-xs font-bold text-solar-orange uppercase tracking-widest mb-2.5 border-b border-white/10 pb-1.5">
+                            Syndicate Standing
+                        </h3>
+                        <div className="space-y-2.5">
+                            {(Object.values(CorporationId) as CorporationId[]).map(corpId => {
+                                const corp = CORPORATION_DEFINITIONS[corpId];
+                                const rep = profile.sponsorships?.[corpId]?.reputation ?? 0;
+                                const tier = getSyndicateTier(corpId, rep);
+                                const pct = tier.nextRep ? Math.min(100, Math.round(((rep - tier.minRep) / (tier.nextRep - tier.minRep)) * 100)) : 100;
+                                return (
+                                    <div key={corpId} className="bg-black/30 p-2 rounded border border-white/5">
+                                        <div className="flex items-center justify-between text-xs mb-1">
+                                            <span className="font-bold text-white flex items-center gap-1">
+                                                <span aria-hidden="true">{corp.icon}</span>
+                                                <span>{corp.name.split(' ')[0]}</span>
+                                            </span>
+                                            <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-bold ${
+                                                tier.level >= 2 ? 'bg-hyper-green/20 text-hyper-green' :
+                                                tier.level === 1 ? 'bg-galaxy-cyan/20 text-galaxy-cyan' :
+                                                'bg-white/10 text-gray-400'
+                                            }`}>
+                                                {tier.title} ({rep} Rep)
+                                            </span>
+                                        </div>
+                                        <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden mb-1">
+                                            <div
+                                                className="h-full bg-gradient-to-r from-galaxy-cyan to-hyper-green transition-all duration-300"
+                                                style={{ width: `${pct}%` }}
+                                            />
+                                        </div>
+                                        <p className="text-[10px] text-gray-400 leading-tight">{tier.perkSummary}</p>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                     </div>
 
                      <div className="mt-4 p-3 sm:p-4 bg-white/5 rounded-lg border border-white/5">
                         <h3 className="text-xs font-bold text-galaxy-cyan mb-2">Pro Tip</h3>

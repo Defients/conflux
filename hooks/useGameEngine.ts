@@ -10,7 +10,7 @@ import { hapticsService } from '../services/hapticsService';
 import { generateNebula } from '../services/nebulaGenerator';
 import { PitStopAction } from '../components/PitStopScreen';
 import { GameRules, GameEffect } from '../services/gameRules';
-import { applySkillEffects, applyLoadoutEffects, applySeasonalModifierToSettings, applySeasonalModifierToPlayer, getSeasonalAnomalyChance } from '../shared/gameSetup';
+import { applySkillEffects, applyLoadoutEffects, applySyndicatePerks, rollStartingLoadoutPerks, applySeasonalModifierToSettings, applySeasonalModifierToPlayer, getSeasonalAnomalyChance, assignTeams, sanitizeGameSettings } from '../shared/gameSetup';
 import { applyRivalTraitsToPlayer } from '../shared/botMind';
 
 export const useGameEngine = () => {
@@ -25,11 +25,12 @@ export const useGameEngine = () => {
   const processEffects = useCallback((effects: GameEffect[]) => {
     effects.forEach(effect => {
         switch (effect.type) {
-            case 'TOAST':
+            case 'TOAST': {
                 const id = Date.now() + Math.random();
                 setToasts(prev => [...prev, { id, message: effect.message, type: effect.variant }]);
                 setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 2500);
                 break;
+            }
             case 'RIVAL_TAUNT':
                 setRivalTaunt(effect.message);
                 setTimeout(() => setRivalTaunt(null), 3000);
@@ -53,19 +54,22 @@ export const useGameEngine = () => {
 
 
   // --- Game Initialization ---
-  const initializeGame = useCallback((settings: GameSettings, customEventIds?: string[], profile?: PilotProfile | null) => {
+  const initializeGame = useCallback((rawSettings: GameSettings, customEventIds?: string[], profile?: PilotProfile | null) => {
+    setGhostRun(null);
+    const settings = sanitizeGameSettings(rawSettings, { defaultSeed: rawSettings.seed });
     // Apply seasonal modifier to settings (e.g., runLength override)
     const { settings: modSettings, modifier: seasonalModifier } = applySeasonalModifierToSettings(settings);
     const rng = new SeededRNG(`players-${modSettings.seed}`);
-    const players: Player[] = [];
+    let players: Player[] = [];
     const shuffledBotNames = rng.shuffle([...BOT_NAMES]);
 
     // Player 1 (Human)
     let humanPlayer: Player = {
       id: 1,
-      name: 'Player 1',
+      name: profile?.name || 'Player 1',
       isBot: false,
       isRival: false,
+      chassisId: settings.selectedChassis,
       color: PLAYER_COLORS[0],
       position: 0,
       powerUps: [],
@@ -80,7 +84,7 @@ export const useGameEngine = () => {
         humanPlayer.powerUps.push('Shield');
     }
 
-    // v5.0: Apply skill and loadout effects from pilot profile
+    // v5.0: Apply skill, loadout, and syndicate effects from pilot profile
     if (profile) {
       if (profile.skills) {
         humanPlayer = applySkillEffects(humanPlayer, profile.skills);
@@ -89,6 +93,8 @@ export const useGameEngine = () => {
       if (chassisId && profile.loadouts && profile.loadouts[chassisId]) {
         humanPlayer = applyLoadoutEffects(humanPlayer, profile.loadouts[chassisId]);
       }
+      humanPlayer = applySyndicatePerks(humanPlayer, profile);
+      humanPlayer = rollStartingLoadoutPerks(humanPlayer, rng);
     }
 
     players.push(humanPlayer);
@@ -142,13 +148,17 @@ export const useGameEngine = () => {
         }
     }
 
+    if (modSettings.teamMode) {
+        players = assignTeams(players);
+    }
+
     let run = (customEventIds && customEventIds.length > 0)
         ? generateCustomRun(modSettings.seed, modSettings.runLength, eventRegistry, customEventIds)
         : generateRun(modSettings.seed, modSettings.runLength, eventRegistry);
 
     // Anomaly chance: base 15%, boosted by seasonal modifier if active
     let activeAnomaly = null;
-    const anomalyChance = Math.max(0.15, getSeasonalAnomalyChance());
+    const anomalyChance = Math.max(0.15, getSeasonalAnomalyChance(modSettings.activeSeasonId));
     if (rng.nextFloat() < anomalyChance) {
         const anomalyIds = Object.values(AnomalyId);
         const randomAnomalyId = anomalyIds[rng.nextInt(0, anomalyIds.length)];
@@ -174,7 +184,10 @@ export const useGameEngine = () => {
       ? players.map(p => applySeasonalModifierToPlayer(p, seasonalModifier))
       : players;
 
+    const matchId = `${modSettings.seed}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
     setGameState({
+      matchId,
       settings: modSettings,
       players: finalPlayers,
       run,
@@ -193,14 +206,16 @@ export const useGameEngine = () => {
   }, []);
 
   // --- Gauntlet Initialization ---
-  const initializeGauntlet = useCallback((settings: GameSettings) => {
+  const initializeGauntlet = useCallback((settings: GameSettings, profile?: PilotProfile | null) => {
+    setGhostRun(null);
     const rng = new SeededRNG(`gauntlet-${settings.seed}`);
     
-    const players: Player[] = [{
+    let humanPlayer: Player = {
       id: 1,
-      name: 'Player 1',
+      name: profile?.name || 'Player 1',
       isBot: false,
       isRival: false,
+      chassisId: settings.selectedChassis,
       color: PLAYER_COLORS[0],
       position: 0,
       powerUps: [],
@@ -209,10 +224,22 @@ export const useGameEngine = () => {
       energy: 0,
       overdriveCooldown: 0,
       lives: GAUNTLET_CONFIG.startingLives,
-    }];
+    };
 
     if (settings.selectedChassis === ChassisId.Aegis) {
-        players[0].powerUps.push('Shield');
+        humanPlayer.powerUps.push('Shield');
+    }
+
+    if (profile) {
+      if (profile.skills) {
+        humanPlayer = applySkillEffects(humanPlayer, profile.skills);
+      }
+      const chassisId = settings.selectedChassis ?? humanPlayer.chassisId;
+      if (chassisId && profile.loadouts && profile.loadouts[chassisId]) {
+        humanPlayer = applyLoadoutEffects(humanPlayer, profile.loadouts[chassisId]);
+      }
+      humanPlayer = applySyndicatePerks(humanPlayer, profile);
+      humanPlayer = rollStartingLoadoutPerks(humanPlayer, rng);
     }
 
     const workingEvents = eventRegistry.filter(e => !e.isStub);
@@ -229,9 +256,12 @@ export const useGameEngine = () => {
         });
     }
 
+    const matchId = `gauntlet-${settings.seed}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
     setGameState({
+      matchId,
       settings: { ...settings, isGauntlet: true, runLength: GAUNTLET_CONFIG.runLength },
-      players,
+      players: [humanPlayer],
       run,
       currentTileIndex: 0,
       eventResults: {},
@@ -247,14 +277,16 @@ export const useGameEngine = () => {
   }, []);
 
   // --- Ghost Race Initialization ---
-  const initializeGhostRace = useCallback((settings: GameSettings, ghost: GhostRun) => {
-    const rng = new SeededRNG(`ghost-${settings.seed}`);
+  const initializeGhostRace = useCallback((settings: GameSettings, ghost: GhostRun, profile?: PilotProfile | null) => {
+    const ghostSeed = ghost.seed || settings.seed;
+    const rng = new SeededRNG(`ghost-${ghostSeed}`);
 
-    const players: Player[] = [{
+    let humanPlayer: Player = {
       id: 1,
-      name: 'Player 1',
+      name: profile?.name || 'Player 1',
       isBot: false,
       isRival: false,
+      chassisId: settings.selectedChassis,
       color: PLAYER_COLORS[0],
       position: 0,
       powerUps: [],
@@ -262,35 +294,53 @@ export const useGameEngine = () => {
       tileHistory: [],
       energy: 0,
       overdriveCooldown: 0,
-    }];
+    };
 
     if (settings.selectedChassis === ChassisId.Aegis) {
-      players[0].powerUps.push('Shield');
+      humanPlayer.powerUps.push('Shield');
     }
 
-    // Ghost player: a bot that uses pre-recorded results instead of simulation.
-    players.push({
-      id: 2,
-      name: ghost.ownerName,
-      isBot: true,
-      isGhost: true,
-      isRival: false,
-      color: PLAYER_COLORS[1],
-      position: 0,
-      powerUps: [],
-      statuses: [],
-      tileHistory: [],
-      energy: 0,
-      overdriveCooldown: 0,
-    });
+    if (profile) {
+      if (profile.skills) {
+        humanPlayer = applySkillEffects(humanPlayer, profile.skills);
+      }
+      const chassisId = settings.selectedChassis ?? humanPlayer.chassisId;
+      if (chassisId && profile.loadouts && profile.loadouts[chassisId]) {
+        humanPlayer = applyLoadoutEffects(humanPlayer, profile.loadouts[chassisId]);
+      }
+      humanPlayer = applySyndicatePerks(humanPlayer, profile);
+      humanPlayer = rollStartingLoadoutPerks(humanPlayer, rng);
+    }
+
+    const players: Player[] = [
+      humanPlayer,
+      // Ghost player: a bot that uses pre-recorded results instead of simulation.
+      {
+        id: 2,
+        name: ghost.ownerName,
+        isBot: true,
+        isGhost: true,
+        isRival: false,
+        chassisId: ghost.chassisId,
+        color: PLAYER_COLORS[1],
+        position: 0,
+        powerUps: [],
+        statuses: [],
+        tileHistory: [],
+        energy: 0,
+        overdriveCooldown: 0,
+      },
+    ];
 
     // Use the ghost's seed so the track matches what they played.
-    const ghostSeed = ghost.seed;
-    const run = generateRun(ghostSeed, ghost.runLength, eventRegistry);
+    const safeLength = Math.max(4, Math.min(20, ghost.runLength || settings.runLength || 8));
+    const run = generateRun(ghostSeed, safeLength, eventRegistry);
+    const matchId = `ghost-${ghostSeed}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
     setGhostRun(ghost);
     setGameState({
-      settings: { ...settings, seed: ghostSeed, runLength: ghost.runLength },
+      matchId,
+      settings: { ...settings, seed: ghostSeed, runLength: safeLength },
       players,
       run,
       currentTileIndex: 0,
@@ -309,7 +359,10 @@ export const useGameEngine = () => {
   // --- Get ghost's pre-recorded result for the current tile ---
   const getGhostResultForTile = useCallback((tileIndex: number): EventResult | null => {
     if (!ghostRun) return null;
-    const ghostTile = ghostRun.tileResults.find(t => t.tileIndex === tileIndex + 1);
+    const isZeroIndexed = ghostRun.tileResults.some(t => t.tileIndex === 0);
+    const ghostTile = isZeroIndexed
+      ? ghostRun.tileResults.find(t => t.tileIndex === tileIndex)
+      : (ghostRun.tileResults.find(t => t.tileIndex === tileIndex + 1) ?? ghostRun.tileResults[tileIndex]);
     if (!ghostTile) return null;
     return {
       playerId: 2,
@@ -323,12 +376,35 @@ export const useGameEngine = () => {
   const processGauntletTile = useCallback((results: { [playerId: number]: EventResult }) => {
     setGameState(current => {
         if (!current) return null;
-        const humanResult = results[1];
+        let humanResult = results[1];
         const player = { ...current.players[0] };
         const effects: GameEffect[] = [];
+
+        // Handle Overdrive in Gauntlet
+        if (current.overdrivingPlayerIds.includes(player.id)) {
+            if (humanResult.stars === 3) {
+                humanResult = { ...humanResult, stars: 4 };
+                effects.push({ type: 'SOUND', sound: 'overdrive-success' });
+                effects.push({ type: 'TOAST', message: 'Overdrive Success! (4★)', variant: 'success' });
+            } else if (player._lastStandAvailable) {
+                humanResult = { ...humanResult, stars: 1 };
+                player._lastStandAvailable = false;
+                effects.push({ type: 'TOAST', message: 'Last Stand saved Overdrive (1★)!', variant: 'info' });
+            } else {
+                humanResult = { ...humanResult, stars: 0 };
+                player.statuses = [...player.statuses, { type: 'STUNNED', duration: 1 }];
+                effects.push({ type: 'SOUND', sound: 'overdrive-fail' });
+                effects.push({ type: 'TOAST', message: 'Overdrive Failed!', variant: 'warning' });
+            }
+        } else if (humanResult.stars === 0 && player._lastStandAvailable) {
+            humanResult = { ...humanResult, stars: 1 };
+            player._lastStandAvailable = false;
+            effects.push({ type: 'TOAST', message: 'Last Stand! 0★ upgraded to 1★!', variant: 'success' });
+        }
         
-        player.tileHistory = [...player.tileHistory, { tileIndex: current.currentTileIndex, stars: humanResult.stars }];
-        player.energy += humanResult.stars;
+        player.tileHistory = [...player.tileHistory, { tileIndex: current.currentTileIndex, stars: humanResult.stars, primaryMetric: humanResult.primaryMetric }];
+        player.energy += Math.round(humanResult.stars * (1 + (player._energyPerStarBonus ?? 0)));
+        player.position = Math.min(100, ((current.currentTileIndex + 1) / current.run.length) * 100);
         
         if (humanResult.stars <= GAUNTLET_CONFIG.starLossThreshold) {
             const livesLost = humanResult.stars === 0 ? 2 : 1;
@@ -350,7 +426,7 @@ export const useGameEngine = () => {
             ...current,
             players: [player],
             currentTileIndex: current.currentTileIndex + 1,
-            lastTileResults: results,
+            lastTileResults: { ...results, 1: humanResult },
             overdrivingPlayerIds: [],
         };
     });

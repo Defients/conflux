@@ -119,6 +119,8 @@ export interface InterventionPayload {
   standardTile: Tile;
   hazardTile: Tile;
   cpBonus: number;
+  interventionType?: 'HAZARD' | 'SABOTAGE' | 'VETO';
+  sabotageStatus?: 'BLURRED' | 'SLOWED';
 }
 
 export interface PlayerConnectionPayload {

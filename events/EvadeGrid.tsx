@@ -1,12 +1,14 @@
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { EventProps } from '../types';
+import { SeededRNG } from '../services/seededRNG';
 
 const GRID_SIZE = 5;
 
 type Position = { x: number; y: number };
 
 export const EvadeGrid: React.FC<EventProps> = ({ onComplete, tile, settings, event, isBlurred , isPaused }) => {
+    const rng = useMemo(() => new SeededRNG(`evadegrid-${settings.seed}-${tile.tileIndex}`), [settings.seed, tile.tileIndex]);
     const [playerPos, setPlayerPos] = useState<Position>({ x: 2, y: 4 });
     const [dangerZones, setDangerZones] = useState<Position[]>([]);
     const [telegraphZones, setTelegraphZones] = useState<Position[]>([]);
@@ -23,15 +25,15 @@ export const EvadeGrid: React.FC<EventProps> = ({ onComplete, tile, settings, ev
         const numDangers = Math.min(GRID_SIZE * GRID_SIZE - 2, 2 + tile.difficulty);
         while (newZones.length < numDangers) {
             const pos = {
-                x: Math.floor(Math.random() * GRID_SIZE),
-                y: Math.floor(Math.random() * GRID_SIZE),
+                x: rng.nextInt(0, GRID_SIZE),
+                y: rng.nextInt(0, GRID_SIZE),
             };
             if (!newZones.some(z => z.x === pos.x && z.y === pos.y)) {
                 newZones.push(pos);
             }
         }
         return newZones;
-    }, [tile.difficulty]);
+    }, [tile.difficulty, rng]);
 
     useEffect(() => {
         if (isPaused) return;

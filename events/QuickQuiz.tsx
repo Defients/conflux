@@ -14,9 +14,7 @@ const QUESTION_BANK = [
     { q: "What is the chemical symbol for Gold?", a: ["Ag", "Au", "Pb", "Fe"], correct: 1 },
 ];
 
-type Question = typeof QUESTION_BANK[0];
-
-export const QuickQuiz: React.FC<EventProps> = ({ onComplete, tile, settings, event, isBlurred , isPaused }) => {
+export const QuickQuiz: React.FC<EventProps> = ({ onComplete, tile, settings, isBlurred , isPaused }) => {
     const questions = useMemo(() => {
         const rng = new SeededRNG(`quiz-${settings.seed}-${tile.tileIndex}`);
         return rng.shuffle([...QUESTION_BANK]).slice(0, 3);
@@ -24,7 +22,7 @@ export const QuickQuiz: React.FC<EventProps> = ({ onComplete, tile, settings, ev
 
     const [questionIndex, setQuestionIndex] = useState(0);
     const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
-    const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
+    const [_feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
     const [timeLeft, setTimeLeft] = useState(4); // 4 seconds per question
     
     const resultsRef = useRef({ correctCount: 0, totalTimeMs: 0 });

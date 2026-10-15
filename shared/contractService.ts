@@ -74,8 +74,15 @@ export function generateContracts(seed: string): Contract[] {
     return contracts;
 }
 
-export function evaluateContracts(contracts: Contract[], gameState: GameState, eventDimensionMap: { [eventId: string]: string }): Contract[] {
-    const humanPlayer = gameState.players.find(p => !p.isBot);
+export function evaluateContracts(
+    contracts: Contract[],
+    gameState: GameState,
+    eventDimensionMap: { [eventId: string]: string },
+    targetPlayerId?: number
+): Contract[] {
+    const humanPlayer = targetPlayerId !== undefined
+        ? (gameState.players.find(p => p.id === targetPlayerId) ?? gameState.players.find(p => !p.isBot))
+        : gameState.players.find(p => !p.isBot);
     if (!humanPlayer) return contracts;
 
     const sortedPlayers = [...gameState.players].sort((a, b) => b.position - a.position);
@@ -83,6 +90,7 @@ export function evaluateContracts(contracts: Contract[], gameState: GameState, e
     const avgStars = humanPlayer.tileHistory.length > 0
         ? humanPlayer.tileHistory.reduce((s, h) => s + h.stars, 0) / humanPlayer.tileHistory.length
         : 0;
+    const isZeroIndexed = humanPlayer.tileHistory.some(h => h.tileIndex === 0);
 
     return contracts.map(contract => ({
         ...contract,
@@ -98,8 +106,10 @@ export function evaluateContracts(contracts: Contract[], gameState: GameState, e
                     break;
                 case 'GET_STARS_IN_DIMENSION':
                     if (obj.dimension) {
-                        isComplete = humanPlayer.tileHistory.some((h, i) => {
-                            const tile = gameState.run[h.tileIndex - 1];
+                        isComplete = humanPlayer.tileHistory.some((h) => {
+                            const tile = isZeroIndexed
+                                ? gameState.run[h.tileIndex]
+                                : (gameState.run[h.tileIndex - 1] ?? gameState.run[h.tileIndex]);
                             if (!tile) return false;
                             const eventDim = eventDimensionMap[tile.eventId];
                             return eventDim === obj.dimension && h.stars >= obj.targetValue;

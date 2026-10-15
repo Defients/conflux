@@ -7,8 +7,10 @@
 
 import { Room, Client, matchMaker } from 'colyseus';
 import { ClientMessages, ServerMessages, RoomNames } from '../../../shared/protocol';
-import { RoomConfig } from '../../../shared/types';
+import { RoomConfig, PilotProfile } from '../../../shared/types';
 import { DEFAULT_RATING } from '../../../shared/rankSystem';
+import { verifyAuthToken, validateUserIdClaim } from '../auth/verifyToken';
+import { getProfile } from '../services/profileRepository';
 
 interface QueuePlayer {
   sessionId: string;
@@ -68,13 +70,34 @@ export class MatchmakingRoom extends Room {
     console.log(`[Queue:${this.queueType}] created (room ${this.roomId})`);
   }
 
+  async onAuth(client: Client, options: RoomConfig): Promise<boolean> {
+    const identity = await verifyAuthToken(options?.idToken);
+    if (!identity) return false;
+    if (!validateUserIdClaim(options?.userId, identity.uid)) return false;
+    (client as any).verifiedUid = identity.uid;
+    if (!identity.authBypassed) {
+      try {
+        (client as any).storedProfile = await getProfile(identity.uid);
+      } catch {
+        (client as any).storedProfile = null;
+      }
+    } else {
+      (client as any).storedProfile = null;
+    }
+    return true;
+  }
+
   onJoin(client: Client, options: RoomConfig) {
-    const rating = options.rating ?? DEFAULT_RATING;
+    const storedProfile = (client as any).storedProfile as PilotProfile | null | undefined;
+    const rawRating = storedProfile?.rank?.rating ?? options?.rating ?? DEFAULT_RATING;
+    const rating = typeof rawRating === 'number' && Number.isFinite(rawRating)
+      ? Math.max(0, Math.min(5000, Math.round(rawRating)))
+      : DEFAULT_RATING;
     // Guard against duplicate queue entries for the same session.
     this.removeFromQueue(client.sessionId);
     this.queue.push({
       sessionId: client.sessionId,
-      config: options,
+      config: { ...options, rating, userId: (client as any).verifiedUid ?? options?.userId },
       rating,
       joinedAt: Date.now(),
       queueType: options.queueType ?? this.queueType,
@@ -178,7 +201,7 @@ export class MatchmakingRoom extends Room {
   }
 
   private async createMatch(group: QueuePlayer[]) {
-    let room: Awaited<ReturnType<typeof matchMaker.createRoom>> | null = null;
+    let room: Awaited<ReturnType<typeof matchMaker.createRoom>>;
     try {
       // Create the correct gameplay room type (registered as conflux_match).
       room = await matchMaker.createRoom(RoomNames.MATCH, {
@@ -204,10 +227,10 @@ export class MatchmakingRoom extends Room {
       }
       try {
         // Reserve a seat BEFORE telling the client to leave the queue.
-        const reservation = await matchMaker.reserveSeatFor(room!, player.config);
+        const reservation = await matchMaker.reserveSeatFor(room, player.config);
         client.send(ServerMessages.MATCH_FOUND, {
           reservation,
-          roomId: room!.roomId,
+          roomId: room.roomId,
           queueType: player.queueType,
           message: 'Match found!',
         });
@@ -220,7 +243,7 @@ export class MatchmakingRoom extends Room {
     // Anyone whose reservation failed goes back into the queue.
     if (failed.length > 0) this.requeue(failed);
 
-    console.log(`[Queue:${this.queueType}] created match ${room!.roomId} for ${group.length - failed.length} players`);
+    console.log(`[Queue:${this.queueType}] created match ${room.roomId} for ${group.length - failed.length} players`);
   }
 
   /** Put players back at the front of the queue (preserving their wait time). */

@@ -1,13 +1,14 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { GameState, EventResult, PowerUp, EventTelemetry, RivalTraitId } from '../types';
+import { GameState, EventResult, PowerUp, EventTelemetry, RivalTraitId, Contract } from '../types';
 import { eventRegistry } from '../events/eventRegistry';
 import { RaceTrackHUD } from './RaceTrackHUD';
 import { simulateBotPerformance, decideBotPowerUp, decideBotOverdrive } from '../services/botMind';
 import { PowerUpIcon } from './PowerUpIcon';
 import { DebugPanel } from './DebugPanel';
 import { ExplainEventModal } from './ExplainEventModal';
-import { OVERDRIVE_ENERGY_COST } from '../constants';
+import { OVERDRIVE_ENERGY_COST, CORPORATION_DEFINITIONS } from '../constants';
+import { evaluateContracts } from '../shared/contractService';
 import { TimerBar } from './TimerBar';
 
 interface EventRunnerProps {
@@ -24,20 +25,48 @@ interface EventRunnerProps {
   isPaused?: boolean;
   /** Rival traits from the pilot profile, used for bot simulation and power-up decisions. */
   rivalTraits?: RivalTraitId[];
+  /** Active corporation contracts for live HUD tracking. */
+  contracts?: Contract[];
+  /** Explicit local player ID (resolved from session/auth in online mode). */
+  localPlayerId?: number;
+  /** Read-only spectator mode flag. */
+  isSpectator?: boolean;
 }
 
-export const EventRunner: React.FC<EventRunnerProps> = ({ gameState, onTileComplete, onUsePowerUp, onActivateOverdrive, onlineMode, onSubmitTelemetry, getGhostResultForTile, isPaused, rivalTraits }) => {
+export const EventRunner: React.FC<EventRunnerProps> = ({ gameState, onTileComplete, onUsePowerUp, onActivateOverdrive, onlineMode, onSubmitTelemetry, getGhostResultForTile, isPaused, rivalTraits, contracts, localPlayerId, isSpectator = false }) => {
   const { settings, run, currentTileIndex, players, overdrivingPlayerIds, activeAnomaly } = gameState;
-  const currentTile = run[currentTileIndex];
-  const event = useMemo(() => eventRegistry.find(e => e.id === currentTile.eventId)!, [currentTile.eventId]);
+  const currentTile = run[currentTileIndex] ?? run[0];
+  const event = useMemo(() => eventRegistry.find(e => e.id === currentTile?.eventId) ?? eventRegistry[0], [currentTile?.eventId]);
   
   // Apply Time Dilation
-  const baseDuration = useMemo(() => event.durationSec(currentTile.difficulty, settings.accessibility), [event, currentTile.difficulty, settings.accessibility]);
+  const baseDuration = useMemo(() => event.durationSec(currentTile?.difficulty ?? 1, settings.accessibility), [event, currentTile?.difficulty, settings.accessibility]);
   const eventDuration = activeAnomaly?.id === 'TIME_DILATION' ? baseDuration * 0.8 : baseDuration;
+  const effectiveEvent = useMemo(
+    () => (activeAnomaly?.id === 'TIME_DILATION'
+      ? { ...event, durationSec: (d: number, a: boolean) => event.durationSec(d, a) * 0.8 }
+      : event),
+    [event, activeAnomaly?.id]
+  );
 
   const [isEventOver, setIsEventOver] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
   const [isExplainModalOpen, setIsExplainModalOpen] = useState(false);
+  const [showContractsPopover, setShowContractsPopover] = useState(false);
+
+  const eventDimensionMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    eventRegistry.forEach(e => { map[e.id] = e.performanceDimension; });
+    return map;
+  }, []);
+
+  const evaluatedContracts = useMemo(() => {
+    if (!contracts || contracts.length === 0 || settings.isGauntlet) return [];
+    return evaluateContracts(contracts, gameState, eventDimensionMap, localPlayerId);
+  }, [contracts, gameState, eventDimensionMap, settings.isGauntlet, localPlayerId]);
+
+  const completedContractsCount = useMemo(() => {
+    return evaluatedContracts.filter(c => c.objectives.every(o => o.isComplete)).length;
+  }, [evaluatedContracts]);
 
   // Reset event state when tile changes (fixes stale isEventOver blocking subsequent tiles)
   useEffect(() => {
@@ -49,7 +78,10 @@ export const EventRunner: React.FC<EventRunnerProps> = ({ gameState, onTileCompl
 
   const [isActivelyBlurred, setIsActivelyBlurred] = useState(false);
 
-  const humanPlayer = players.find(p => !p.isBot);
+  const humanPlayer = useMemo(
+    () => (localPlayerId !== undefined ? players.find(p => p.id === localPlayerId) : undefined) ?? players.find(p => !p.isBot) ?? players[0],
+    [players, localPlayerId]
+  );
   const hasBlurStatus = humanPlayer?.statuses.some(s => s.type === 'BLURRED') ?? false;
   const hasStunStatus = humanPlayer?.statuses.some(s => s.type === 'STUNNED') ?? false;
   const hasFrozenStatus = humanPlayer?.statuses.some(s => s.type === 'FROZEN') ?? false;
@@ -82,7 +114,7 @@ export const EventRunner: React.FC<EventRunnerProps> = ({ gameState, onTileCompl
   }, [hasBlurStatus, eventDuration, currentTileIndex, isPaused]);
 
   const handleEventComplete = useCallback((result: Omit<EventResult, 'playerId' | 'stars'>) => {
-    if (isEventOver) return;
+    if (isEventOver || isSpectator) return;
     setIsEventOver(true);
 
     // ─── Online Mode: submit raw telemetry, server computes stars ─────
@@ -149,14 +181,14 @@ export const EventRunner: React.FC<EventRunnerProps> = ({ gameState, onTileCompl
     return () => clearTimeout(botDecisionTimeout);
   }, [currentTileIndex, onlineMode, isPaused]);
 
-  // Cosmic Storm Anomaly Effect
+  // Cosmic Storm Anomaly Effect (local mode only — server handles Cosmic Storm in online mode)
   useEffect(() => {
-    if (isPaused) return undefined;
+    if (onlineMode || isPaused || isSpectator) return undefined;
     if (activeAnomaly?.id === 'COSMIC_STORM' && !isEventOver) {
         const stormInterval = setInterval(() => {
             if (Math.random() < 0.1) { // 10% chance every second
                 const randomPlayer = players[Math.floor(Math.random() * players.length)];
-                if (!gameState.overdrivingPlayerIds.includes(randomPlayer.id)) {
+                if (randomPlayer && !gameState.overdrivingPlayerIds.includes(randomPlayer.id)) {
                     onActivateOverdrive(randomPlayer.id, true);
                 }
             }
@@ -164,7 +196,7 @@ export const EventRunner: React.FC<EventRunnerProps> = ({ gameState, onTileCompl
         return () => clearInterval(stormInterval);
     }
     return undefined;
-  }, [activeAnomaly, isEventOver, players, gameState.overdrivingPlayerIds, onActivateOverdrive, isPaused]);
+  }, [onlineMode, activeAnomaly, isEventOver, players, gameState.overdrivingPlayerIds, onActivateOverdrive, isPaused, isSpectator]);
 
 
   const EventComponent = event.Component;
@@ -220,6 +252,19 @@ export const EventRunner: React.FC<EventRunnerProps> = ({ gameState, onTileCompl
                             <span>TILE {currentTile.tileIndex}/{run.length}</span>
                             <span className="text-star-purple">•</span>
                             <span aria-label={`Difficulty ${currentTile.difficulty} of 3`}>{'★'.repeat(currentTile.difficulty).padEnd(3, '☆')}</span>
+                            {evaluatedContracts.length > 0 && (
+                                <>
+                                    <span className="text-star-purple hidden sm:inline">•</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowContractsPopover(s => !s)}
+                                        className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-[10px] font-mono text-galaxy-cyan transition-colors"
+                                        aria-label="Toggle live contract objectives"
+                                    >
+                                        <span>📋 {completedContractsCount}/{evaluatedContracts.length} Contracts</span>
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -227,6 +272,28 @@ export const EventRunner: React.FC<EventRunnerProps> = ({ gameState, onTileCompl
                 {/* Optimized Timer */}
                 <TimerBar duration={eventDuration} totalDuration={eventDuration} isPaused={isPaused} />
             </div>
+            {showContractsPopover && evaluatedContracts.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-white/10 grid grid-cols-1 sm:grid-cols-3 gap-2 relative z-20 animate-fade-in">
+                    {evaluatedContracts.map((c, idx) => {
+                        const corp = CORPORATION_DEFINITIONS[c.corporationId];
+                        const allDone = c.objectives.every(o => o.isComplete);
+                        return (
+                            <div key={idx} className={`p-2 rounded border text-[10px] ${allDone ? 'bg-hyper-green/10 border-hyper-green/40' : 'bg-black/40 border-white/10'}`}>
+                                <div className="flex justify-between items-center font-bold mb-1">
+                                    <span className="text-white">{corp?.icon} {corp?.name.split(' ')[0]}</span>
+                                    <span className={allDone ? 'text-hyper-green' : 'text-solar-orange'}>+{c.cpReward} CP</span>
+                                </div>
+                                {c.objectives.map((obj, j) => (
+                                    <div key={j} className="flex items-center gap-1 text-gray-300 truncate">
+                                        <span>{obj.isComplete ? '✅' : '⬜'}</span>
+                                        <span className="truncate">{obj.description}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
         
         {/* Main Event Area */}
@@ -236,18 +303,19 @@ export const EventRunner: React.FC<EventRunnerProps> = ({ gameState, onTileCompl
           <React.Suspense fallback={<LazyFallback />}>
           <MemoizedEventComponent
             tile={currentTile}
-            event={event}
+            event={effectiveEvent}
             settings={settings}
             onComplete={handleEventComplete}
             isBlurred={isActivelyBlurred}
             isOverdriving={isPlayerOverdriving}
-            isPaused={isPaused}
+            isPaused={isPaused || isSpectator}
           />
           </React.Suspense>
         </div>
 
         {/* Bottom Controls & Track */}
         <div className="flex-shrink-0 mt-1 sm:mt-3 event-bottom-controls">
+            {!isSpectator && (
             <div className="flex gap-2 sm:gap-3 mb-1 sm:mb-3">
                 {/* Power Ups Panel */}
                 <div className="glass-panel p-1.5 sm:p-2 flex-grow flex items-center justify-between" role="toolbar" aria-label="Power-ups">
@@ -296,6 +364,7 @@ export const EventRunner: React.FC<EventRunnerProps> = ({ gameState, onTileCompl
                     )}
                 </button>
             </div>
+            )}
 
             {/* Track */}
             <RaceTrackHUD
@@ -304,6 +373,7 @@ export const EventRunner: React.FC<EventRunnerProps> = ({ gameState, onTileCompl
                 currentTileIndex={currentTileIndex}
                 overdrivingPlayerIds={overdrivingPlayerIds}
                 activeAnomaly={activeAnomaly}
+                localPlayerId={localPlayerId}
             />
         </div>
     </div>

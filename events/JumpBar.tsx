@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { EventProps } from '../types';
+import { SeededRNG } from '../services/seededRNG';
 
 const JUMP_VELOCITY = 20;
 const GRAVITY = 1.2;
@@ -11,6 +12,7 @@ const BAR_HEIGHT = 60;
 type GameStatus = 'ready' | 'playing' | 'hit' | 'cleared' | 'done';
 
 export const JumpBar: React.FC<EventProps> = ({ onComplete, tile, event, settings, isBlurred , isPaused }) => {
+    const rng = useMemo(() => new SeededRNG(`jumpbar-${settings?.seed ?? 'seed'}-${tile.tileIndex}`), [settings?.seed, tile.tileIndex]);
     const [status, setStatus] = useState<GameStatus>('ready');
     const [playerY, setPlayerY] = useState(0);
     const [barX, setBarX] = useState(window.innerWidth);
@@ -55,11 +57,11 @@ export const JumpBar: React.FC<EventProps> = ({ onComplete, tile, event, setting
         if (isDoneRef.current) return;
         playerState.current = { y: 0, vy: 0, isJumping: false };
         setPlayerY(0);
-        const startX = window.innerWidth + Math.random() * 200;
+        const startX = window.innerWidth + rng.nextFloat() * 200;
         barState.current = { x: startX };
         setBarX(startX);
         setStatus('playing');
-    }, []);
+    }, [rng]);
 
     const gameLoop = useCallback(() => {
         if (isDoneRef.current) return;

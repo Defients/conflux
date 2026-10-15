@@ -1,28 +1,30 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { EventProps } from '../types';
 import { SeededRNG } from '../services/seededRNG';
+import { audioService } from '../services/audioService';
 
 const NOTE_COLORS = [
-  { id: 0, color: '#ff2a75', label: 'Red' },
-  { id: 1, color: '#00dffc', label: 'Cyan' },
-  { id: 2, color: '#39ff14', label: 'Green' },
-  { id: 3, color: '#ffae42', label: 'Orange' },
-  { id: 4, color: '#a77dff', label: 'Purple' },
+  { id: 0, color: '#ff2a75', label: 'Red', freq: 261.63 },
+  { id: 1, color: '#00dffc', label: 'Cyan', freq: 329.63 },
+  { id: 2, color: '#39ff14', label: 'Green', freq: 392.00 },
+  { id: 3, color: '#ffae42', label: 'Orange', freq: 493.88 },
+  { id: 4, color: '#a77dff', label: 'Purple', freq: 587.33 },
 ];
 
 export const ChordMemory: React.FC<EventProps> = ({ onComplete, tile, settings, event, isBlurred, isPaused }) => {
   const [sequence, setSequence] = useState<number[]>([]);
+  const [roundLength, setRoundLength] = useState(3);
   const [userIndex, setUserIndex] = useState(0);
   const [activeNote, setActiveNote] = useState<number | null>(null);
   const [phase, setPhase] = useState<'showing' | 'input' | 'done'>('showing');
   const [showIndex, setShowIndex] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
   const isDoneRef = useRef(false);
-  const startTimeRef = useRef(Date.now());
 
   const maxDuration = event.durationSec(tile.difficulty, settings.accessibility) * 1000;
   const initialLength = 2 + tile.difficulty;
-  const maxRounds = 5;
+  const maxRounds = 3;
+  const totalNotes = initialLength + maxRounds - 1;
 
   const finish = useCallback((totalCorrect: number) => {
     if (isDoneRef.current) return;
@@ -34,29 +36,34 @@ export const ChordMemory: React.FC<EventProps> = ({ onComplete, tile, settings, 
   useEffect(() => {
     const rng = new SeededRNG(`chord-${settings.seed}-${tile.tileIndex}`);
     const seq: number[] = [];
-    for (let i = 0; i < initialLength + maxRounds; i++) {
+    for (let i = 0; i < totalNotes; i++) {
       seq.push(rng.nextInt(0, NOTE_COLORS.length));
     }
     setSequence(seq);
-  }, [settings.seed, tile.tileIndex, initialLength, maxRounds]);
+    setRoundLength(initialLength);
+  }, [settings.seed, tile.tileIndex, initialLength, totalNotes]);
 
   useEffect(() => {
     if (isPaused || phase !== 'showing' || sequence.length === 0) return;
-    if (showIndex >= sequence.length) {
+    if (showIndex >= roundLength) {
       setPhase('input');
       return;
     }
 
     const noteId = sequence[showIndex];
     const showDelay = 600 - tile.difficulty * 100;
-    const timer1 = setTimeout(() => setActiveNote(noteId), 200);
+    const timer1 = setTimeout(() => {
+      setActiveNote(noteId);
+      const note = NOTE_COLORS[noteId];
+      if (note) audioService.playTone(note.freq, 0.18, 'triangle');
+    }, 150);
     const timer2 = setTimeout(() => {
       setActiveNote(null);
       setShowIndex(prev => prev + 1);
     }, showDelay);
 
     return () => { clearTimeout(timer1); clearTimeout(timer2); };
-  }, [phase, showIndex, sequence, tile.difficulty, isPaused]);
+  }, [phase, showIndex, roundLength, sequence, tile.difficulty, isPaused]);
 
   useEffect(() => {
     if (isPaused || phase === 'done') return;
@@ -65,9 +72,11 @@ export const ChordMemory: React.FC<EventProps> = ({ onComplete, tile, settings, 
   }, [isPaused, phase, correctCount, maxDuration, finish]);
 
   const handleNoteClick = (noteId: number) => {
-    if (phase !== 'input' || isDoneRef.current) return;
+    if (phase !== 'input' || isDoneRef.current || isPaused) return;
 
     setActiveNote(noteId);
+    const note = NOTE_COLORS[noteId];
+    if (note) audioService.playTone(note.freq, 0.15, 'triangle');
     setTimeout(() => setActiveNote(null), 200);
 
     const expectedNote = sequence[userIndex];
@@ -77,15 +86,26 @@ export const ChordMemory: React.FC<EventProps> = ({ onComplete, tile, settings, 
       setUserIndex(newIndex);
       setCorrectCount(newCorrect);
 
-      if (newIndex >= sequence.length) {
-        finish(newCorrect);
+      if (newIndex >= roundLength) {
+        if (roundLength >= sequence.length) {
+          finish(newCorrect);
+        } else {
+          // Advance to next growing round
+          setTimeout(() => {
+            if (isDoneRef.current) return;
+            setRoundLength(r => r + 1);
+            setUserIndex(0);
+            setShowIndex(0);
+            setPhase('showing');
+          }, 350);
+        }
       }
     } else {
       finish(correctCount);
     }
   };
 
-  const inputProgress = phase === 'input' ? `${userIndex}/${sequence.length}` : '';
+  const inputProgress = phase === 'input' ? `${userIndex}/${roundLength}` : '';
 
   return (
     <div
@@ -93,7 +113,7 @@ export const ChordMemory: React.FC<EventProps> = ({ onComplete, tile, settings, 
       style={{ filter: isBlurred ? 'blur(8px)' : 'none' }}
     >
       <div className="text-sm text-cyan-300/70">
-        {phase === 'showing' && 'Watch the sequence...'}
+        {phase === 'showing' && `Watch the sequence (Length ${roundLength})...`}
         {phase === 'input' && `Repeat the sequence! (${inputProgress})`}
         {phase === 'done' && 'Done!'}
       </div>
@@ -116,7 +136,7 @@ export const ChordMemory: React.FC<EventProps> = ({ onComplete, tile, settings, 
 
       {phase === 'showing' && (
         <div className="flex gap-1 mt-2">
-          {sequence.map((_, i) => (
+          {Array.from({ length: roundLength }).map((_, i) => (
             <div
               key={i}
               className="w-2 h-2 rounded-full"

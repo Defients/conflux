@@ -57,27 +57,21 @@ const generateRival = (playerName: string, playerAvatar: string): RivalData => {
 
 const normalizeProfile = (input: Partial<PilotProfile & { rivalData: Partial<RivalData> }>): PilotProfile | null => {
     const parsed = { ...input } as Partial<PilotProfile & { rivalData: Partial<RivalData> }>;
-    let needsSave = false;
 
     if (typeof parsed.gauntletHighScore !== 'number') {
         parsed.gauntletHighScore = 0;
-        needsSave = true;
     }
     if (typeof parsed.winStreak !== 'number') {
         parsed.winStreak = 0;
-        needsSave = true;
     }
     if (!parsed.unlockedAccolades) {
         parsed.unlockedAccolades = [];
-        needsSave = true;
     }
     if (!parsed.rivalData) {
         parsed.rivalData = generateRival(parsed.name ?? 'Player', parsed.avatarId ?? '🤖');
-        needsSave = true;
     }
     if (!parsed.rivalData.traits) {
         parsed.rivalData.traits = [];
-        needsSave = true;
     }
     if (!parsed.sponsorships) {
         parsed.sponsorships = {
@@ -85,32 +79,37 @@ const normalizeProfile = (input: Partial<PilotProfile & { rivalData: Partial<Riv
             [CorporationId.Zenith]: { reputation: 0, activeContract: null },
             [CorporationId.Rogue]: { reputation: 0, activeContract: null },
         };
-        needsSave = true;
     }
     if (!Array.isArray(parsed.appliedMatchIds)) {
         parsed.appliedMatchIds = [];
-        needsSave = true;
     }
     if (!parsed.dailyBests || typeof parsed.dailyBests !== 'object') {
         parsed.dailyBests = {};
-        needsSave = true;
     }
-    // v5.0: Normalize new fields
+    if (typeof parsed.circuitPoints !== 'number' || !Number.isFinite(parsed.circuitPoints)) {
+        parsed.circuitPoints = 0;
+    } else {
+        parsed.circuitPoints = Math.max(0, Math.floor(parsed.circuitPoints));
+    }
+    // v5.0: Normalize new fields — circuitPoints is the single authoritative currency ledger
     if (!parsed.skills) {
-        parsed.skills = { speed: {}, tech: {}, endurance: {}, availableCP: 0 };
-        needsSave = true;
+        parsed.skills = { speed: {}, tech: {}, endurance: {}, availableCP: parsed.circuitPoints };
+    } else {
+        parsed.skills = {
+            speed: parsed.skills.speed ?? {},
+            tech: parsed.skills.tech ?? {},
+            endurance: parsed.skills.endurance ?? {},
+            availableCP: parsed.circuitPoints,
+        };
     }
     if (!parsed.loadouts) {
         parsed.loadouts = {};
-        needsSave = true;
     }
     if (!parsed.unlockedModules) {
         parsed.unlockedModules = [];
-        needsSave = true;
     }
     if (!parsed.eventMastery) {
         parsed.eventMastery = {};
-        needsSave = true;
     }
     if (!parsed.rank) {
         parsed.rank = {
@@ -120,7 +119,6 @@ const normalizeProfile = (input: Partial<PilotProfile & { rivalData: Partial<Riv
             losses: 0,
             peakRating: 1000,
         };
-        needsSave = true;
     }
 
     if (parsed.name && parsed.avatarId && parsed.unlockedChassis && parsed.rivalData && parsed.unlockedAccolades && parsed.sponsorships) {

@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { SeededRNG } from '../services/seededRNG';
 import { EventProps } from '../types';
 
-export const EventStub: React.FC<EventProps> = ({ onComplete, tile, settings , isPaused }) => {
+export const EventStub: React.FC<EventProps> = ({ onComplete, tile, isPaused }) => {
   const [countdown, setCountdown] = useState(5);
 
   useEffect(() => {

@@ -4,7 +4,7 @@ import { EventProps } from '../types';
 
 type Judgement = 'Perfect' | 'Good' | 'Miss' | '';
 
-export const RhythmTap: React.FC<EventProps> = ({ onComplete, tile, event, settings, isBlurred , isPaused }) => {
+export const RhythmTap: React.FC<EventProps> = ({ onComplete, tile, isBlurred , isPaused }) => {
     const [judgement, setJudgement] = useState<Judgement>('');
     const [score, setScore] = useState(0);
     const [beat, setBeat] = useState(0);

@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { GameEvent, EventPreset, PerformanceDimension } from '../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { GameEvent, EventPreset, PerformanceDimension, PilotProfile } from '../types';
 import { eventRegistry } from '../events/eventRegistry';
 import { savePresets, loadPresets } from '../services/presetService';
 import { useSound } from '../hooks/useSound';
@@ -10,6 +10,7 @@ interface EventListProps {
     onApplyConfig: (eventIds: string[]) => void;
     onPlaytest: (event: GameEvent, difficulty: number) => void;
     initialActiveIds: string[];
+    profile?: PilotProfile | null;
 }
 
 const DIMENSION_COLORS: Record<PerformanceDimension, string> = {
@@ -31,7 +32,7 @@ const Toggle = ({ checked, onChange, id, label }: { checked: boolean, onChange: 
     </label>
 );
 
-export const EventList: React.FC<EventListProps> = ({ onBack, onApplyConfig, onPlaytest, initialActiveIds }) => {
+export const EventList: React.FC<EventListProps> = ({ onBack, onApplyConfig, onPlaytest, initialActiveIds, profile }) => {
     const { playSound } = useSound();
     const [activeEventIds, setActiveEventIds] = useState<Set<string>>(new Set(initialActiveIds));
     const [presets, setPresets] = useState<EventPreset[]>([]);
@@ -186,12 +187,19 @@ export const EventList: React.FC<EventListProps> = ({ onBack, onApplyConfig, onP
                         </div>
                     </div>
                     <div className="flex-grow overflow-y-auto pr-1 sm:pr-2 space-y-2 mobile-scroll">
-                        {filteredEvents.map(event => (
+                        {filteredEvents.map(event => {
+                             const mastery = profile?.eventMastery?.[event.id];
+                             return (
                              <div key={event.id} className="p-2.5 sm:p-3 rounded-lg flex items-center bg-cosmic-blue/50 border border-star-purple/50 gap-2 sm:gap-4">
                                 <div className="flex-grow min-w-0">
                                     <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
                                         <h3 className="text-sm sm:text-lg font-semibold text-white truncate">{event.displayName}</h3>
                                         <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold ${DIMENSION_COLORS[event.performanceDimension]}`}>{event.performanceDimension}</span>
+                                        {mastery && mastery.totalPlays > 0 && (
+                                            <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-mono font-bold bg-solar-orange/20 text-solar-orange border border-solar-orange/30">
+                                                ★ Mastery Lv.{mastery.masteryLevel} ({mastery.totalPlays})
+                                            </span>
+                                        )}
                                     </div>
                                     <p className="text-xs sm:text-sm text-gray-400 line-clamp-1 sm:line-clamp-none">{event.instructions}</p>
                                 </div>
@@ -200,7 +208,8 @@ export const EventList: React.FC<EventListProps> = ({ onBack, onApplyConfig, onP
                                     <Toggle checked={activeEventIds.has(event.id)} onChange={() => handleToggle(event.id)} id={`toggle-${event.id}`} label={`Toggle ${event.displayName}`} />
                                 </div>
                             </div>
-                        ))}
+                             );
+                        })}
                     </div>
                 </div>
 

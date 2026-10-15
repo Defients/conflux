@@ -6,23 +6,24 @@
  * event result validation, scoring, and reconnection.
  */
 
-import { Room, Client, Delayed } from 'colyseus';
+import { Room, Client, Delayed, matchMaker } from 'colyseus';
 import {
-  GameState, GameSettings, Player, EventResult, Tile, PowerUp,
-  ChassisId, BotPersonality, AnomalyId, SharedEventDescriptor,
+  GameState, GameSettings, Player, EventResult,
+  ChassisId, BotPersonality, AnomalyId,
   RoomConfig, MatchPhase, EventTelemetry, LobbyPlayer,
-  PilotSkills, ChassisLoadout, TeamId,
+  TeamId, PilotProfile,
 } from '../../../shared/types';
 import {
   PLAYER_COLORS, BOT_NAMES, CHASSIS_DEFINITIONS, ANOMALY_DEFINITIONS,
-  GAUNTLET_CONFIG, MAX_ROOM_PLAYERS, EVENT_RESULT_TIMEOUT_MS,
-  RECONNECT_GRACE_PERIOD_MS, ROOM_CODE_LENGTH,
+  MAX_ROOM_PLAYERS, EVENT_RESULT_TIMEOUT_MS,
+  ROOM_CODE_LENGTH,
   RECONNECT_GRACE_PERIOD_V5_MS, MAX_RECONNECT_ATTEMPTS_V5,
+  PIT_STOP_CONFIG,
 } from '../../../shared/constants';
 import { SeededRNG } from '../../../shared/seededRNG';
-import { generateRun } from '../../../shared/pathGenerator';
+import { generateRun, generateCustomRun } from '../../../shared/pathGenerator';
 import { GameRules } from '../../../shared/gameRules';
-import { simulateBotPerformance, decideBotPowerUp, decideBotOverdrive } from '../../../shared/botMind';
+import { simulateBotPerformance, decideBotPowerUp, decideBotOverdrive, applyRivalTraitsToPlayer } from '../../../shared/botMind';
 import {
   ClientMessages, ServerMessages,
   TileStartPayload, TileResultsPayload, RaceFinishedPayload,
@@ -30,19 +31,18 @@ import {
   InterventionChoicePayload, PitStopActionPayload, UpdateSettingsPayload,
   KickPlayerPayload, BanPlayerPayload,
 } from '../../../shared/protocol';
-import { RoomNames } from '../../../shared/protocol';
 import { EVENT_DESCRIPTORS, STAR_COMPUTERS } from '../eventDescriptors';
+import { getCanonicalEventDurationSec } from '../../../shared/eventCatalog';
 import { ServerEventValidator } from '../validation/eventValidator';
 import { ClientRateLimiter, RATE_LIMITS } from '../validation/rateLimiter';
-import { computeMatchSummary, applyMatchSummaryToProfile } from '../../../shared/matchSummary';
-import { computeMultiPlayerRatingChanges, applyRatingChange, createDefaultRankInfo } from '../../../shared/rankSystem';
-import { applySkillEffects, applyLoadoutEffects, assignTeams } from '../../../shared/gameSetup';
-import { generateContracts } from '../../../shared/contractService';
-import { getProfile, saveProfile, updateProfileTransaction } from '../services/profileRepository';
+import {
+  applySkillEffects, applyLoadoutEffects, applySyndicatePerks,
+  rollStartingLoadoutPerks, assignTeams, applySeasonalModifierToSettings,
+  applySeasonalModifierToPlayer, getSeasonalAnomalyChance,
+  sanitizeGameSettings, validateLoadoutAndSkills,
+} from '../../../shared/gameSetup';
+import { getProfile } from '../services/profileRepository';
 import { runMatchSummaryPipeline, RoomPlayerInfo } from '../services/matchSummaryPipeline';
-import { writeLeaderboardEntry } from '../services/leaderboardRepository';
-import { writeMatchHistory } from '../services/matchHistoryRepository';
-import { LeaderboardEntry, MatchHistoryEntry } from '../../../shared/types';
 import { verifyAuthToken, validateUserIdClaim } from '../auth/verifyToken';
 
 // ─── Room State (plain object, synced via messages) ──────────────────────────
@@ -63,6 +63,7 @@ interface RoomPlayer {
   rating?: number;
   skillNodeIds?: string[];
   moduleIds?: string[];
+  storedProfile?: PilotProfile | null;
   rttMs?: number;
   reconnectAttempts?: number;
 }
@@ -123,6 +124,9 @@ export class ConfluxRoom extends Room {
   };
 
   private resultTimeout: Delayed | null = null;
+  private pitStopTimeout: Delayed | null = null;
+  private interventionTimeout: Delayed | null = null;
+  private stormInterval: Delayed | null = null;
   private nextPlayerId = 1;
   private eventDimensionMap: Record<string, string> = {};
   private rateLimiter = new ClientRateLimiter();
@@ -130,6 +134,10 @@ export class ConfluxRoom extends Room {
   /** v5.1: Matchmaking options — auto-start when expectedPlayers have joined. */
   private autoStart = false;
   private expectedPlayers = 0;
+  private isRankedMatch = false;
+  private tournamentRoomId: string | null = null;
+  private tournamentMatchId: string | null = null;
+  private allowedParticipantIds: Set<string> | null = null;
   /** Timeout handle for auto-start grace period. */
   private autoStartTimeout: Delayed | null = null;
 
@@ -150,6 +158,12 @@ export class ConfluxRoom extends Room {
     // v5.1: Matchmaking-created rooms auto-start when all expected players join.
     this.autoStart = !!options.autoStart;
     this.expectedPlayers = typeof options.expectedPlayers === 'number' ? options.expectedPlayers : 0;
+    this.isRankedMatch = options.queueType === 'ranked';
+    this.tournamentRoomId = typeof options.tournamentRoomId === 'string' ? options.tournamentRoomId : null;
+    this.tournamentMatchId = typeof options.tournamentMatchId === 'string' ? options.tournamentMatchId : null;
+    this.allowedParticipantIds = Array.isArray(options.allowedParticipantIds)
+      ? new Set((options.allowedParticipantIds as string[]).filter(Boolean))
+      : null;
 
     // v5.1: Auto-start timeout — if not all expected players join within 30s
     // (e.g., a matched player disconnected before consuming their seat reservation),
@@ -267,59 +281,101 @@ export class ConfluxRoom extends Room {
       return false;
     }
 
-    // Store verified identity on client for use in onJoin.
+    // Store verified identity and authoritative stored profile on client for use in onJoin.
     (client as any).verifiedUid = identity.uid;
     (client as any).authBypassed = identity.authBypassed;
+    if (!identity.authBypassed) {
+      try {
+        const storedProfile = await getProfile(identity.uid);
+        (client as any).storedProfile = storedProfile;
+      } catch {
+        (client as any).storedProfile = null;
+      }
+    } else {
+      (client as any).storedProfile = null;
+    }
     return true;
   }
 
   onJoin(client: Client, options: RoomConfig) {
+    if (!this.spectatorIds) this.spectatorIds = new Set();
     // Check ban lists (using verified UID from onAuth, not client-supplied userId)
     const verifiedUid = (client as any).verifiedUid as string | undefined;
+    const storedProfile = (client as any).storedProfile as PilotProfile | null | undefined;
     if (this.roomState.bannedSessionIds.has(client.sessionId) ||
         (verifiedUid && this.roomState.bannedUserIds.has(verifiedUid))) {
       throw new Error('You are banned from this room.');
     }
 
-    // Reject joins during an active match unless spectating
-    if (this.roomState.phase !== 'lobby') {
-      // Check if this is a spectator join
-      if ((options as any).spectate) {
-        this.spectatorIds.add(client.sessionId);
-        client.send(ServerMessages.SPECTATOR_MODE, { roomCode: this.roomState.roomCode });
-        if (this.roomState.gameState) {
-          this.sendGameStateToClient(client);
-        }
-        console.log(`[Room ${this.roomState.roomCode}] Spectator joined (session: ${client.sessionId})`);
-        return;
+    // Check if this is a spectator join (allowed in any phase)
+    if ((options as any)?.spectate) {
+      this.spectatorIds.add(client.sessionId);
+      client.send(ServerMessages.SPECTATOR_MODE, { roomCode: this.roomState.roomCode });
+      if (this.roomState.gameState) {
+        this.sendGameStateToClient(client);
       }
+      console.log(`[Room ${this.roomState.roomCode}] Spectator joined (session: ${client.sessionId})`);
+      return;
+    }
+
+    // Reject non-spectator joins during an active match
+    if (this.roomState.phase !== 'lobby') {
       throw new Error('Match already in progress.');
+    }
+
+    // If this is a restricted tournament child match, verify participant admission
+    if (this.allowedParticipantIds && this.allowedParticipantIds.size > 0) {
+      const candidateIds = [
+        client.sessionId,
+        verifiedUid,
+        options?.userId,
+        options?.playerName,
+      ].filter((v): v is string => typeof v === 'string' && v.length > 0);
+      const isAllowed = candidateIds.some(id => this.allowedParticipantIds!.has(id));
+      if (!isAllowed) {
+        throw new Error('You are not a participant in this tournament match.');
+      }
     }
 
     const playerId = this.nextPlayerId++;
 
-    // Sanitize inputs
-    const rawName = typeof options.playerName === 'string' ? options.playerName.trim() : '';
-    const sanitizedName = rawName.slice(0, 20) || `Player ${playerId}`;
-    const validChassis = Object.values(ChassisId).includes(options.chassisId as ChassisId)
-      ? options.chassisId
-      : ChassisId.Standard;
+    // Sanitize inputs and validate loadout/skills against authoritative profile if available
+    const rawName = typeof options?.playerName === 'string' ? options.playerName.trim() : '';
+    const sanitizedName = rawName.slice(0, 20) || storedProfile?.name?.slice(0, 20) || `Player ${playerId}`;
+    const { validChassisId, skills, loadout } = validateLoadoutAndSkills(
+      options?.chassisId as ChassisId,
+      options?.skillNodeIds,
+      options?.moduleIds,
+      storedProfile
+    );
+    const validatedSkillIds = [
+      ...Object.keys(skills.speed).filter(k => skills.speed[k]),
+      ...Object.keys(skills.tech).filter(k => skills.tech[k]),
+      ...Object.keys(skills.endurance).filter(k => skills.endurance[k]),
+    ];
+    const validatedModuleIds = Object.values(loadout.modules).filter(Boolean) as string[];
+    const authoritativeRating = storedProfile?.rank?.rating ?? (
+      typeof options?.rating === 'number' && Number.isFinite(options.rating)
+        ? Math.max(0, Math.min(5000, Math.round(options.rating)))
+        : undefined
+    );
 
     const roomPlayer: RoomPlayer = {
       sessionId: client.sessionId,
       name: sanitizedName,
-      avatarId: options.avatarId || '🤖',
-      chassisId: validChassis,
+      avatarId: options?.avatarId || storedProfile?.avatarId || '🤖',
+      chassisId: validChassisId,
       isReady: false,
       isHost: this.roomState.players.size === 0, // First player is host
       isConnected: true,
       playerId,
-      userId: verifiedUid ?? options.userId, // Prefer verified UID over client claim
+      userId: verifiedUid ?? options?.userId, // Prefer verified UID over client claim
       // v5.0 fields
-      rating: options.rating,
-      teamId: options.teamId,
-      skillNodeIds: options.skillNodeIds,
-      moduleIds: options.moduleIds,
+      rating: authoritativeRating,
+      teamId: options?.teamId,
+      skillNodeIds: validatedSkillIds,
+      moduleIds: validatedModuleIds,
+      storedProfile: storedProfile ?? null,
       reconnectAttempts: 0,
     };
 
@@ -429,11 +485,31 @@ export class ConfluxRoom extends Room {
   }
 
   onDispose() {
+    this.clearTimers();
+    console.log(`[Room ${this.roomState.roomCode}] Disposed`);
+  }
+
+  private clearTimers() {
     if (this.autoStartTimeout) {
       this.autoStartTimeout.clear();
       this.autoStartTimeout = null;
     }
-    console.log(`[Room ${this.roomState.roomCode}] Disposed`);
+    if (this.resultTimeout) {
+      this.resultTimeout.clear();
+      this.resultTimeout = null;
+    }
+    if (this.pitStopTimeout) {
+      this.pitStopTimeout.clear();
+      this.pitStopTimeout = null;
+    }
+    if (this.interventionTimeout) {
+      this.interventionTimeout.clear();
+      this.interventionTimeout = null;
+    }
+    if (this.stormInterval) {
+      this.stormInterval.clear();
+      this.stormInterval = null;
+    }
   }
 
   // ─── Message Handlers ──────────────────────────────────────────────────
@@ -469,16 +545,16 @@ export class ConfluxRoom extends Room {
 
   private handleUpdateSettings(client: Client, payload: UpdateSettingsPayload) {
     if (this.roomState.phase !== 'lobby') return;
+    if (!payload || typeof payload.settings !== 'object' || payload.settings === null) return;
 
     const player = this.roomState.players.get(client.sessionId);
     if (!player?.isHost) return;
 
-    const s = { ...this.roomState.settings, ...payload.settings };
-    s.playerCount = Math.max(1, Math.min(s.playerCount, MAX_ROOM_PLAYERS));
-    s.runLength = Math.max(1, Math.min(s.runLength, 20));
-    s.easyBots = Math.max(0, s.easyBots);
-    s.intermediateBots = Math.max(0, s.intermediateBots);
-    this.roomState.settings = s;
+    this.roomState.settings = sanitizeGameSettings(
+      { ...this.roomState.settings, ...payload.settings },
+      { defaultSeed: this.roomState.settings.seed }
+    );
+    this.roomState.settings.playerCount = Math.max(1, Math.min(this.roomState.settings.playerCount, MAX_ROOM_PLAYERS));
     this.broadcastLobbyState();
   }
 
@@ -493,22 +569,34 @@ export class ConfluxRoom extends Room {
     // Prevent duplicate submissions
     if (this.roomState.pendingResults.has(playerId)) return;
 
-    // Validate telemetry
+    const expectedTile = this.roomState.gameState.run[this.roomState.gameState.currentTileIndex];
+    if (!expectedTile) return;
+
+    // Validate telemetry against authoritative tile and event state
     const validation = ServerEventValidator.validate(payload, {
       tileIndex: this.roomState.gameState.currentTileIndex,
-      expectedEventId: this.roomState.gameState.run[this.roomState.gameState.currentTileIndex]?.eventId,
+      expectedEventId: expectedTile.eventId,
       tileStartTimestamp: this.roomState.tileStartTimestamp,
       tileDurationMs: this.roomState.tileDurationMs,
     });
 
     if (!validation.valid) {
-      console.warn(`[Room ${this.roomState.roomCode}] Invalid telemetry from ${roomPlayer.name}: ${validation.reason}`);
-      // Still accept with degraded score rather than rejecting outright
+      console.warn(`[Room ${this.roomState.roomCode}] Invalid telemetry rejected from ${roomPlayer.name}: ${validation.reason}`);
+      client.send?.(ServerMessages.ROOM_ERROR, {
+        message: `Invalid event result rejected: ${validation.reason}`,
+      });
+      this.roomState.pendingResults.set(playerId, {
+        playerId,
+        stars: 0,
+        primaryMetric: 0,
+      });
+      this.checkAllResultsReceived();
+      return;
     }
 
-    // Server computes stars from raw metrics
+    // Server computes stars from raw metrics using the authoritative tile's eventId
     const stars = ServerEventValidator.computeStars(
-      payload.eventId,
+      expectedTile.eventId,
       payload.primaryMetric,
       payload.secondaryMetric
     );
@@ -528,6 +616,7 @@ export class ConfluxRoom extends Room {
 
   private handleUsePowerUp(client: Client, payload: UsePowerUpPayload) {
     if (this.roomState.phase !== 'playing' || !this.roomState.gameState) return;
+    if (!payload || typeof payload.powerUp !== 'string') return;
 
     const roomPlayer = this.roomState.players.get(client.sessionId);
     if (!roomPlayer) return;
@@ -544,16 +633,17 @@ export class ConfluxRoom extends Room {
     this.broadcastGameState();
   }
 
-  private handleActivateOverdrive(client: Client, payload: ActivateOverdrivePayload) {
+  private handleActivateOverdrive(client: Client, _payload: ActivateOverdrivePayload) {
     if (this.roomState.phase !== 'playing' || !this.roomState.gameState) return;
 
     const roomPlayer = this.roomState.players.get(client.sessionId);
     if (!roomPlayer) return;
 
+    // Never trust client-supplied `force`; clients must pay energy and obey cooldown
     const { newState } = GameRules.activateOverdrive(
       this.roomState.gameState,
       roomPlayer.playerId,
-      payload.force
+      false
     );
 
     this.roomState.gameState = newState;
@@ -562,7 +652,9 @@ export class ConfluxRoom extends Room {
 
   private handleInterventionChoice(client: Client, payload: InterventionChoicePayload) {
     if (!this.roomState.gameState) return;
+    if (this.roomState.phase !== 'intervention' && this.roomState.phase !== 'tile_results') return;
     if (!this.roomState.gameState.activeIntervention) return;
+    if (!payload || typeof payload.accept !== 'boolean') return;
 
     const roomPlayer = this.roomState.players.get(client.sessionId);
     if (!roomPlayer) return;
@@ -573,6 +665,11 @@ export class ConfluxRoom extends Room {
       return;
     }
 
+    if (this.interventionTimeout) {
+      this.interventionTimeout.clear();
+      this.interventionTimeout = null;
+    }
+
     const { newState } = GameRules.resolveIntervention(
       this.roomState.gameState,
       payload.accept
@@ -580,11 +677,24 @@ export class ConfluxRoom extends Room {
 
     this.roomState.gameState = newState;
     this.broadcastGameState();
-    this.advanceToNextTile();
+    this.advanceAfterIntervention();
   }
 
   private handlePitStopAction(client: Client, payload: PitStopActionPayload) {
     if (!this.roomState.gameState) return;
+    if (this.roomState.phase !== 'pit_stop') {
+      client.send?.(ServerMessages.ROOM_ERROR, { message: 'Pit stop actions are only allowed during a pit stop.' });
+      return;
+    }
+
+    if (
+      !payload ||
+      typeof payload.action !== 'string' ||
+      !Object.prototype.hasOwnProperty.call(PIT_STOP_CONFIG.actions, payload.action)
+    ) {
+      client.send?.(ServerMessages.ROOM_ERROR, { message: 'Invalid pit stop action.' });
+      return;
+    }
 
     const roomPlayer = this.roomState.players.get(client.sessionId);
     if (!roomPlayer) return;
@@ -609,6 +719,10 @@ export class ConfluxRoom extends Room {
     const allSubmitted = humanPlayers.every(p => this.roomState.pendingPitStops.has(p.id));
 
     if (allSubmitted) {
+      if (this.pitStopTimeout) {
+        this.pitStopTimeout.clear();
+        this.pitStopTimeout = null;
+      }
       this.roomState.pendingPitStops.clear();
       this.advanceToNextTile();
     }
@@ -713,7 +827,8 @@ export class ConfluxRoom extends Room {
 
   private startMatch() {
     this.roomState.phase = 'countdown';
-    this.lock(); // Prevent new joins during match
+    // Note: onJoin already rejects non-spectator joins when phase !== 'lobby';
+    // keeping the room unlocked at the transport layer allows spectators to join active matches.
 
     const settings = { ...this.roomState.settings };
     const humanCount = this.roomState.players.size;
@@ -742,22 +857,33 @@ export class ConfluxRoom extends Room {
     }, 3500); // Match the existing countdown duration
   }
 
-  private initializeGameState(settings: GameSettings): GameState {
+  private initializeGameState(rawSettings: GameSettings): GameState {
+    const sanitized = sanitizeGameSettings(rawSettings, { defaultSeed: rawSettings.seed });
+    const { settings, modifier: seasonalModifier } = applySeasonalModifierToSettings(sanitized);
     const rng = new SeededRNG(`players-${settings.seed}`);
-    const players: Player[] = [];
+    let players: Player[] = [];
     const shuffledBotNames = rng.shuffle([...BOT_NAMES]);
     let botCount = 0;
 
     // Add human players
     for (const roomPlayer of this.roomState.players.values()) {
-      players.push({
+      const { validChassisId, skills, loadout } = validateLoadoutAndSkills(
+        roomPlayer.chassisId,
+        roomPlayer.skillNodeIds,
+        roomPlayer.moduleIds,
+        roomPlayer.storedProfile
+      );
+
+      let humanPlayer: Player = {
         id: roomPlayer.playerId,
         name: roomPlayer.name,
         isBot: false,
         isRival: false,
         playerType: 'human',
         connectionId: roomPlayer.sessionId,
-        chassisId: roomPlayer.chassisId,
+        userId: roomPlayer.userId,
+        chassisId: validChassisId,
+        teamId: roomPlayer.teamId,
         color: PLAYER_COLORS[(roomPlayer.playerId - 1) % PLAYER_COLORS.length],
         position: 0,
         powerUps: [],
@@ -767,36 +893,19 @@ export class ConfluxRoom extends Room {
         overdriveCooldown: 0,
         isConnected: true,
         isReady: true,
-      });
+      };
 
       // Apply Chassis effects
-      if (roomPlayer.chassisId === ChassisId.Aegis) {
-        players[players.length - 1].powerUps.push('Shield');
+      if (validChassisId === ChassisId.Aegis) {
+        humanPlayer.powerUps.push('Shield');
       }
 
-      // v5.0: Apply skill and loadout effects
-      if (roomPlayer.skillNodeIds && roomPlayer.skillNodeIds.length > 0) {
-        const skills: PilotSkills = {
-          speed: {}, tech: {}, endurance: {}, availableCP: 0,
-        };
-        for (const id of roomPlayer.skillNodeIds) {
-          if (id.startsWith('speed-')) skills.speed[id] = true;
-          else if (id.startsWith('tech-')) skills.tech[id] = true;
-          else if (id.startsWith('endurance-')) skills.endurance[id] = true;
-        }
-        players[players.length - 1] = applySkillEffects(players[players.length - 1], skills);
-      }
-      if (roomPlayer.moduleIds && roomPlayer.moduleIds.length > 0) {
-        const loadout: ChassisLoadout = {
-          chassisId: roomPlayer.chassisId,
-          modules: {},
-        };
-        const slotKeys = ['core', 'thrusters', 'shielding'] as const;
-        roomPlayer.moduleIds.forEach((mid, i) => {
-          if (i < 3) loadout.modules[slotKeys[i]] = mid;
-        });
-        players[players.length - 1] = applyLoadoutEffects(players[players.length - 1], loadout);
-      }
+      // v5.0: Apply validated skill, loadout, and syndicate effects
+      humanPlayer = applySkillEffects(humanPlayer, skills);
+      humanPlayer = applyLoadoutEffects(humanPlayer, loadout);
+      humanPlayer = applySyndicatePerks(humanPlayer, roomPlayer.storedProfile);
+      humanPlayer = rollStartingLoadoutPerks(humanPlayer, rng);
+      players.push(humanPlayer);
     }
 
     // Add bots
@@ -839,14 +948,33 @@ export class ConfluxRoom extends Room {
       const randomChassisId = chassisIds[rng.nextInt(0, chassisIds.length)];
       rivalBot.chassisId = randomChassisId;
       if (randomChassisId === ChassisId.Aegis) rivalBot.powerUps.push('Shield');
+
+      const hostProfile = this.roomState.players.get(this.roomState.hostSessionId)?.storedProfile;
+      if (hostProfile?.rivalData?.traits && hostProfile.rivalData.traits.length > 0) {
+        const rivalIdx = players.findIndex(p => p === rivalBot);
+        if (rivalIdx >= 0) {
+          players[rivalIdx] = applyRivalTraitsToPlayer(rivalBot, hostProfile.rivalData.traits, rng);
+        }
+      }
+    }
+
+    if (settings.teamMode) {
+      players = assignTeams(players);
+    }
+
+    if (seasonalModifier) {
+      players = players.map(p => applySeasonalModifierToPlayer(p, seasonalModifier));
     }
 
     // Generate run
-    let run = generateRun(settings.seed, settings.runLength, EVENT_DESCRIPTORS);
+    let run = (settings.customEventIds && settings.customEventIds.length > 0)
+      ? generateCustomRun(settings.seed, settings.runLength, EVENT_DESCRIPTORS, settings.customEventIds)
+      : generateRun(settings.seed, settings.runLength, EVENT_DESCRIPTORS);
 
-    // 15% chance for anomaly
+    // Anomaly chance: base 15%, boosted by seasonal modifier if active
     let activeAnomaly = null;
-    if (rng.nextFloat() < 0.15) {
+    const anomalyChance = Math.max(0.15, getSeasonalAnomalyChance(settings.activeSeasonId));
+    if (rng.nextFloat() < anomalyChance) {
       const anomalyIds = Object.values(AnomalyId);
       const randomAnomalyId = anomalyIds[rng.nextInt(0, anomalyIds.length)];
       activeAnomaly = { id: randomAnomalyId, ...ANOMALY_DEFINITIONS[randomAnomalyId] };
@@ -864,7 +992,11 @@ export class ConfluxRoom extends Room {
       }
     }
 
+    const matchId = `${settings.seed}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
     return {
+      matchId,
+      isRanked: this.isRankedMatch,
       settings,
       players,
       run,
@@ -888,10 +1020,14 @@ export class ConfluxRoom extends Room {
     }
 
     const tile = gs.run[gs.currentTileIndex];
-    // Conservative server-side default for timeout validation; actual event duration is client-side.
-    const baseDuration = 15000;
-    const anomalyMult = gs.activeAnomaly?.id === 'TIME_DILATION' ? 0.8 : 1;
-    this.roomState.tileDurationMs = baseDuration * anomalyMult;
+    // Canonical per-event duration (with accessibility and Time Dilation support)
+    const canonicalSec = getCanonicalEventDurationSec(
+      tile.eventId,
+      tile.difficulty,
+      gs.settings.accessibility,
+      gs.activeAnomaly?.id
+    );
+    this.roomState.tileDurationMs = Math.round(canonicalSec * 1000);
     this.roomState.tileStartTimestamp = Date.now();
     this.roomState.pendingResults.clear();
 
@@ -909,20 +1045,56 @@ export class ConfluxRoom extends Room {
 
     this.broadcast(ServerMessages.TILE_START, tileStart);
 
+    // Authoritative server-side Cosmic Storm surges
+    if (this.stormInterval) {
+      this.stormInterval.clear();
+      this.stormInterval = null;
+    }
+    if (gs.activeAnomaly?.id === 'COSMIC_STORM') {
+      const stormRng = new SeededRNG(`storm-${gs.settings.seed}-${gs.currentTileIndex}`);
+      this.stormInterval = this.clock.setTimeout(() => {
+        if (this.roomState.phase !== 'playing' || !this.roomState.gameState) return;
+        if (stormRng.nextFloat() < 0.35 && this.roomState.gameState.players.length > 0) {
+          const targetIdx = stormRng.nextInt(0, this.roomState.gameState.players.length);
+          const randomPlayer = this.roomState.gameState.players[targetIdx];
+          if (randomPlayer && !this.roomState.gameState.overdrivingPlayerIds.includes(randomPlayer.id)) {
+            const { newState } = GameRules.activateOverdrive(this.roomState.gameState, randomPlayer.id, true);
+            this.roomState.gameState = newState;
+            this.broadcastGameState();
+          }
+        }
+      }, 2500);
+    }
+
     // Simulate bot power-up and overdrive decisions (mirroring client EventRunner logic)
     if (this.roomState.gameState) {
-      const gsForBots = this.roomState.gameState;
+      const expectedTileIdx = gs.currentTileIndex;
+      const expectedMatchId = gs.matchId;
+      const botRng = new SeededRNG(`bot-delay-${gs.settings.seed}-${expectedTileIdx}`);
       this.clock.setTimeout(() => {
-        if (!this.roomState.gameState) return;
-        for (const player of gsForBots.players) {
+        if (
+          !this.roomState.gameState ||
+          this.roomState.phase !== 'playing' ||
+          this.roomState.gameState.currentTileIndex !== expectedTileIdx ||
+          this.roomState.gameState.matchId !== expectedMatchId
+        ) {
+          return;
+        }
+        const hostTraits = this.roomState.players.get(this.roomState.hostSessionId)?.storedProfile?.rivalData?.traits;
+        for (const player of this.roomState.gameState.players) {
           if (!player.isBot) continue;
 
-          if (decideBotOverdrive(player, gsForBots)) {
-            const { newState } = GameRules.activateOverdrive(gsForBots, player.id);
+          if (decideBotOverdrive(player, this.roomState.gameState)) {
+            const { newState } = GameRules.activateOverdrive(this.roomState.gameState, player.id);
             this.roomState.gameState = newState;
           }
 
-          const powerUpDecision = decideBotPowerUp(player, gsForBots, tile);
+          const powerUpDecision = decideBotPowerUp(
+            player,
+            this.roomState.gameState,
+            tile,
+            player.isRival ? hostTraits : undefined
+          );
           if (powerUpDecision) {
             const { newState } = GameRules.applyPowerUp(
               this.roomState.gameState, player.id, powerUpDecision.use,
@@ -932,14 +1104,15 @@ export class ConfluxRoom extends Room {
           }
         }
         this.broadcastGameState();
-      }, Math.floor(Math.random() * 2000) + 500);
+      }, botRng.nextInt(500, 2500));
     }
 
-    // Set timeout for missing submissions
+    // Set timeout for missing submissions based on canonical tile duration + 10s grace buffer
     if (this.resultTimeout) this.resultTimeout.clear();
+    const timeoutMs = Math.max(EVENT_RESULT_TIMEOUT_MS, this.roomState.tileDurationMs + 10_000);
     this.resultTimeout = this.clock.setTimeout(() => {
       this.handleResultTimeout();
-    }, EVENT_RESULT_TIMEOUT_MS);
+    }, timeoutMs);
   }
 
   private checkAllResultsReceived() {
@@ -1059,6 +1232,7 @@ export class ConfluxRoom extends Room {
 
     // Check for intervention
     if (gs.activeIntervention) {
+      this.roomState.phase = 'intervention';
       const rival = gs.players.find(p => p.isRival);
       const standardTile = gs.run[gs.currentTileIndex];
       this.broadcast(ServerMessages.INTERVENTION, {
@@ -1066,15 +1240,52 @@ export class ConfluxRoom extends Room {
         standardTile,
         hazardTile: gs.activeIntervention.hazardTile,
         cpBonus: gs.activeIntervention.cpBonus,
+        interventionType: gs.activeIntervention.type,
+        sabotageStatus: gs.activeIntervention.sabotageStatus as 'BLURRED' | 'SLOWED' | undefined,
       });
-      // Wait for host's intervention choice
+      if (this.interventionTimeout) this.interventionTimeout.clear();
+      this.interventionTimeout = this.clock.setTimeout(() => {
+        if (this.roomState.phase === 'intervention' && this.roomState.gameState?.activeIntervention) {
+          const { newState } = GameRules.resolveIntervention(this.roomState.gameState, false);
+          this.roomState.gameState = newState;
+          this.broadcastGameState();
+          this.advanceAfterIntervention();
+        }
+      }, 20_000);
       return;
     }
 
+    this.advanceAfterIntervention();
+  }
+
+  private advanceAfterIntervention() {
+    if (!this.roomState.gameState) return;
+    const gs = this.roomState.gameState;
+
     // Check for pit stop
-    const tilesPerStage = 4;
+    const tilesPerStage = PIT_STOP_CONFIG.tilesPerStage;
     if (gs.currentTileIndex > 0 && gs.currentTileIndex % tilesPerStage === 0) {
+      this.roomState.phase = 'pit_stop';
+      this.roomState.pendingPitStops.clear();
       this.broadcast(ServerMessages.PIT_STOP, {});
+      if (this.pitStopTimeout) this.pitStopTimeout.clear();
+      this.pitStopTimeout = this.clock.setTimeout(() => {
+        if (this.roomState.phase === 'pit_stop' && this.roomState.gameState) {
+          const humanPlayers = this.roomState.gameState.players.filter(
+            p => !p.isBot && p.isConnected !== false
+          );
+          for (const hp of humanPlayers) {
+            if (!this.roomState.pendingPitStops.has(hp.id)) {
+              const { newState } = GameRules.processPitStop(this.roomState.gameState, hp.id, 'recharge');
+              this.roomState.gameState = newState;
+              this.roomState.pendingPitStops.add(hp.id);
+            }
+          }
+          this.roomState.pendingPitStops.clear();
+          this.broadcastGameState();
+          this.advanceToNextTile();
+        }
+      }, 20_000);
       return;
     }
 
@@ -1121,6 +1332,26 @@ export class ConfluxRoom extends Room {
     this.broadcast(ServerMessages.RACE_FINISHED, payload);
     this.unlock(); // Allow new joins for rematch
 
+    // If this was a tournament child match, report the authoritative winner to the parent TournamentRoom
+    if (this.tournamentRoomId && this.tournamentMatchId && sortedPlayers.length > 0) {
+      const winningPlayer = sortedPlayers.find(p => !p.isBot) ?? sortedPlayers[0];
+      const winningRoomPlayer = winningPlayer
+        ? Array.from(this.roomState.players.values()).find(rp => rp.playerId === winningPlayer.id)
+        : undefined;
+      matchMaker.remoteRoomCall(
+        this.tournamentRoomId,
+        'onChildMatchFinished',
+        [{
+          matchId: this.tournamentMatchId,
+          winnerSessionId: winningRoomPlayer?.sessionId ?? winningPlayer?.connectionId,
+          winnerUserId: winningRoomPlayer?.userId ?? winningPlayer?.userId,
+          winnerName: winningPlayer?.name,
+        }]
+      ).catch((err) => {
+        console.error(`[Room ${this.roomState.roomCode}] Failed to report tournament outcome:`, err);
+      });
+    }
+
     // ── Async per-player summary pipeline (extracted to matchSummaryPipeline) ──
     const eventDimensionMap = this.getEventDimensionMap();
     const gs = this.roomState.gameState; // capture snapshot
@@ -1140,6 +1371,8 @@ export class ConfluxRoom extends Room {
       sortedPlayers,
       eventDimensionMap,
       roomCode: this.roomState.roomCode,
+      isRanked: Boolean(this.isRankedMatch),
+      matchId: gs.matchId,
       findClient: (sessionId: string) => this.clients.find(c => c.sessionId === sessionId),
     });
   }
@@ -1164,6 +1397,15 @@ export class ConfluxRoom extends Room {
     this.roomState.players.delete(sessionId);
     this.rateLimiter.removeClient(sessionId);
 
+    // Reassign host if the abandoned player was host and players remain
+    if (player.isHost && this.roomState.players.size > 0) {
+      const newHost = this.roomState.players.values().next().value;
+      if (newHost) {
+        newHost.isHost = true;
+        this.roomState.hostSessionId = newHost.sessionId;
+      }
+    }
+
     // If we're waiting for their result, submit a 0-star default
     if (this.roomState.phase === 'playing') {
       if (!this.roomState.pendingResults.has(player.playerId)) {
@@ -1176,8 +1418,8 @@ export class ConfluxRoom extends Room {
       }
     }
 
-    // If a disconnected player hasn't submitted pit stop action, auto-advance
-    if (this.roomState.phase === 'tile_results' || this.roomState.phase === 'playing') {
+    // If a disconnected player hasn't submitted pit stop action during pit_stop phase, auto-advance
+    if (this.roomState.phase === 'pit_stop') {
       if (!this.roomState.pendingPitStops.has(player.playerId)) {
         this.roomState.pendingPitStops.add(player.playerId);
         const humanPlayers = this.roomState.gameState?.players.filter(
@@ -1185,6 +1427,10 @@ export class ConfluxRoom extends Room {
         ) ?? [];
         const allSubmitted = humanPlayers.every(p => this.roomState.pendingPitStops.has(p.id));
         if (allSubmitted && this.roomState.pendingPitStops.size > 0) {
+          if (this.pitStopTimeout) {
+            this.pitStopTimeout.clear();
+            this.pitStopTimeout = null;
+          }
           this.roomState.pendingPitStops.clear();
           this.advanceToNextTile();
         }
@@ -1192,11 +1438,15 @@ export class ConfluxRoom extends Room {
     }
 
     // If host abandons during intervention, auto-reject it
-    if (this.roomState.phase === 'tile_results' && player.isHost && this.roomState.gameState?.activeIntervention) {
+    if (this.roomState.phase === 'intervention' && player.isHost && this.roomState.gameState?.activeIntervention) {
+      if (this.interventionTimeout) {
+        this.interventionTimeout.clear();
+        this.interventionTimeout = null;
+      }
       const { newState } = GameRules.resolveIntervention(this.roomState.gameState, false);
       this.roomState.gameState = newState;
       this.broadcastGameState();
-      this.advanceToNextTile();
+      this.advanceAfterIntervention();
     }
   }
 
@@ -1254,6 +1504,8 @@ export class ConfluxRoom extends Room {
         standardTile,
         hazardTile: gs.activeIntervention.hazardTile,
         cpBonus: gs.activeIntervention.cpBonus,
+        interventionType: gs.activeIntervention.type,
+        sabotageStatus: gs.activeIntervention.sabotageStatus as 'BLURRED' | 'SLOWED' | undefined,
       });
     } else if (
       this.roomState.phase === 'tile_results' &&

@@ -7,9 +7,10 @@ interface PilotProfileSetupProps {
   existingProfiles?: PilotAccountSummary[];
   onSelectProfile?: (accountId: string) => void;
   onDeleteProfile?: (accountId: string) => void;
+  onStartOnboarding?: () => void;
 }
 
-export const PilotProfileSetup: React.FC<PilotProfileSetupProps> = ({ onProfileCreated, existingProfiles = [], onSelectProfile, onDeleteProfile }) => {
+export const PilotProfileSetup: React.FC<PilotProfileSetupProps> = ({ onProfileCreated, existingProfiles = [], onSelectProfile, onDeleteProfile, onStartOnboarding }) => {
   const [name, setName] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState(AVATARS[0]);
   const [profilePendingDelete, setProfilePendingDelete] = useState<PilotAccountSummary | null>(null);
@@ -141,6 +142,16 @@ export const PilotProfileSetup: React.FC<PilotProfileSetupProps> = ({ onProfileC
           <button type="submit" className="w-full py-4 sm:py-3 bg-hyper-green text-cosmic-blue font-bold text-lg sm:text-xl rounded-lg active:opacity-80 sm:hover:opacity-90 transition-opacity" aria-label="Create profile and enter hangar">
             Create Profile & Enter Hangar
           </button>
+          {onStartOnboarding && (
+            <button
+              type="button"
+              onClick={onStartOnboarding}
+              className="w-full mt-2 py-2.5 bg-white/5 hover:bg-white/10 border border-galaxy-cyan/30 text-galaxy-cyan text-xs sm:text-sm font-bold rounded-lg transition-colors"
+              aria-label="Start interactive pilot onboarding"
+            >
+              🎓 Guided Pilot Onboarding & Chassis Briefing
+            </button>
+          )}
         </form>
 
       </div>

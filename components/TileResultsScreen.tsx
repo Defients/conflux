@@ -5,11 +5,12 @@ import { STAR_MOVEMENT_MULTIPLIERS, TILE_MODIFIER_DEFINITIONS } from '../constan
 interface TileResultsScreenProps {
   gameState: GameState;
   onContinue: () => void;
+  localPlayerId?: number;
 }
 
 const AUTO_ADVANCE_MS = 3500;
 
-export const TileResultsScreen: React.FC<TileResultsScreenProps> = ({ gameState, onContinue }) => {
+export const TileResultsScreen: React.FC<TileResultsScreenProps> = ({ gameState, onContinue, localPlayerId }) => {
   const { players, run, lastTileResults, settings } = gameState;
   const completedTileIndex = gameState.currentTileIndex - 1;
   const completedTile = run[completedTileIndex];
@@ -119,7 +120,7 @@ export const TileResultsScreen: React.FC<TileResultsScreenProps> = ({ gameState,
                     <div className="relative z-10 flex justify-between w-full items-center">
                         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                             <div className="w-2 sm:w-3 h-6 sm:h-8 rounded-full flex-shrink-0" style={{backgroundColor: player.color}}></div>
-                            <span className={`font-bold text-sm sm:text-base truncate ${!player.isBot ? 'text-white' : 'text-gray-400'}`}>{player.name}</span>
+                            <span className={`font-bold text-sm sm:text-base truncate ${(localPlayerId ? player.id === localPlayerId : !player.isBot) ? 'text-white' : 'text-gray-400'}`}>{player.name}</span>
                         </div>
                         
                         <div className="flex items-center gap-3 sm:gap-6 flex-shrink-0">

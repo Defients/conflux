@@ -28,7 +28,7 @@ export const TournamentScreen: React.FC<TournamentScreenProps> = ({
   onChampion,
   profile,
 }) => {
-  const [hasJoined, setHasJoined] = useState(false);
+  const [hasJoined, setHasJoined] = useState(() => !!networkService.tournamentRoom || !!bracket);
   const [isJoining, setIsJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [bracketSize, setBracketSize] = useState<4 | 8 | 16>(4);
@@ -73,11 +73,13 @@ export const TournamentScreen: React.FC<TournamentScreenProps> = ({
     setError(null);
     try {
       const currentUser = auth?.currentUser;
+      const idToken = await currentUser?.getIdToken?.() ?? undefined;
       await networkService.joinTournament({
         playerName: profile.name,
         avatarId: profile.avatarId,
         chassisId: selectedChassis,
         userId: currentUser?.uid,
+        idToken,
       }, bracketSize);
       setHasJoined(true);
     } catch (err) {

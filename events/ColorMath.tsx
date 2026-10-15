@@ -42,12 +42,13 @@ export const ColorMath: React.FC<EventProps> = ({ onComplete, tile, settings, ev
     }, [onComplete, targetColor]);
     
     useEffect(() => {
+        if (isPaused) return;
         const timer = setTimeout(finishEvent, event.durationSec(tile.difficulty, settings.accessibility) * 1000);
         return () => clearTimeout(timer);
-    }, [event, tile.difficulty, settings.accessibility, finishEvent]);
+    }, [event, tile.difficulty, settings.accessibility, finishEvent, isPaused]);
 
     const handleSliderChange = (channel: 'r' | 'g' | 'b', value: number) => {
-        if (isDoneRef.current) return;
+        if (isDoneRef.current || isPaused) return;
         const newColor = { ...currentColorRef.current, [channel]: value };
         currentColorRef.current = newColor;
         setCurrentColor(newColor);

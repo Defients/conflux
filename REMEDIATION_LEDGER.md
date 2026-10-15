@@ -1,7 +1,7 @@
 # ConfluxCircuit Remediation Ledger
 
-**Created:** 2026-08-04  
-**Baseline:** 128 client tests, 34 server tests, clean typecheck, clean build
+**Updated:** 2026-10-15  
+**Current Baseline:** 216 client/shared tests, 87 server tests, 0 lint errors/warnings, clean typecheck, clean client & server builds. All 11 audit diagnostic probes (`B01–B15`, `R01–R18`) remediated and verified in `server/src/__tests__/auditRemediation.test.ts` and `shared/__tests__/eventCatalog.test.ts`.
 
 ## Legend
 - `unverified` — not yet checked against code
@@ -14,7 +14,24 @@
 
 ---
 
-## Issues
+## October 2026 Development-State Audit Remediations (B01–B15)
+- **B01 (Telemetry enforcement):** `fixed` — `ConfluxRoom.handleSubmitEventResult` rejects invalid telemetry with `0★` + `ROOM_ERROR` and scores using `expectedTile.eventId`.
+- **B02 (Command cost & phase guards):** `fixed` — Client `force` flag ignored on server; `GameRules.activateOverdrive` deduplicates `overdrivingPlayerIds`; `pit_stop` and `intervention` are explicit `MatchPhase` states with 20s deadlines and action validation.
+- **B03 (Three-tile generator hang):** `fixed` — `assignDifficultyAndModifiers` samples bounded interior positions `[1..runLength-2]` without unbounded loops; `sanitizeGameSettings` enforced at all ingresses.
+- **B04 (Independent clocks):** `fixed` — Canonical 47-event metadata/durations/scorers unified in `shared/eventCatalog.ts`; `Countdown` synced to 3.5s (`count = 3`); `TimerBar` preserves elapsed time across `isPaused`.
+- **B05 (Online human identity):** `fixed` — `App.tsx` resolves `activeHumanPlayerId` from session/UID and passes `localPlayerId` to `EventRunner`, `PitStopScreen`, `TileResultsScreen`, `ResultsScreen`, and `RaceTrackHUD`.
+- **B06 & §6 (Reward summary recomputation):** `fixed` — `runMatchSummaryPipeline` computes `MatchSummary` once inside `updateProfileTransaction` with an immutable `matchId`, persists a match receipt, and delivers the exact committed summary without recomputation.
+- **B07 (Ranking inflation & eligibility):** `fixed` — ELO changes gated on `isRanked` and computed with 1-based placements (`+16` / `-16` for equal-rated 2-player match); `ratingChange`/`newRating`/`newTier` included in `MatchSummary`.
+- **B08 (Account identity & CP ledger):** `fixed` — `circuitPoints` is the single currency ledger in `normalizeProfile` and `Lobby.tsx`; local profiles bind to `firebaseUid`; `FIREBASE_AUTH_DISABLED=1` rejected when `NODE_ENV === 'production'`.
+- **B09 (Firestore daily paths & UTC boundary):** `fixed` — Daily leaderboard uses valid 3-segment collection (`leaderboards/daily_${seed}/entries`) and 4-segment document (`leaderboards/daily_${seed}/entries/${userId}`) paths; `getDailySeed()` uses UTC `YYYY-MM-DD`; `/api/progression/local-match` publishes local/daily/gauntlet runs.
+- **B10 (Network pub/sub, reconnect & queue timeout):** `fixed` — `networkService.setHandlers` uses a multi-subscriber `Set`; reconnect token preserved across backoff retries; `onQueueTimeout` keeps `isQueuing = true`.
+- **B11 (Tournament authority & lifecycle):** `fixed` — `TournamentRoom` requires `onAuth`, enforces 30s grace timeout on single reports, receives authoritative `onChildMatchFinished` callbacks from `ConfluxRoom`, and restores brackets via `loadTournamentBracket`.
+- **B12–B13 (Modes, Workshop, Rematch):** `fixed` — `Lobby.tsx` wires `ModeSelector`, Team Mode (`Rally` / `Shield Wall`), and Workshop pool on first race start; `handleRematch` preserves Gauntlet/Ghost/Standard mode.
+- **B14–B15 (Mini-games & skill/module/season contracts):** `fixed` — `FlowConnect` solvable generator + single rotation + `solvedRef` metric; `BalanceBeam` 3★ attainable at all difficulties; `MazeMicro`/`ColorMath`/`SprintMash` pause handling; `ChordMemory` growing rounds + synth notes; `AudioBeat`/`DrumEcho` synth tones; `SeededRNG` across all 47 events; 52-week seasonal rotation and whole-match `hardcore` power-up restriction.
+
+---
+
+## Earlier Issues
 
 ### A1: Skill effects non-functional (CRITICAL)
 - **Status:** confirmed

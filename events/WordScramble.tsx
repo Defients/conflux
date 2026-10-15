@@ -26,7 +26,6 @@ export const WordScramble: React.FC<EventProps> = ({ onComplete, tile, settings,
   const [feedback, setFeedback] = useState<'none' | 'correct' | 'wrong'>('none');
   const isDoneRef = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const startTimeRef = useRef(Date.now());
 
   const maxDuration = event.durationSec(tile.difficulty, settings.accessibility) * 1000;
   const wordCount = 3 + tile.difficulty;

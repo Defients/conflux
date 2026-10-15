@@ -1,0 +1,64 @@
+[
+  {
+    "name": "Rejected event ID is still scored using the supplied event",
+    "confirmed": false,
+    "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n0 !== 3\n"
+  },
+  {
+    "name": "Client force flag grants free overdrive",
+    "confirmed": false,
+    "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n+ actual - expected\n\n+ []\n- [\n-   1\n- ]\n"
+  },
+  {
+    "name": "Pit-stop recharge is accepted during active play and advances the tile",
+    "confirmed": false,
+    "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n+ actual - expected\n\n+ undefined\n- true\n"
+  },
+  {
+    "name": "Malformed pit-stop action throws",
+    "confirmed": false,
+    "error": "AssertionError [ERR_ASSERTION]: Missing expected exception."
+  },
+  {
+    "name": "Three-tile generation does not terminate within one second",
+    "confirmed": false,
+    "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n+ actual - expected\n\n+ undefined\n- 'ETIMEDOUT'\n"
+  },
+  {
+    "name": "One tournament victory report completes match on next tick",
+    "confirmed": false,
+    "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nundefined !== 'a'\n"
+  },
+  {
+    "name": "Recomputed post-transaction summary has different identity, streak and mastery",
+    "confirmed": true,
+    "evidence": {
+      "persistedId": "audit-100",
+      "deliveredId": "audit-101",
+      "persistedStreak": 1,
+      "deliveredStreak": 2,
+      "deliveredDailyNewBest": false,
+      "deliveredMasteryPlays": 2
+    }
+  },
+  {
+    "name": "Daily leaderboard paths have invalid Firestore segment parity",
+    "confirmed": true,
+    "evidence": "4-segment collection and 5-segment document references rejected locally"
+  },
+  {
+    "name": "Repeated forced overdrive reverses a three-star success",
+    "confirmed": false,
+    "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n4 !== 0\n"
+  },
+  {
+    "name": "Pipeline zero-based placements inflate both players ratings",
+    "confirmed": false,
+    "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n16 !== 48\n"
+  },
+  {
+    "name": "Auth bypass still works when NODE_ENV=production",
+    "confirmed": false,
+    "evidence": null
+  }
+]

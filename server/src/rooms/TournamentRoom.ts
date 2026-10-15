@@ -12,31 +12,56 @@ import {
   TournamentBracket, TournamentRound, TournamentMatch,
   TournamentParticipant, RoomConfig,
 } from '../../../shared/types';
-import { saveTournamentBracket, deleteTournamentBracket } from '../services/tournamentRepository';
+import {
+  saveTournamentBracket,
+  loadTournamentBracket,
+  deleteTournamentBracket,
+} from '../services/tournamentRepository';
+import { verifyAuthToken, validateUserIdClaim } from '../auth/verifyToken';
 
 const TICK_MS = 3000;
+const SINGLE_REPORT_TIMEOUT_MS = 30_000;
 
 export class TournamentRoom extends Room {
   bracket: TournamentBracket | null = null;
   participants: Map<string, TournamentParticipant> = new Map();
   pendingMatches: Map<string, { matchId: string; roomCode: string }> = new Map();
   tickInterval: ReturnType<typeof setInterval> | null = null;
-  /** Pending result reports: matchId -> { sessionId, won }[] */
+  /** Pending result reports: matchId -> (sessionId -> won) */
   pendingResultReports: Map<string, Map<string, boolean>> = new Map();
+  /** Timestamp when the first report arrived for a matchId, used to enforce the 30s grace period. */
+  firstReportTimestamps: Map<string, number> = new Map();
 
-  onCreate(options: { name?: string; size?: 4 | 8 | 16 }) {
-    const size = options.size ?? 4;
+  onCreate(options: { name?: string; size?: 4 | 8 | 16; bracketId?: string }) {
+    const size = options.size === 8 || options.size === 16 ? options.size : 4;
     this.bracket = {
-      id: this.roomId,
+      id: options.bracketId || this.roomId,
       name: options.name ?? 'Tournament',
       size,
       rounds: [],
       currentRound: 0,
       participants: [],
     };
+
+    if (options.bracketId) {
+      loadTournamentBracket(options.bracketId)
+        .then((restored) => {
+          if (restored && this.bracket && this.bracket.rounds.length === 0) {
+            this.bracket = restored;
+            for (const p of restored.participants) {
+              this.participants.set(p.id, p);
+            }
+            this.broadcastBracket();
+          }
+        })
+        .catch((err) => {
+          console.error('[TournamentRoom] Failed to restore bracket:', err);
+        });
+    }
+
     this.tickInterval = setInterval(() => this.processRound(), TICK_MS);
 
-    this.onMessage(ClientMessages.JOIN_TOURNAMENT, (client: Client) => {
+    this.onMessage(ClientMessages.JOIN_TOURNAMENT, () => {
       this.broadcastBracket();
     });
 
@@ -45,7 +70,7 @@ export class TournamentRoom extends Room {
     });
 
     this.onMessage(ClientMessages.REPORT_TOURNAMENT_RESULT, (client: Client, data: { matchId: string; won: boolean }) => {
-      if (!this.bracket) return;
+      if (!this.bracket || !data || typeof data.matchId !== 'string' || typeof data.won !== 'boolean') return;
       const currentRound = this.bracket.rounds[this.bracket.currentRound];
       if (!currentRound) return;
 
@@ -55,66 +80,103 @@ export class TournamentRoom extends Room {
       // Verify the sender is a participant in this match
       if (!match.participants.includes(client.sessionId)) return;
 
-      // Dual-report verification: store the report and only accept when both agree.
-      // This prevents a single client from falsely claiming victory.
+      if (!this.pendingResultReports) {
+        this.pendingResultReports = new Map();
+      }
+      if (!this.firstReportTimestamps) {
+        this.firstReportTimestamps = new Map();
+      }
+
       if (!this.pendingResultReports.has(data.matchId)) {
         this.pendingResultReports.set(data.matchId, new Map());
+        this.firstReportTimestamps.set(data.matchId, Date.now());
       }
       const reports = this.pendingResultReports.get(data.matchId)!;
       reports.set(client.sessionId, data.won);
 
-      // For a 2-player match, we need both reports to agree.
-      // If only one reports, wait for the other.
+      // For a 2-player match, wait for both reports to agree (or 30s timeout if opponent disconnected).
       if (reports.size < match.participants.length) {
-        // Single report — not enough to verify. Wait for the other player.
-        // If the other player doesn't report within a timeout, the tick will
-        // eventually resolve it (see processRound timeout handling below).
         return;
       }
 
-      // Both have reported. Determine the winner.
-      // A player claiming "won: true" and the other claiming "won: false" = agreement.
-      // Both claiming "won: true" = conflict (both can't win).
-      // Both claiming "won: false" = conflict (both can't lose).
       const reporters = [...reports.entries()];
       const [r1, r2] = reporters;
       const p1Claim = r1[1];
       const p2Claim = r2[1];
 
       if (p1Claim === p2Claim) {
-        // Conflict — both claim win or both claim loss.
-        // Flag as disputed and log for review. Don't resolve the match.
         console.warn(`[TournamentRoom] Result conflict for match ${data.matchId}: both reported ${p1Claim ? 'won' : 'lost'}`);
-        // Clear pending reports to allow re-reporting
         this.pendingResultReports.delete(data.matchId);
+        this.firstReportTimestamps.delete(data.matchId);
         return;
       }
 
-      // Agreement — the one who claimed "won: true" is the winner.
       const winnerId = p1Claim ? r1[0] : r2[0];
-      match.winner = winnerId;
-      match.isComplete = true;
+      this.completeMatch(currentRound, match, winnerId);
+    });
+  }
 
-      // Clean up pending reports
-      this.pendingResultReports.delete(data.matchId);
+  async onAuth(client: Client, options: RoomConfig): Promise<boolean> {
+    const identity = await verifyAuthToken(options?.idToken);
+    if (!identity) return false;
+    if (!validateUserIdClaim(options?.userId, identity.uid)) return false;
+    (client as any).verifiedUid = identity.uid;
+    return true;
+  }
 
-      // Check if all matches in the round are complete
-      currentRound.isComplete = currentRound.matches.every(m => m.isComplete);
+  /**
+   * Authoritative server-to-server callback invoked by a child ConfluxRoom when a match finishes.
+   */
+  public onChildMatchFinished(payload: {
+    matchId: string;
+    winnerSessionId?: string;
+    winnerUserId?: string;
+    winnerName?: string;
+  }) {
+    if (!this.bracket || !payload?.matchId) return;
+    const currentRound = this.bracket.rounds[this.bracket.currentRound];
+    if (!currentRound) return;
+    const match = currentRound.matches.find(m => m.matchId === payload.matchId);
+    if (!match || match.isComplete) return;
 
-      // Mark eliminated participants
-      for (const m of currentRound.matches) {
-        if (m.isComplete && m.winner) {
-          for (const pid of m.participants) {
-            if (pid !== m.winner) {
-              const p = this.participants.get(pid);
-              if (p) p.eliminated = true;
-            }
+    // Resolve the winning tournament participant ID
+    let winnerParticipantId: string | undefined;
+    if (payload.winnerSessionId && match.participants.includes(payload.winnerSessionId)) {
+      winnerParticipantId = payload.winnerSessionId;
+    } else if (payload.winnerUserId) {
+      const byUid = match.participants.find(pid => this.participants.get(pid)?.userId === payload.winnerUserId);
+      if (byUid) winnerParticipantId = byUid;
+    }
+    if (!winnerParticipantId && payload.winnerName) {
+      const byName = match.participants.find(pid => this.participants.get(pid)?.name === payload.winnerName);
+      if (byName) winnerParticipantId = byName;
+    }
+
+    if (winnerParticipantId) {
+      this.completeMatch(currentRound, match, winnerParticipantId);
+    }
+  }
+
+  private completeMatch(currentRound: TournamentRound, match: TournamentMatch, winnerId: string) {
+    match.winner = winnerId;
+    match.isComplete = true;
+
+    this.pendingResultReports?.delete(match.matchId);
+    this.firstReportTimestamps?.delete(match.matchId);
+
+    currentRound.isComplete = currentRound.matches.every(m => m.isComplete);
+    for (const m of currentRound.matches) {
+      if (m.isComplete && m.winner) {
+        for (const pid of m.participants) {
+          if (pid !== m.winner) {
+            const p = this.participants.get(pid);
+            if (p) p.eliminated = true;
           }
         }
       }
+    }
 
-      this.broadcastBracket();
-    });
+    this.broadcastBracket();
   }
 
   onJoin(client: Client, options: RoomConfig) {
@@ -128,11 +190,13 @@ export class TournamentRoom extends Room {
       return;
     }
 
+    const verifiedUid = (client as any).verifiedUid as string | undefined;
+    const rawName = typeof options?.playerName === 'string' ? options.playerName.trim() : '';
     const participant: TournamentParticipant = {
       id: client.sessionId,
-      name: options.playerName,
-      avatarId: options.avatarId,
-      userId: options.userId,
+      name: rawName.slice(0, 20) || `Pilot ${this.bracket.participants.length + 1}`,
+      avatarId: options?.avatarId || '🚀',
+      userId: verifiedUid ?? options?.userId,
       seedRank: this.bracket.participants.length + 1,
       eliminated: false,
     };
@@ -175,46 +239,24 @@ export class TournamentRoom extends Room {
       this.advanceRound();
     }
 
-    // Timeout handling: resolve matches with a single pending report after 30s.
-    // If only one player reported, accept their report as authoritative.
-    // This prevents a match from being stuck if one player disconnects.
-    if (currentRound) {
+    // Timeout handling: only resolve a single pending report AFTER the full 30s grace period has elapsed.
+    if (currentRound && this.pendingResultReports) {
+      const now = Date.now();
       for (const match of currentRound.matches) {
         if (match.isComplete) continue;
         const reports = this.pendingResultReports.get(match.matchId);
-        if (!reports || reports.size === 0) continue;
+        if (!reports || reports.size !== 1) continue;
 
-        // Check if the match has been pending for too long.
-        // The match was created with a roomCode; if only one report exists,
-        // we accept it after a grace period.
-        if (reports.size === 1 && match.roomCode) {
-          // Single report — accept it as authoritative after grace period.
-          // The grace period is implicit: the tick runs every 3s, and we
-          // check if the match room still exists. If the room is gone
-          // (match finished and room disposed), we accept the single report.
-          // For simplicity, we accept the single report immediately if
-          // the reporter claims victory, since the other player likely
-          // disconnected or left without reporting.
-          const [reporterId, won] = [...reports.entries()][0];
-          if (won) {
-            console.log(`[TournamentRoom] Accepting single report for match ${match.matchId}: ${reporterId} won (opponent did not report)`);
-            match.winner = reporterId;
-            match.isComplete = true;
-            this.pendingResultReports.delete(match.matchId);
+        const firstReportedAt = this.firstReportTimestamps?.get(match.matchId);
+        // Never resolve a single report before SINGLE_REPORT_TIMEOUT_MS (30s) has elapsed
+        if (typeof firstReportedAt !== 'number' || now - firstReportedAt < SINGLE_REPORT_TIMEOUT_MS) {
+          continue;
+        }
 
-            currentRound.isComplete = currentRound.matches.every(m => m.isComplete);
-            for (const m of currentRound.matches) {
-              if (m.isComplete && m.winner) {
-                for (const pid of m.participants) {
-                  if (pid !== m.winner) {
-                    const p = this.participants.get(pid);
-                    if (p) p.eliminated = true;
-                  }
-                }
-              }
-            }
-            this.broadcastBracket();
-          }
+        const [reporterId, won] = [...reports.entries()][0];
+        if (won && match.participants.includes(reporterId)) {
+          console.log(`[TournamentRoom] Accepting single report after 30s timeout for match ${match.matchId}: ${reporterId} won`);
+          this.completeMatch(currentRound, match, reporterId);
         }
       }
     }
@@ -257,10 +299,20 @@ export class TournamentRoom extends Room {
     for (const match of round.matches) {
       if (match.isComplete) continue;
       try {
+        const allowedParticipantIds: string[] = [];
+        for (const pid of match.participants) {
+          allowedParticipantIds.push(pid);
+          const p = this.participants.get(pid);
+          if (p?.userId) allowedParticipantIds.push(p.userId);
+          if (p?.name) allowedParticipantIds.push(p.name);
+        }
         const room = await matchMaker.createRoom(RoomNames.MATCH, {
           isPrivate: true,
           autoStart: true,
           tournamentMatch: true,
+          tournamentRoomId: this.roomId,
+          tournamentMatchId: match.matchId,
+          allowedParticipantIds,
           expectedPlayers: 2,
         });
         match.roomCode = room.roomId;
@@ -319,9 +371,11 @@ export class TournamentRoom extends Room {
     this.broadcast(ServerMessages.TOURNAMENT_UPDATE, {
       bracket: this.bracket,
     });
-    // Persist bracket to Firestore (fire-and-forget, non-blocking)
-    saveTournamentBracket(this.bracket).catch(err => {
-      console.error('[TournamentRoom] Failed to persist bracket:', err);
-    });
+    if (!this.bracket.champion) {
+      // Persist active bracket to Firestore (non-blocking)
+      saveTournamentBracket(this.bracket).catch(err => {
+        console.error('[TournamentRoom] Failed to persist bracket:', err);
+      });
+    }
   }
 }

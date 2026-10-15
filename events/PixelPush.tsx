@@ -27,7 +27,7 @@ export const PixelPush: React.FC<EventProps> = ({ onComplete, tile, settings, ev
   const resultsRef = useRef<RoundResult[]>([]);
   const settlingRef = useRef(false);
 
-  const setupRound = useCallback((roundIdx: number) => {
+  const setupRound = useCallback((_roundIdx: number) => {
     const center = rng.nextInt(80, TRACK_WIDTH - 80);
     setTargetCenter(center);
     posRef.current = TRACK_WIDTH / 2;

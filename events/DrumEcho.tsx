@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { EventProps } from '../types';
 import { SeededRNG } from '../services/seededRNG';
+import { audioService } from '../services/audioService';
 
 const PADS = 4;
 const PAD_COLORS = ['#00dffc', '#ff8c42', '#d64f8a', '#a78bfa'];
+const PAD_FREQS = [180, 260, 340, 440];
 const SEQUENCE_LEN = 4 + 2; // 6 hits
 
 export const DrumEcho: React.FC<EventProps> = ({ onComplete, tile, settings, event, isBlurred, isPaused }) => {
@@ -24,7 +26,6 @@ export const DrumEcho: React.FC<EventProps> = ({ onComplete, tile, settings, eve
   const scoreRef = useRef(0);
   const isDoneRef = useRef(false);
   const playIndexRef = useRef(0);
-  const beatTimesRef = useRef<number[]>([]);
   const playStartTimeRef = useRef(0);
 
   const bpm = 90 + tile.difficulty * 20;
@@ -44,28 +45,35 @@ export const DrumEcho: React.FC<EventProps> = ({ onComplete, tile, settings, eve
   }, [event, tile.difficulty, settings.accessibility, finishEvent, isPaused]);
 
   useEffect(() => {
-    if (phase !== 'demo') return;
+    if (isPaused || phase !== 'demo') return;
     let i = 0;
+    let stepTimer: ReturnType<typeof setTimeout> | null = null;
     const playNext = () => {
+      if (isDoneRef.current) return;
       if (i >= sequence.length) {
-        setTimeout(() => {
+        stepTimer = setTimeout(() => {
           setPhase('play');
           playStartTimeRef.current = performance.now();
         }, beatInterval);
         return;
       }
+      const padId = sequence[i];
       setDemoIndex(i);
-      setActivePad(sequence[i]);
+      setActivePad(padId);
+      audioService.playTone(PAD_FREQS[padId] ?? 240, 0.12, 'triangle');
       setTimeout(() => setActivePad(-1), beatInterval * 0.6);
       i++;
-      setTimeout(playNext, beatInterval);
+      stepTimer = setTimeout(playNext, beatInterval);
     };
     const startTimer = setTimeout(playNext, 800);
-    return () => clearTimeout(startTimer);
-  }, [phase, sequence, beatInterval]);
+    return () => {
+      clearTimeout(startTimer);
+      if (stepTimer) clearTimeout(stepTimer);
+    };
+  }, [isPaused, phase, sequence, beatInterval]);
 
   const handlePadPress = useCallback((padIndex: number) => {
-    if (isDoneRef.current || phase !== 'play') return;
+    if (isDoneRef.current || isPaused || phase !== 'play') return;
 
     const expected = sequence[playIndexRef.current];
     const now = performance.now();
@@ -73,6 +81,7 @@ export const DrumEcho: React.FC<EventProps> = ({ onComplete, tile, settings, eve
     const timingError = Math.abs(now - expectedTime);
 
     setActivePad(padIndex);
+    audioService.playTone(PAD_FREQS[padIndex] ?? 240, 0.12, 'triangle');
     setTimeout(() => setActivePad(-1), 150);
 
     if (padIndex === expected) {
@@ -98,7 +107,7 @@ export const DrumEcho: React.FC<EventProps> = ({ onComplete, tile, settings, eve
     } else {
       setTimeout(() => setFeedback(null), 200);
     }
-  }, [phase, sequence, beatInterval, finishEvent]);
+  }, [phase, sequence, beatInterval, finishEvent, isPaused]);
 
   return (
     <div className={`w-full h-full flex flex-col items-center justify-center p-4 bg-cosmic-blue/50 select-none ${isBlurred ? 'filter blur-md' : ''}`}>

@@ -10,7 +10,7 @@
 
 import {
   GameState, Player, EventResult, Tile, PowerUp, PlayerStatus,
-  ChassisId, BotPersonality, RivalIntervention, GameSettings, SharedEventDescriptor
+  ChassisId, RivalIntervention, GameSettings, SharedEventDescriptor
 } from './types';
 import {
   STAR_MOVEMENT_MULTIPLIERS, RUBBER_BAND_THRESHOLD, RUBBER_BAND_BOOST,
@@ -21,7 +21,7 @@ import {
 import { SeededRNG } from './seededRNG';
 import { generateRun } from './pathGenerator';
 import { getRivalBanter } from './rivalBanter';
-import { applySkillEffects, applyLoadoutEffects, getSeasonalEnergyMultiplier } from './gameSetup';
+import { getSeasonalEnergyMultiplier, isSeasonalPowerUpsDisabled } from './gameSetup';
 
 // --- Types ---
 
@@ -49,6 +49,14 @@ const applyDebuff = (player: Player, status: PlayerStatus, settings: GameSetting
 
     // 2. Check Shield
     if (player.statuses.some(s => s.type === 'SHIELDED')) {
+        if (player._fortifiedShield) {
+            const newStatuses = [...player.statuses, { type: 'IMMUNE' as const, duration: IMMUNITY_DURATION + 1 }];
+            const effect: GameEffect | undefined = (!player.isBot || player.isRival)
+                ? { type: 'TOAST', message: `${player.name}'s Fortified Shield absorbed the hit (1 charge left)!`, variant: 'success' }
+                : undefined;
+            return { player: { ...player, _fortifiedShield: false, statuses: newStatuses }, effect };
+        }
+
         const newStatuses = player.statuses.filter(s => s.type !== 'SHIELDED');
         // Add temporary immunity after shield break
         newStatuses.push({ type: 'IMMUNE', duration: IMMUNITY_DURATION + 1 });
@@ -127,6 +135,10 @@ export const GameRules = {
                 finalResults[pid] = { ...result, stars: 4 };
                 effects.push({ type: 'SOUND', sound: 'overdrive-success' });
                 effects.push({ type: 'TOAST', message: `${player.name} Overdrive Success!`, variant: 'success' });
+            } else if (player._lastStandAvailable) {
+                finalResults[pid] = { ...result, stars: 1 };
+                players = players.map(p => p.id === pid ? { ...p, _lastStandAvailable: false } : p);
+                effects.push({ type: 'TOAST', message: `${player.name}'s Last Stand saved Overdrive (1★)!`, variant: 'info' });
             } else {
                 finalResults[pid] = { ...result, stars: 0 };
                 players = players.map(p => p.id === pid ? { ...p, statuses: [...p.statuses, { type: 'STUNNED', duration: 1 }] } : p);
@@ -137,27 +149,47 @@ export const GameRules = {
 
         // 2. Core Loop: Movement & Rewards
         players = players.map(p => {
-            const result = finalResults[p.id];
+            let result = finalResults[p.id];
             if (!result) return p;
 
             const updatedPlayer = { ...p };
+
+            // v5.0: Last Stand (endurance-t5) — once per race, upgrade 0★ to 1★
+            if (result.stars === 0 && updatedPlayer._lastStandAvailable) {
+                result = { ...result, stars: 1 };
+                finalResults[p.id] = result;
+                updatedPlayer._lastStandAvailable = false;
+                updatedPlayer.statuses = updatedPlayer.statuses.filter(s => s.type !== 'STUNNED');
+                if (!p.isBot) {
+                    effects.push({ type: 'TOAST', message: 'Last Stand! 0★ upgraded to 1★!', variant: 'success' });
+                }
+            }
 
             // A. Haptics for Human
             if (!p.isBot && (result.stars >= 2)) {
                 effects.push({ type: 'HAPTIC', pattern: 'light' });
             }
 
-            // B. PowerUps
-            const shouldAward = currentTile.modifier === 'POWER_SURGE' || (result.stars > 0 && POWERUP_AWARD_RULES[result.stars as 1|2|3]);
+            // B. PowerUps & Energy
+            const hardcoreNoPowerUps = isSeasonalPowerUpsDisabled(state.settings.activeSeasonId);
+            const seasonEnergyMult = getSeasonalEnergyMultiplier(state.settings.activeSeasonId);
+            const energyGain = result.stars > 0
+                ? Math.round(result.stars * (1 + (updatedPlayer._energyPerStarBonus ?? 0)) * seasonEnergyMult)
+                : 0;
+            const shouldAward = !hardcoreNoPowerUps && (currentTile.modifier === 'POWER_SURGE' || (result.stars > 0 && POWERUP_AWARD_RULES[result.stars as 1|2|3]));
             if (shouldAward) {
-                let award = POWERUP_AWARD_RULES[result.stars as 1|2|3] ?? 'Clarity';
+                let award: PowerUp = POWERUP_AWARD_RULES[result.stars as 1|2|3] ?? 'Clarity';
 
                 // POWER_SURGE tiles have a chance to award from the expanded pool
                 if (currentTile.modifier === 'POWER_SURGE') {
-                    const expandedPool: PowerUp[] = ['Overcharge', 'Sludge', 'Reflector', 'Shield', 'Clarity'];
+                    const expandedPool: PowerUp[] = state.settings.teamMode
+                        ? ['Overcharge', 'Sludge', 'Reflector', 'Shield', 'Clarity', 'Rally', 'Shield Wall']
+                        : ['Overcharge', 'Sludge', 'Reflector', 'Shield', 'Clarity'];
                     if (powerUpRng.nextFloat() < 0.4) {
                         award = expandedPool[powerUpRng.nextInt(0, expandedPool.length)];
                     }
+                } else if (state.settings.teamMode && result.stars >= 3 && powerUpRng.nextFloat() < 0.35) {
+                    award = powerUpRng.nextFloat() < 0.5 ? 'Rally' : 'Shield Wall';
                 }
                 
                 // Chassis Bonuses
@@ -169,20 +201,32 @@ export const GameRules = {
                 }
 
                 updatedPlayer.powerUps = [...updatedPlayer.powerUps, award];
-                updatedPlayer.energy += Math.round((result.stars + (updatedPlayer._energyPerStarBonus ?? 0)) * getSeasonalEnergyMultiplier());
+                updatedPlayer.energy += energyGain;
                 
                 if (!p.isBot || p.isRival) {
                     effects.push({ type: 'SOUND', sound: 'powerup-get' });
                     if (!p.isBot) effects.push({ type: 'TOAST', message: `Acquired ${award}`, variant: 'info' });
                 }
             } else {
-                updatedPlayer.energy += Math.round((result.stars + (updatedPlayer._energyPerStarBonus ?? 0)) * getSeasonalEnergyMultiplier());
+                updatedPlayer.energy += energyGain;
             }
 
-            updatedPlayer.tileHistory = [...updatedPlayer.tileHistory, { tileIndex: state.currentTileIndex, stars: result.stars }];
+            updatedPlayer.tileHistory = [...updatedPlayer.tileHistory, { tileIndex: state.currentTileIndex, stars: result.stars, primaryMetric: result.primaryMetric }];
 
             // C. Movement Calculation
             let moveMult = STAR_MOVEMENT_MULTIPLIERS[result.stars] || 0;
+
+            // v5.0: Iron Will (endurance-t3) — 1★ results grant 2★ movement speed
+            if (result.stars === 1 && updatedPlayer._ironWill) {
+                moveMult = STAR_MOVEMENT_MULTIPLIERS[2];
+                if (!p.isBot) effects.push({ type: 'TOAST', message: 'Iron Will! Full stride on 1★', variant: 'info' });
+            }
+
+            // v5.0: Hyperdrive (speed-t3) — +25% movement surge on 4★ Overdrive success
+            if (result.stars === 4 && updatedPlayer._hyperdriveBonus) {
+                moveMult *= 1.25;
+                if (!p.isBot) effects.push({ type: 'TOAST', message: 'Hyperdrive Surge! +25% Speed', variant: 'success' });
+            }
             
             // Apply Status/Chassis Modifiers
             const chassis = updatedPlayer.chassisId ?? (updatedPlayer.isBot ? undefined : state.settings.selectedChassis);
@@ -210,9 +254,14 @@ export const GameRules = {
                 moveMult *= 2.0;
             }
             
-            // v5.0: Movement bonus from loadout modules
+            // v5.0: Movement bonus from loadout modules / Zenith Syndicate
             if (updatedPlayer._movementBonus && result.stars > 0) {
                 moveMult *= (1 + updatedPlayer._movementBonus);
+            }
+
+            // v5.0: 3★ movement bonus from Cyberex Syndicate
+            if (updatedPlayer._threeStarMovementBonus && result.stars >= 3) {
+                moveMult *= (1 + updatedPlayer._threeStarMovementBonus);
             }
             
             // Momentum Activation
@@ -241,15 +290,22 @@ export const GameRules = {
         });
 
         // 4. Status Management
-        players = players.map(p => ({
-            ...p,
-            overdriveCooldown: Math.max(0, p.overdriveCooldown - 1),
-            statuses: p.statuses
+        players = players.map(p => {
+            const nextStatuses = p.statuses
                 .map(s => ({ ...s, duration: s.duration - 1 }))
-                .filter(s => s.duration > 0),
-            // Only clear scrambled data if the status is gone
-            scrambledTileData: p.statuses.some(s => s.type === 'SCRAMBLED') ? p.scrambledTileData : undefined,
-        }));
+                .filter(s => s.duration > 0);
+            const stillImmune = nextStatuses.some(s => s.type === 'IMMUNE');
+            const nextScan = p._sensorScanTiles && p._sensorScanTiles > 1 ? p._sensorScanTiles - 1 : undefined;
+            return {
+                ...p,
+                overdriveCooldown: Math.max(0, p.overdriveCooldown - 1),
+                statuses: nextStatuses,
+                _reflectActive: stillImmune ? p._reflectActive : undefined,
+                _sensorScanTiles: nextScan,
+                // Only clear scrambled data if the status is gone
+                scrambledTileData: p.statuses.some(s => s.type === 'SCRAMBLED') ? p.scrambledTileData : undefined,
+            };
+        });
 
         // 5. Rival Logic & Interventions
         const oldLeaderId = [...state.players].sort((a, b) => b.position - a.position)[0].id;
@@ -284,13 +340,52 @@ export const GameRules = {
 
             if (nextIndex < state.run.length && canTrigger && rng.nextFloat() < chance) {
                 const nextTile = state.run[nextIndex];
-                const hazardTile: Tile = {
-                    ...nextTile,
-                    difficulty: Math.min(3, nextTile.difficulty + 1),
-                    isHazard: true,
-                };
-                
-                activeIntervention = { type: 'HAZARD', hazardTile, cpBonus: CP_AWARD_RULES.hazardBonus };
+                const modeRoll = rng.nextFloat();
+
+                // Select among HAZARD, SABOTAGE, and VETO
+                const altEventCandidates = (eventDescriptors ?? [])
+                    .filter(e => !e.isStub && e.id !== nextTile.eventId)
+                    .map(e => e.id);
+                const runAltEvents = state.run
+                    .map(t => t.eventId)
+                    .filter(id => id !== nextTile.eventId);
+                const availableVetoEvents = altEventCandidates.length > 0 ? altEventCandidates : runAltEvents;
+
+                if (modeRoll < 0.45) {
+                    const hazardTile: Tile = {
+                        ...nextTile,
+                        difficulty: Math.min(3, nextTile.difficulty + 1),
+                        isHazard: true,
+                    };
+                    activeIntervention = { type: 'HAZARD', hazardTile, cpBonus: CP_AWARD_RULES.hazardBonus };
+                } else if (modeRoll < 0.78 || availableVetoEvents.length === 0) {
+                    const sabotageStatus: PlayerStatus['type'] = rng.nextFloat() < 0.5 ? 'BLURRED' : 'SLOWED';
+                    const hazardTile: Tile = {
+                        ...nextTile,
+                        isHazard: true,
+                    };
+                    activeIntervention = {
+                        type: 'SABOTAGE',
+                        hazardTile,
+                        sabotageStatus,
+                        cpBonus: CP_AWARD_RULES.sabotageBonus,
+                    };
+                } else {
+                    const altEventId = availableVetoEvents[rng.nextInt(0, availableVetoEvents.length)];
+                    const hazardTile: Tile = {
+                        ...nextTile,
+                        eventId: altEventId,
+                        difficulty: Math.min(3, nextTile.difficulty + 1),
+                        isHazard: true,
+                    };
+                    activeIntervention = {
+                        type: 'VETO',
+                        hazardTile,
+                        vetoSelection: [nextTile.eventId, altEventId],
+                        cpBonus: 35,
+                    };
+                }
+
                 lastHazardIndex = state.currentTileIndex;
                 
                 effects.push({ type: 'SOUND', sound: 'rival-tell' });
@@ -336,7 +431,10 @@ export const GameRules = {
         eventDescriptors?: SharedEventDescriptor[]
     ): GameUpdate => {
         const currentTile = state.run[state.currentTileIndex];
-        if (currentTile.modifier === 'STATIC_FIELD') {
+        if (!currentTile) {
+            return { newState: state, effects: [] };
+        }
+        if (currentTile.modifier === 'STATIC_FIELD' || isSeasonalPowerUpsDisabled(state.settings.activeSeasonId)) {
              return { newState: state, effects: [{ type: 'TOAST', message: 'Power-ups Disabled!', variant: 'warning' }]};
         }
 
@@ -364,14 +462,65 @@ export const GameRules = {
         // Apply Effects
         const isHyperFlux = state.activeAnomaly?.id === 'HYPER_FLUX';
         const durationMult = isHyperFlux ? 2 : 1;
+        const powerUpBonus = user._powerUpBonus ?? 0;
+        const baseDuration = 1 * durationMult + powerUpBonus;
         
         const isQuantum = state.activeAnomaly?.id === 'QUANTUM_ENTANGLEMENT';
         const rng = new SeededRNG(`quantum-${state.currentTileIndex}-${state.settings.seed}-${playerId}`);
 
+        const bouncedDebuffs: { status: PlayerStatus; fromName: string; scrambledData?: Tile[] }[] = [];
+
+        const applyOffensiveWithReflect = (
+            targetPlayer: Player,
+            status: PlayerStatus,
+            scrambledData?: Tile[]
+        ): Player => {
+            if (targetPlayer.statuses.some(s => s.type === 'IMMUNE') && targetPlayer._reflectActive) {
+                bouncedDebuffs.push({ status, fromName: targetPlayer.name, scrambledData });
+                return { ...targetPlayer, _reflectActive: false };
+            }
+            const res = applyDebuff(targetPlayer, status, state.settings);
+            if (res.effect) effects.push(res.effect);
+            if (scrambledData && res.player.statuses.some(s => s.type === 'SCRAMBLED')) {
+                return { ...res.player, scrambledTileData: scrambledData };
+            }
+            return res.player;
+        };
+
         switch (powerUp) {
             case 'Shield':
-                players = players.map(p => p.id === playerId ? { ...p, statuses: [...p.statuses, { type: 'SHIELDED', duration: 1 * durationMult }] } : p);
+                players = players.map(p => p.id === playerId ? {
+                    ...p,
+                    _fortifiedShield: p._fortifiedShield !== undefined ? true : undefined,
+                    statuses: [...p.statuses, { type: 'SHIELDED', duration: baseDuration, charges: p._fortifiedShield !== undefined ? 2 : 1 }],
+                } : p);
                 break;
+            case 'Rally': {
+                const userTeam = user.teamId;
+                players = players.map(p => {
+                    if (userTeam ? (p.teamId === userTeam && p.id !== playerId) : p.id === playerId) {
+                        return { ...p, statuses: [...p.statuses, { type: 'BOOSTED', duration: baseDuration + 1 }] };
+                    }
+                    return p;
+                });
+                if (!user.isBot) effects.push({ type: 'TOAST', message: 'Rally! Teammate velocity boosted!', variant: 'success' });
+                break;
+            }
+            case 'Shield Wall': {
+                const userTeam = user.teamId;
+                players = players.map(p => {
+                    if (userTeam ? p.teamId === userTeam : p.id === playerId) {
+                        return {
+                            ...p,
+                            _fortifiedShield: p._fortifiedShield !== undefined ? true : undefined,
+                            statuses: [...p.statuses, { type: 'SHIELDED', duration: baseDuration, charges: p._fortifiedShield !== undefined ? 2 : 1 }],
+                        };
+                    }
+                    return p;
+                });
+                if (!user.isBot) effects.push({ type: 'TOAST', message: 'Shield Wall! Team shielded!', variant: 'success' });
+                break;
+            }
             case 'Clarity':
                 players = players.map(p => {
                     if (p.id === playerId) {
@@ -385,14 +534,12 @@ export const GameRules = {
             case 'Mist Bomb':
                 players = players.map(p => {
                     if (isQuantum ? rng.nextFloat() > 0.5 : p.id !== playerId) {
-                        const res = applyDebuff(p, { type: 'BLURRED', duration: 1 * durationMult }, state.settings);
-                        if (res.effect) effects.push(res.effect);
-                        return res.player;
+                        return applyOffensiveWithReflect(p, { type: 'BLURRED', duration: baseDuration });
                     }
                     return p;
                 });
                 break;
-            case 'Time Snare':
+            case 'Time Snare': {
                 const sorted = [...players].sort((a, b) => b.position - a.position);
                 // Target leader, or 2nd place if user is leader
                 let target = sorted[0].id === playerId ? sorted[1] : sorted[0];
@@ -404,56 +551,83 @@ export const GameRules = {
                 if (target) {
                     players = players.map(p => {
                         if (p.id === target.id) {
-                            const res = applyDebuff(p, { type: 'FROZEN', duration: 1 * durationMult }, state.settings);
-                            if (res.effect) effects.push(res.effect);
+                            const updatedTarget = applyOffensiveWithReflect(p, { type: 'FROZEN', duration: baseDuration });
                             if (!p.isBot) effects.push({ type: 'SOUND', sound: 'debuff-hit' });
-                            return res.player;
+                            return updatedTarget;
                         }
                         return p;
                     });
                 }
                 break;
-            case 'Data Spike':
+            }
+            case 'Data Spike': {
                 let spikeTargetId = targetId;
                 if (isQuantum) {
                     spikeTargetId = players[rng.nextInt(0, players.length)].id;
                 }
+                if (!spikeTargetId) {
+                    const opponents = players.filter(p => p.id !== playerId);
+                    if (opponents.length > 0) {
+                        spikeTargetId = [...opponents].sort((a, b) => b.position - a.position)[0].id;
+                    }
+                }
                 
                 if (spikeTargetId) {
+                    const spikeDuration = baseDuration + (user._dataSpikeBonus ?? 0);
+                    const descriptors = eventDescriptors ?? [];
+                    const scrambledRun = descriptors.length > 0
+                        ? generateRun(`scramble-${state.settings.seed}-${state.currentTileIndex}`, state.settings.runLength, descriptors)
+                        : [];
                     players = players.map(p => {
                         if (p.id === spikeTargetId) {
-                            const res = applyDebuff(p, { type: 'SCRAMBLED', duration: 1 * durationMult }, state.settings);
-                            // Use provided event descriptors for scrambled run, or empty array as fallback
-                            const descriptors = eventDescriptors ?? [];
-                            const scrambledRun = descriptors.length > 0
-                                ? generateRun(`scramble-${state.settings.seed}-${state.currentTileIndex}`, state.settings.runLength, descriptors)
-                                : [];
-                            if (res.effect) effects.push(res.effect);
+                            const updatedTarget = applyOffensiveWithReflect(p, { type: 'SCRAMBLED', duration: spikeDuration }, scrambledRun);
                             if (!p.isBot) effects.push({ type: 'SOUND', sound: 'debuff-hit' });
-                            return { ...res.player, scrambledTileData: scrambledRun };
+                            return updatedTarget;
                         }
                         return p;
                     });
                 }
                 break;
-            case 'Overcharge':
-                players = players.map(p => p.id === playerId ? { ...p, energy: p.energy + Math.round(2 * getSeasonalEnergyMultiplier()) } : p);
-                if (!user.isBot) effects.push({ type: 'TOAST', message: `+${Math.round(2 * getSeasonalEnergyMultiplier())} Energy!`, variant: 'success' });
+            }
+            case 'Overcharge': {
+                const overchargeGain = Math.round((2 + powerUpBonus) * getSeasonalEnergyMultiplier(state.settings.activeSeasonId));
+                players = players.map(p => p.id === playerId ? { ...p, energy: p.energy + overchargeGain } : p);
+                if (!user.isBot) effects.push({ type: 'TOAST', message: `+${overchargeGain} Energy!`, variant: 'success' });
                 break;
+            }
             case 'Sludge':
                 players = players.map(p => {
                     if (isQuantum ? rng.nextFloat() > 0.5 : p.id !== playerId) {
-                        const res = applyDebuff(p, { type: 'SLOWED', duration: 1 * durationMult }, state.settings);
-                        if (res.effect) effects.push(res.effect);
-                        return res.player;
+                        return applyOffensiveWithReflect(p, { type: 'SLOWED', duration: baseDuration });
                     }
                     return p;
                 });
                 break;
             case 'Reflector':
-                players = players.map(p => p.id === playerId ? { ...p, statuses: [...p.statuses, { type: 'IMMUNE', duration: 1 * durationMult }] } : p);
-                if (!user.isBot) effects.push({ type: 'TOAST', message: 'Reflector Active!', variant: 'info' });
+                players = players.map(p => p.id === playerId ? { ...p, _reflectActive: true, statuses: [...p.statuses, { type: 'IMMUNE', duration: baseDuration }] } : p);
+                if (!user.isBot) effects.push({ type: 'TOAST', message: 'Reflector Active! Next debuff will bounce!', variant: 'info' });
                 break;
+        }
+
+        // Process any debuffs bounced back by Reflector onto the sender
+        if (bouncedDebuffs.length > 0) {
+            players = players.map(p => {
+                if (p.id !== playerId) return p;
+                let bouncedSender = { ...p };
+                for (const bounce of bouncedDebuffs) {
+                    const res = applyDebuff(bouncedSender, bounce.status, state.settings);
+                    bouncedSender = res.player;
+                    if (bounce.scrambledData && bouncedSender.statuses.some(s => s.type === 'SCRAMBLED')) {
+                        bouncedSender = { ...bouncedSender, scrambledTileData: bounce.scrambledData };
+                    }
+                    effects.push({
+                        type: 'TOAST',
+                        message: `${bounce.fromName}'s Reflector bounced ${bounce.status.type} back at ${user.name}!`,
+                        variant: 'warning',
+                    });
+                }
+                return bouncedSender;
+            });
         }
 
         return { newState: { ...state, players }, effects };
@@ -463,46 +637,60 @@ export const GameRules = {
      * Handles Pit Stop actions which cost energy.
      */
     processPitStop: (state: GameState, playerId: number, action: 'scrub' | 'tuneUp' | 'analyze' | 'recharge'): GameUpdate => {
+        if (!action || typeof action !== 'string' || !Object.prototype.hasOwnProperty.call(PIT_STOP_CONFIG.actions, action)) {
+            return { newState: state, effects: [] };
+        }
         let players = [...state.players];
         const player = players.find(p => p.id === playerId);
         if (!player) return { newState: state, effects: [] };
 
+        if (action === 'tuneUp' && isSeasonalPowerUpsDisabled(state.settings.activeSeasonId)) {
+            return { newState: state, effects: [{ type: 'TOAST', message: 'Hardcore Season: Power-ups Disabled!', variant: 'warning' }] };
+        }
+
         const config = PIT_STOP_CONFIG.actions[action];
-        const updatedPlayer = { ...player };
+        const updatedPlayer = { ...player, statuses: [...player.statuses], powerUps: [...player.powerUps] };
+        const effectiveCost = (action === 'analyze' && updatedPlayer._freeScanner) ? 0 : config.cost;
 
         // Cost check
-        if (action !== 'recharge' && updatedPlayer.energy < config.cost) {
+        if (action !== 'recharge' && updatedPlayer.energy < effectiveCost) {
              return { newState: state, effects: [{ type: 'TOAST', message: 'Not enough energy!', variant: 'warning' }] };
         }
 
         if (action !== 'recharge') {
-            updatedPlayer.energy -= config.cost;
+            updatedPlayer.energy -= effectiveCost;
         }
 
         const effects: GameEffect[] = [];
 
         switch (action) {
-            case 'scrub':
-                const badStatusIdx = updatedPlayer.statuses.findIndex(s => s.type !== 'SHIELDED' && s.type !== 'BOOSTED');
+            case 'scrub': {
+                const badStatusIdx = updatedPlayer.statuses.findIndex(s => s.type !== 'SHIELDED' && s.type !== 'BOOSTED' && s.type !== 'IMMUNE');
                 if (badStatusIdx > -1) {
                     updatedPlayer.statuses.splice(badStatusIdx, 1);
                     effects.push({ type: 'TOAST', message: 'Status Cleared', variant: 'success' });
                 }
                 break;
-            case 'tuneUp':
+            }
+            case 'tuneUp': {
                 const tuneRng = new SeededRNG(`pitstop-${state.currentTileIndex}-${playerId}`);
-                const allPowerUps: PowerUp[] = ['Clarity', 'Mist Bomb', 'Time Snare', 'Shield', 'Data Spike', 'Overcharge', 'Sludge', 'Reflector'];
+                const allPowerUps: PowerUp[] = state.settings.teamMode
+                    ? ['Clarity', 'Mist Bomb', 'Time Snare', 'Shield', 'Data Spike', 'Overcharge', 'Sludge', 'Reflector', 'Rally', 'Shield Wall']
+                    : ['Clarity', 'Mist Bomb', 'Time Snare', 'Shield', 'Data Spike', 'Overcharge', 'Sludge', 'Reflector'];
                 const award = allPowerUps[tuneRng.nextInt(0, allPowerUps.length)];
                 updatedPlayer.powerUps.push(award);
                 effects.push({ type: 'TOAST', message: `Tuned Up: ${award}`, variant: 'success' });
                 break;
-            case 'recharge':
-                updatedPlayer.energy += Math.round(2 * getSeasonalEnergyMultiplier());
-                effects.push({ type: 'TOAST', message: `Recharged +${Math.round(2 * getSeasonalEnergyMultiplier())} Energy`, variant: 'info' });
+            }
+            case 'recharge': {
+                const rechargeAmount = Math.round((2 + (updatedPlayer._rechargeBonus ?? 0)) * getSeasonalEnergyMultiplier(state.settings.activeSeasonId));
+                updatedPlayer.energy += rechargeAmount;
+                effects.push({ type: 'TOAST', message: `Recharged +${rechargeAmount} Energy`, variant: 'info' });
                 break;
+            }
             case 'analyze':
-                // UI handles visualization, state just pays cost
-                effects.push({ type: 'TOAST', message: 'Analysis Complete', variant: 'info' });
+                updatedPlayer._sensorScanTiles = 4;
+                effects.push({ type: 'TOAST', message: 'Sensor Forecast Active: Next 4 Tiles Revealed', variant: 'info' });
                 break;
         }
 
@@ -516,6 +704,9 @@ export const GameRules = {
     activateOverdrive: (state: GameState, playerId: number, force: boolean = false): GameUpdate => {
         const player = state.players.find(p => p.id === playerId);
         if (!player) return { newState: state, effects: [] };
+        if (state.overdrivingPlayerIds.includes(playerId)) {
+            return { newState: state, effects: [] };
+        }
         
         if (!force) {
             if (player.overdriveCooldown > 0) {
@@ -548,17 +739,31 @@ export const GameRules = {
         if (!state.activeIntervention) return { newState: state, effects: [] };
         
         const newRun = [...state.run];
+        let players = [...state.players];
         const effects: GameEffect[] = [];
+        const intervention = state.activeIntervention;
         
-        if (accept && state.activeIntervention.hazardTile) {
-            newRun[state.currentTileIndex] = state.activeIntervention.hazardTile;
-            effects.push({ type: 'TOAST', message: 'Hazard Accepted! +Bonus CP', variant: 'warning' });
+        if (accept && intervention.hazardTile) {
+            newRun[state.currentTileIndex] = intervention.hazardTile;
+            if (intervention.type === 'SABOTAGE' && intervention.sabotageStatus) {
+                players = players.map(p => {
+                    if (!p.isBot) {
+                        return { ...p, statuses: [...p.statuses, { type: intervention.sabotageStatus!, duration: 1 }] };
+                    }
+                    return p;
+                });
+                effects.push({ type: 'TOAST', message: `Sabotage Accepted! Racing under ${intervention.sabotageStatus} for +${intervention.cpBonus} CP`, variant: 'warning' });
+            } else if (intervention.type === 'VETO') {
+                effects.push({ type: 'TOAST', message: `Veto Challenge Accepted! +${intervention.cpBonus} CP Bonus`, variant: 'warning' });
+            } else {
+                effects.push({ type: 'TOAST', message: 'Hazard Accepted! +Bonus CP', variant: 'warning' });
+            }
         } else {
              effects.push({ type: 'TOAST', message: 'Challenge Declined', variant: 'info' });
         }
 
         return {
-            newState: { ...state, run: newRun, activeIntervention: null },
+            newState: { ...state, players, run: newRun, activeIntervention: null },
             effects
         };
     }

@@ -1,8 +1,9 @@
 
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { GameScreen, GameSettings, GameState, GameEvent, PilotProfile, EventTelemetry, PowerUp, EventResult, ChassisId, GhostRun, TournamentBracket, AccoladeId } from './types';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { GameScreen, GameSettings, GameState, GameEvent, PilotProfile, EventTelemetry, PowerUp, EventResult, ChassisId, TournamentBracket, AccoladeId } from './types';
 import { MatchSummary, computeMatchSummary, applyMatchSummaryToProfile } from './shared/matchSummary';
+import { SeededRNG } from './shared/seededRNG';
 import { useGameEngine } from './hooks/useGameEngine';
 import { useOnlineGame } from './hooks/useOnlineGame';
 import { Lobby } from './components/Lobby';
@@ -41,7 +42,6 @@ import { SettingsScreen, loadSettings, saveSettings, UISettings } from './compon
 import { OnboardingFlow } from './components/OnboardingFlow';
 import { TournamentScreen } from './components/TournamentScreen';
 import { networkService } from './services/networkService';
-import { RankBadge } from './components/RankBadge';
 import { ConnectionIndicator } from './components/ConnectionIndicator';
 import { useConnectionStatus } from './hooks/useConnectionStatus';
 import { useOnlineScreenSync } from './hooks/useOnlineScreenSync';
@@ -91,6 +91,8 @@ const App: React.FC = () => {
   const [uiSettings, setUiSettings] = useState<UISettings>(() => loadSettings());
   const [tournamentBracket, setTournamentBracket] = useState<TournamentBracket | null>(null);
   const [tournamentMatchId, setTournamentMatchId] = useState<string | null>(null);
+  const reportedTournamentMatchRef = useRef<string | null>(null);
+  const tournamentReturnTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const connectionStatus = useConnectionStatus();
   const { leaveSpectator } = useOnlineScreenSync({
@@ -192,34 +194,36 @@ const App: React.FC = () => {
   }, []);
 
   const handleStartGame = useCallback((settings: GameSettings, customEventIds?: string[]) => {
-    initializeGame(settings, customEventIds, profile);
+    const effectivePool = customEventIds && customEventIds.length > 0 ? customEventIds : activeEventIds;
+    initializeGame(settings, effectivePool, profile);
     setActiveContracts(generateContracts(settings.seed));
     setScreen(GameScreen.Event);
     setShowCountdown(true);
     setMatchSummary(null);
-  }, [initializeGame, profile]);
+  }, [initializeGame, activeEventIds, profile]);
 
   const handleStartGauntlet = useCallback((settings: GameSettings) => {
-    initializeGauntlet(settings);
+    initializeGauntlet(settings, profile);
+    setActiveContracts([]);
     setScreen(GameScreen.Event);
     setShowCountdown(true);
     setMatchSummary(null);
-  }, [initializeGauntlet]);
+  }, [initializeGauntlet, profile]);
 
   const handleStartGhostRace = useCallback(async (settings: GameSettings) => {
-    // Try to fetch a real ghost run from Firestore; fall back to a generated bot ghost.
-    let ghost = await fetchRandomGhost();
+    // Try to fetch a real ghost run from Firestore matching runLength; fall back to a deterministic synthetic ghost.
+    let ghost = await fetchRandomGhost(settings.runLength, settings.seed);
     if (!ghost) {
-      // Generate a synthetic ghost so the mode is playable offline.
       const ghostSeed = settings.seed || `ghost-${Date.now()}`;
       const runLength = settings.runLength;
+      const synRng = new SeededRNG(`synthetic-ghost-${ghostSeed}`);
       const tileResults = Array.from({ length: runLength }, (_, i) => ({
         tileIndex: i + 1,
-        stars: Math.floor(Math.random() * 3) + 1,
-        primaryMetric: Math.floor(Math.random() * 200) + 100,
+        stars: synRng.nextInt(1, 4),
+        primaryMetric: synRng.nextInt(100, 300),
       }));
       ghost = {
-        ghostId: `synthetic-${Date.now()}`,
+        ghostId: `synthetic-${ghostSeed}`,
         ownerName: 'Ghost AI',
         ownerAvatarId: '👻',
         seed: ghostSeed,
@@ -228,13 +232,15 @@ const App: React.FC = () => {
         submittedAt: Date.now(),
         ownerCircuitPoints: 500,
         userId: 'synthetic',
+        schemaVersion: 1,
       };
     }
-    initializeGhostRace(settings, ghost);
+    setActiveContracts([]);
+    initializeGhostRace(settings, ghost, profile);
     setScreen(GameScreen.Event);
     setShowCountdown(true);
     setMatchSummary(null);
-  }, [initializeGhostRace]);
+  }, [initializeGhostRace, profile]);
 
   const handleTileComplete = useCallback((results: { [playerId: number]: EventResult }) => {
       if (gameState?.settings.isGauntlet) {
@@ -301,6 +307,25 @@ const App: React.FC = () => {
     if (updatedProfile) {
       if (raceMode === 'local') {
         syncProfile(updatedProfile);
+        // Also publish local/daily/gauntlet race to server leaderboards & match history when authenticated
+        const currentUser = auth?.currentUser;
+        if (currentUser && typeof currentUser.getIdToken === 'function') {
+          currentUser.getIdToken().then((idToken) => {
+            const serverHttpUrl = (import.meta.env.VITE_SERVER_URL || 'ws://localhost:2567')
+              .replace(/^wss:/, 'https:')
+              .replace(/^ws:/, 'http:');
+            return fetch(`${serverHttpUrl}/api/progression/local-match`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${idToken}`,
+              },
+              body: JSON.stringify({ summary, profile: updatedProfile, idToken }),
+            });
+          }).catch(() => {
+            // Offline or local-only mode: local profile sync already completed
+          });
+        }
       } else {
         syncProfileMerge(updatedProfile);
       }
@@ -312,7 +337,7 @@ const App: React.FC = () => {
       const tileResults = humanPlayer.tileHistory.map(t => ({
         tileIndex: t.tileIndex,
         stars: t.stars,
-        primaryMetric: 0,
+        primaryMetric: t.primaryMetric ?? 0,
       }));
       const currentUser = auth?.currentUser;
       if (currentUser) {
@@ -323,6 +348,8 @@ const App: React.FC = () => {
           runLength: finishedGameState.settings.runLength,
           tileResults,
           ownerCircuitPoints: updatedProfile?.circuitPoints ?? profile.circuitPoints,
+          schemaVersion: 1,
+          chassisId: finishedGameState.settings.selectedChassis,
         }).catch(err => console.error('[GhostRace] Failed to submit ghost run:', err));
       }
 
@@ -333,6 +360,7 @@ const App: React.FC = () => {
           const ghostProfile = { ...updatedProfile, unlockedAccolades: [...updatedProfile.unlockedAccolades, AccoladeId.GhostHunter] };
           setProfile(ghostProfile);
           saveProfile(ghostProfile);
+          syncProfile(ghostProfile);
         }
       }
     }
@@ -386,14 +414,28 @@ const App: React.FC = () => {
   }, [handleInterventionChoice, advanceToNextEvent]);
 
   const handleRematch = useCallback(() => {
-      if(gameState) {
-          initializeGame(gameState.settings, activeEventIds, profile);
-          setActiveContracts(generateContracts(gameState.settings.seed));
-          setScreen(GameScreen.Event);
-          setShowCountdown(true);
-          setMatchSummary(null);
+      if (!gameState) return;
+      if (gameState.settings.isGauntlet) {
+          handleStartGauntlet({
+              ...gameState.settings,
+              seed: String(Math.floor(Math.random() * 1000000)),
+          });
+          return;
       }
-  }, [gameState, initializeGame, activeEventIds, profile]);
+      if (ghostRun) {
+          handleStartGhostRace(gameState.settings);
+          return;
+      }
+      const nextSeed = gameState.settings.seed === getDailySeed()
+          ? gameState.settings.seed
+          : String(Math.floor(Math.random() * 1000000));
+      const nextSettings = { ...gameState.settings, seed: nextSeed };
+      initializeGame(nextSettings, activeEventIds, profile);
+      setActiveContracts(generateContracts(nextSettings.seed));
+      setScreen(GameScreen.Event);
+      setShowCountdown(true);
+      setMatchSummary(null);
+  }, [gameState, ghostRun, handleStartGauntlet, handleStartGhostRace, initializeGame, activeEventIds, profile]);
 
   const handleNewRun = useCallback(() => {
       setScreen(GameScreen.Lobby);
@@ -470,36 +512,138 @@ const App: React.FC = () => {
   const handleSaveSettings = useCallback((settings: UISettings) => {
     setUiSettings(settings);
     saveSettings(settings);
+    audioService.setEnabled(settings.soundEnabled);
+    hapticsService.setEnabled(settings.hapticsEnabled);
+    document.documentElement.classList.toggle('hc', settings.highContrast || settings.reducedMotion);
+    document.documentElement.classList.toggle('cb', !!settings.colorBlindMode);
+  }, []);
+
+  // Server-authoritative progression purchases: returns the authoritative
+  // cloud profile on success, or null when offline/unauthenticated (caller
+  // falls back to a local-only purchase).
+  const postPurchase = useCallback(async (payload: Record<string, unknown>): Promise<PilotProfile | null> => {
+    const user = auth?.currentUser;
+    if (!user || typeof user.getIdToken !== 'function') return null;
+    try {
+      const idToken = await user.getIdToken();
+      const serverHttpUrl = (import.meta.env.VITE_SERVER_URL || 'ws://localhost:2567')
+        .replace(/^wss:/, 'https:')
+        .replace(/^ws:/, 'http:');
+      const resp = await fetch(`${serverHttpUrl}/api/progression/purchase`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ ...payload, idToken }),
+      });
+      if (!resp.ok) return null;
+      const data = await resp.json();
+      return (data?.profile as PilotProfile) ?? null;
+    } catch {
+      return null;
+    }
   }, []);
 
   const handleSkillUnlock = useCallback((branch: 'speed' | 'tech' | 'endurance', nodeId: string, cost: number) => {
     if (!profile) return;
-    if ((profile.skills?.availableCP ?? 0) < cost) return;
-    const updated = { ...profile };
-    if (!updated.skills) updated.skills = { speed: {}, tech: {}, endurance: {}, availableCP: 0 };
-    const newSkills = { ...updated.skills, availableCP: updated.skills.availableCP - cost };
-    newSkills[branch] = { ...newSkills[branch], [nodeId]: true };
-    updated.skills = newSkills;
-    handleUpdateProfile(updated);
-    syncProfile(updated);
-  }, [profile, handleUpdateProfile]);
+    const currentCp = Math.max(profile.circuitPoints ?? 0, profile.skills?.availableCP ?? 0);
+    if (currentCp < cost) return;
+    const applyLocalUnlock = () => {
+      const remainingCp = currentCp - cost;
+      const updated: PilotProfile = {
+        ...profile,
+        circuitPoints: remainingCp,
+        skills: {
+          ...(profile.skills ?? { speed: {}, tech: {}, endurance: {}, availableCP: 0 }),
+          availableCP: remainingCp,
+          [branch]: {
+            ...(profile.skills?.[branch] ?? {}),
+            [nodeId]: true,
+          },
+        },
+      };
+      handleUpdateProfile(updated);
+      syncProfile(updated);
+    };
+    postPurchase({ kind: 'skill', itemId: nodeId }).then((serverProfile) => {
+      if (serverProfile) handleUpdateProfile(serverProfile);
+      else applyLocalUnlock();
+    });
+  }, [profile, handleUpdateProfile, postPurchase]);
+
+  const handleUnlockModule = useCallback((moduleId: string, cost: number) => {
+    if (!profile) return;
+    if ((profile.circuitPoints ?? 0) < cost) return;
+    const existingModules = profile.unlockedModules ?? [];
+    if (existingModules.includes(moduleId)) return;
+    const applyLocalUnlock = () => {
+      const remainingCp = profile.circuitPoints - cost;
+      const updated: PilotProfile = {
+        ...profile,
+        circuitPoints: remainingCp,
+        unlockedModules: [...existingModules, moduleId],
+        skills: profile.skills ? { ...profile.skills, availableCP: remainingCp } : undefined,
+      };
+      handleUpdateProfile(updated);
+      syncProfile(updated);
+    };
+    postPurchase({ kind: 'module', itemId: moduleId }).then((serverProfile) => {
+      if (serverProfile) handleUpdateProfile(serverProfile);
+      else applyLocalUnlock();
+    });
+  }, [profile, handleUpdateProfile, postPurchase]);
+
+  const handleUnlockChassis = useCallback((chassisId: ChassisId, cost: number) => {
+    if (!profile) return;
+    if ((profile.circuitPoints ?? 0) < cost) return;
+    if (profile.unlockedChassis.includes(chassisId)) return;
+    const applyLocalUnlock = () => {
+      const remainingCp = profile.circuitPoints - cost;
+      const updated: PilotProfile = {
+        ...profile,
+        circuitPoints: remainingCp,
+        unlockedChassis: [...profile.unlockedChassis, chassisId],
+        skills: profile.skills ? { ...profile.skills, availableCP: remainingCp } : undefined,
+      };
+      handleUpdateProfile(updated);
+      syncProfile(updated);
+    };
+    postPurchase({ kind: 'chassis', itemId: chassisId }).then((serverProfile) => {
+      if (serverProfile) handleUpdateProfile(serverProfile);
+      else applyLocalUnlock();
+    });
+  }, [profile, handleUpdateProfile, postPurchase]);
 
   const handleEquipModule = useCallback((chassisId: ChassisId, slot: 'core' | 'thrusters' | 'shielding', moduleId: string | null) => {
     if (!profile) return;
-    const updated = { ...profile };
-    if (!updated.loadouts) updated.loadouts = {};
-    const existing = updated.loadouts[chassisId] ?? { chassisId, modules: {} };
-    updated.loadouts[chassisId] = {
-      ...existing,
-      modules: { ...existing.modules, [slot]: moduleId ?? undefined },
+    const applyLocalEquip = () => {
+      const updated = { ...profile };
+      if (!updated.loadouts) updated.loadouts = {};
+      const existing = updated.loadouts[chassisId] ?? { chassisId, modules: {} };
+      updated.loadouts[chassisId] = {
+        ...existing,
+        modules: { ...existing.modules, [slot]: moduleId ?? undefined },
+      };
+      handleUpdateProfile(updated);
+      syncProfile(updated);
     };
-    handleUpdateProfile(updated);
-    syncProfile(updated);
-  }, [profile, handleUpdateProfile]);
+    postPurchase({ kind: 'equipModule', itemId: moduleId ?? '', chassisId, slot }).then((serverProfile) => {
+      if (serverProfile) handleUpdateProfile(serverProfile);
+      else applyLocalEquip();
+    });
+  }, [profile, handleUpdateProfile, postPurchase]);
 
   const handleSelectChassis = useCallback((chassisId: ChassisId) => {
     if (!profile) return;
     if (!profile.unlockedChassis.includes(chassisId)) return;
+    try {
+      const saved = localStorage.getItem('conflux-circuit-settings');
+      const parsed = saved ? JSON.parse(saved) : {};
+      localStorage.setItem('conflux-circuit-settings', JSON.stringify({ ...parsed, selectedChassis: chassisId }));
+    } catch {
+      // ignore storage errors
+    }
     const updated = { ...profile };
     handleUpdateProfile(updated);
   }, [profile, handleUpdateProfile]);
@@ -600,31 +744,56 @@ const App: React.FC = () => {
     }
   }, [isOnline, onlineGame.matchPhase]);
 
+  // Resolve the "active" game state — server-authoritative when online
+  const activeGameState = isOnline ? onlineGame.serverGameState : gameState;
+
+  // Resolve explicit local human player ID (handles non-host online players accurately)
+  const activeHumanPlayerId = useMemo(() => {
+    if (!activeGameState) return 1;
+    if (isOnline) {
+      const bySession = activeGameState.players.find(p => p.connectionId === onlineGame.sessionId);
+      if (bySession) return bySession.id;
+      const uid = auth?.currentUser?.uid;
+      const byUid = uid ? activeGameState.players.find(p => p.userId === uid) : undefined;
+      if (byUid) return byUid.id;
+    }
+    return activeGameState.players.find(p => !p.isBot)?.id ?? 1;
+  }, [activeGameState, isOnline, onlineGame.sessionId]);
+
   // ─── Tournament match result reporting ────────────────────────────────
-  // When a tournament match finishes, determine if the human won and report
-  // the result back to the TournamentRoom, then return to the tournament screen.
+  // When a tournament match finishes, determine if the human won (1-based placement === 1)
+  // and report the result back to the TournamentRoom, then return to the tournament screen.
   useEffect(() => {
     if (!tournamentMatchId) return;
     if (onlineGame.matchPhase !== 'finished') return;
     if (!onlineGame.raceFinished) return;
+    if (reportedTournamentMatchRef.current === tournamentMatchId) return;
+
+    reportedTournamentMatchRef.current = tournamentMatchId;
+    const matchIdToReport = tournamentMatchId;
 
     const humanStanding = onlineGame.raceFinished.finalStandings.find(
-      s => s.name === profile?.name
+      s => s.playerId === activeHumanPlayerId || s.name === profile?.name
     );
-    const won = humanStanding ? humanStanding.placement === 0 : false;
+    const won = humanStanding ? humanStanding.placement === 1 : false;
 
-    networkService.reportTournamentResult(tournamentMatchId, won);
-    setTournamentMatchId(null);
+    networkService.reportTournamentResult(matchIdToReport, won);
 
-    // Return to tournament screen after a brief delay to let results render
-    const timer = setTimeout(() => {
+    // Return to tournament screen after a brief delay without canceling via state change
+    if (tournamentReturnTimerRef.current) clearTimeout(tournamentReturnTimerRef.current);
+    tournamentReturnTimerRef.current = setTimeout(() => {
+      setTournamentMatchId(null);
       onlineGame.leaveRoom();
       onlineGame.setMode('local');
       setScreen('TOURNAMENT' as AppScreen);
     }, 3000);
+  }, [tournamentMatchId, onlineGame.matchPhase, onlineGame.raceFinished, activeHumanPlayerId, profile]);
 
-    return () => clearTimeout(timer);
-  }, [tournamentMatchId, onlineGame.matchPhase, onlineGame.raceFinished, profile]);
+  useEffect(() => {
+    return () => {
+      if (tournamentReturnTimerRef.current) clearTimeout(tournamentReturnTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (!isOnline) return;
@@ -632,9 +801,6 @@ const App: React.FC = () => {
       handleAuthoritativeMatchSummary(onlineGame.matchSummary);
     }
   }, [isOnline, onlineGame.matchSummary, handleAuthoritativeMatchSummary]);
-
-  // Resolve the "active" game state — server-authoritative when online
-  const activeGameState = isOnline ? onlineGame.serverGameState : gameState;
 
   // Pre-extract current tiles to avoid Tile | undefined at render sites
   const localCurrentTile = gameState ? gameState.run[gameState.currentTileIndex] : undefined;
@@ -678,8 +844,11 @@ const App: React.FC = () => {
 
 
   const renderScreen = () => {
+    if (showOnboarding) {
+        return <OnboardingFlow onComplete={handleOnboardingComplete} />;
+    }
     if (!profile) {
-        return <PilotProfileSetup onProfileCreated={handleProfileCreated} existingProfiles={savedProfiles} onSelectProfile={handleSelectExistingProfile} onDeleteProfile={handleDeleteExistingProfile} />;
+        return <PilotProfileSetup onProfileCreated={handleProfileCreated} existingProfiles={savedProfiles} onSelectProfile={handleSelectExistingProfile} onDeleteProfile={handleDeleteExistingProfile} onStartOnboarding={() => setShowOnboarding(true)} />;
     }
 
     const renderLobby = () => <Lobby profile={profile} setProfile={setProfile} onStartGame={handleStartGame} onStartGauntlet={handleStartGauntlet} onGoToEventList={handleGoToEventList} onGoToAccolades={handleGoToAccolades} onGoToOnline={handleGoToOnline} onGoToLeaderboard={handleGoToLeaderboard} onGoToMatchHistory={handleGoToMatchHistory} onSwitchPilot={handleSwitchPilot} onGoToModeSelect={handleGoToModeSelect} onGoToSkillTree={handleGoToSkillTree} onGoToHangar={handleGoToHangar} onGoToSettings={handleGoToSettings} />;
@@ -701,7 +870,7 @@ const App: React.FC = () => {
       case 'SKILL_TREE':
         return <SkillTreeScreen profile={profile} onUnlock={handleSkillUnlock} onBack={() => setScreen(GameScreen.Lobby)} />;
       case 'HANGAR':
-        return <HangarScreen profile={profile} onSelectChassis={handleSelectChassis} onEquipModule={handleEquipModule} onBack={() => setScreen(GameScreen.Lobby)} />;
+        return <HangarScreen profile={profile} onSelectChassis={handleSelectChassis} onEquipModule={handleEquipModule} onUnlockModule={handleUnlockModule} onUnlockChassis={handleUnlockChassis} onBack={() => setScreen(GameScreen.Lobby)} />;
       case 'SETTINGS':
         return <SettingsScreen settings={uiSettings} onSave={handleSaveSettings} onBack={() => setScreen(GameScreen.Lobby)} />;
       case 'TOURNAMENT':
@@ -724,6 +893,7 @@ const App: React.FC = () => {
                     onApplyConfig={setActiveEventIds}
                     onPlaytest={handleStartPlaytest}
                     initialActiveIds={activeEventIds}
+                    profile={profile}
                 />;
        case GameScreen.EventPlaytest:
         if (!playtestConfig) return renderLobby();
@@ -744,19 +914,22 @@ const App: React.FC = () => {
           getGhostResultForTile={ghostRun ? getGhostResultForTile : undefined}
           isPaused={showCountdown}
           rivalTraits={profile?.rivalData?.traits}
+          contracts={activeContracts}
+          localPlayerId={activeHumanPlayerId}
+          isSpectator={isOnline && onlineGame.isSpectator}
         />;
       case GameScreen.TileResults:
         if (!activeGameState) return renderLobby();
-        return <TileResultsScreen gameState={activeGameState} onContinue={isOnline ? () => { /* server auto-advances */ } : handleContinueAfterResults} />;
+        return <TileResultsScreen gameState={activeGameState} localPlayerId={activeHumanPlayerId} onContinue={isOnline ? () => { /* server auto-advances */ } : handleContinueAfterResults} />;
       case GameScreen.PitStop:
         if (!activeGameState) return renderLobby();
-        return <PitStopScreen gameState={activeGameState} onAction={isOnline
+        return <PitStopScreen gameState={activeGameState} localPlayerId={activeHumanPlayerId} onAction={isOnline
           ? (_pid: number, action: PitStopAction) => { onlineGame.sendPitStopAction(action); }
           : handlePitStopComplete
         } />;
       case GameScreen.Results:
         if (!activeGameState) return renderLobby();
-        return <ResultsScreen profile={profile} gameState={activeGameState} matchSummary={matchSummary} summaryPending={isOnline && isSignedIn && matchSummary === null} onRematch={isOnline ? () => { onlineGame.sendRequestRematch(); } : handleRematch} onNewRun={isOnline ? () => { onlineGame.leaveRoom(); onlineGame.setMode('local'); setScreen(GameScreen.Lobby); } : handleNewRun} onCopySeed={handleCopySeed} onShareRun={handleShareRun} />;
+        return <ResultsScreen profile={profile} gameState={activeGameState} matchSummary={matchSummary} summaryPending={isOnline && isSignedIn && matchSummary === null} localPlayerId={activeHumanPlayerId} onRematch={isOnline ? () => { onlineGame.sendRequestRematch(); } : handleRematch} onNewRun={isOnline ? () => { onlineGame.leaveRoom(); onlineGame.setMode('local'); setScreen(GameScreen.Lobby); } : handleNewRun} onCopySeed={handleCopySeed} onShareRun={handleShareRun} />;
       default:
         return <div>Unknown Screen</div>;
     }
@@ -796,6 +969,8 @@ const App: React.FC = () => {
                 tileNumber={activeGameState.currentTileIndex + 1}
                 eventName={upcomingEvent.displayName}
                 event={upcomingEvent}
+                mastery={profile?.eventMastery?.[upcomingEvent.id]}
+                onlineMode={isOnline}
                 onComplete={() => {
                     setShowCountdown(false);
                     audioService.playSound('event-start');
@@ -809,6 +984,8 @@ const App: React.FC = () => {
                 standardTile={localCurrentTile!}
                 hazardTile={gameState.activeIntervention.hazardTile}
                 cpBonus={gameState.activeIntervention.cpBonus}
+                interventionType={gameState.activeIntervention.type}
+                sabotageStatus={gameState.activeIntervention.sabotageStatus}
                 onAccept={() => handleInterventionComplete(true)}
                 onDecline={() => handleInterventionComplete(false)}
             />
@@ -820,6 +997,8 @@ const App: React.FC = () => {
                 standardTile={onlineCurrentTile!}
                 hazardTile={onlineGame.interventionData.hazardTile}
                 cpBonus={onlineGame.interventionData.cpBonus}
+                interventionType={onlineGame.interventionData.interventionType}
+                sabotageStatus={onlineGame.interventionData.sabotageStatus}
                 onAccept={() => handleOnlineInterventionChoice(true)}
                 onDecline={() => handleOnlineInterventionChoice(false)}
             />

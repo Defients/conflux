@@ -10,6 +10,7 @@ import { WebSocketTransport } from '@colyseus/ws-transport';
 import http from 'http';
 import { defineRooms, REGISTERED_ROOMS } from './gameServerConfig';
 import { createExpressApp } from './createExpressApp';
+import { authReady, authInitReason } from './firebaseAdmin';
 
 const PORT = Number(process.env.PORT) || 2567;
 const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -39,4 +40,5 @@ gameServer.listen(PORT, '0.0.0.0').then(() => {
   console.log(`[ConfluxServer] origins: ${rawAllowed ? rawAllowed : '* (open — set ALLOWED_ORIGINS in production)'}`);
   console.log(`[ConfluxServer] health:  http://0.0.0.0:${PORT}/health`);
   console.log(`[ConfluxServer] diag:    http://0.0.0.0:${PORT}/diagnostics`);
+  console.log(`[ConfluxServer] firebase: ${authReady ? 'ready' : 'NOT ready'} (${authInitReason})`);
 });

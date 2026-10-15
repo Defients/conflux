@@ -26,9 +26,10 @@ export const SprintMash: React.FC<EventProps> = ({ onComplete, event, tile, sett
     }, [onComplete]);
     
     useEffect(() => {
+        if (isPaused) return;
         const timer = setTimeout(finishEvent, event.durationSec(tile.difficulty, settings.accessibility) * 1000);
         return () => clearTimeout(timer);
-    }, [event, tile.difficulty, settings.accessibility, finishEvent]);
+    }, [event, tile.difficulty, settings.accessibility, finishEvent, isPaused]);
 
     const showFeedback = (type: 'good' | 'fast' | 'slow' | 'wrong') => {
         setFeedback(type);
@@ -36,7 +37,7 @@ export const SprintMash: React.FC<EventProps> = ({ onComplete, event, tile, sett
     }
 
     const handleKeyDown = useCallback((e: KeyboardEvent) => {
-        if (isDoneRef.current || e.repeat) return;
+        if (isDoneRef.current || isPaused || e.repeat) return;
         
         const key = e.key.toLowerCase();
         if (key !== 'a' && key !== 'd') return;
@@ -73,7 +74,7 @@ export const SprintMash: React.FC<EventProps> = ({ onComplete, event, tile, sett
         setLastChar(key);
         lastPressTime.current = now;
 
-    }, [minInterval, maxInterval, finishEvent]);
+    }, [minInterval, maxInterval, finishEvent, isPaused]);
 
     useEffect(() => {
         window.addEventListener('keydown', handleKeyDown);

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { EventProps } from '../types';
 import { TYPING_PHRASES } from '../constants';
+import { SeededRNG } from '../services/seededRNG';
 
 // A simple Levenshtein distance function for error calculation
 const levenshtein = (a: string, b: string): number => {
@@ -31,7 +32,10 @@ const levenshtein = (a: string, b: string): number => {
 
 export const TypeBurst: React.FC<EventProps> = ({ onComplete, tile, event, settings, isBlurred , isPaused }) => {
     const phrases = settings.accessibility ? TYPING_PHRASES.accessible : TYPING_PHRASES.standard;
-    const targetPhrase = useMemo(() => phrases[Math.floor(Math.random() * phrases.length)], [phrases]);
+    const targetPhrase = useMemo(() => {
+        const rng = new SeededRNG(`typeburst-${settings.seed}-${tile.tileIndex}`);
+        return phrases[rng.nextInt(0, phrases.length)];
+    }, [phrases, settings.seed, tile.tileIndex]);
     
     const [typedText, setTypedText] = useState('');
     const typedTextRef = useRef('');

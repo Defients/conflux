@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { EventProps } from '../types';
+import { SeededRNG } from '../services/seededRNG';
 
 type Target = {
   id: number;
@@ -12,6 +13,7 @@ type Target = {
 const TARGET_LIFESPAN = 2000; // ms
 
 export const TargetPractice: React.FC<EventProps> = ({ onComplete, tile, event, settings, isBlurred , isPaused }) => {
+    const rng = useMemo(() => new SeededRNG(`targetpractice-${settings.seed}-${tile.tileIndex}`), [settings.seed, tile.tileIndex]);
     const [targets, setTargets] = useState<Target[]>([]);
     const [score, setScore] = useState({ hits: 0, total: 0 });
     const scoreRef = useRef({ hits: 0, total: 0 });
@@ -41,15 +43,15 @@ export const TargetPractice: React.FC<EventProps> = ({ onComplete, tile, event, 
         const { width, height } = gameAreaRef.current.getBoundingClientRect();
         const newTarget: Target = {
             id: nextTargetId.current++,
-            x: Math.random() * (width - targetSize),
-            y: Math.random() * (height - targetSize),
+            x: rng.nextFloat() * Math.max(0, width - targetSize),
+            y: rng.nextFloat() * Math.max(0, height - targetSize),
             size: targetSize,
             createdAt: Date.now(),
         };
         setTargets(t => [...t, newTarget]);
         scoreRef.current.total += 1;
         setScore({ ...scoreRef.current });
-    }, [targetSize]);
+    }, [targetSize, rng]);
 
     // Target spawner and cleaner loop
     useEffect(() => {

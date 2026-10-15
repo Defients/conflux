@@ -12,7 +12,7 @@ import {
   GameState, GameSettings, LobbyPlayer, MatchPhase,
   RoomConfig, EventTelemetry, PowerUp,
 } from '../types';
-import { TileStartPayload, TileResultsPayload, RaceFinishedPayload, InterventionPayload, MatchSummaryPayload } from '../shared/protocol';
+import { TileStartPayload, TileResultsPayload, RaceFinishedPayload, InterventionPayload } from '../shared/protocol';
 import { MatchSummary } from '../shared/matchSummary';
 import { ConnectionQuality } from '../shared/types';
 
@@ -74,7 +74,7 @@ export interface OnlineGameHook {
 
   // v5.0: Spectator mode
   isSpectator: boolean;
-  spectateRoom: (roomId: string) => Promise<void>;
+  spectateRoom: (roomId: string, config?: Partial<RoomConfig>) => Promise<void>;
 
   // Online actions
   createRoom: (config: RoomConfig) => Promise<void>;
@@ -113,7 +113,7 @@ export function useOnlineGame(): OnlineGameHook {
   const [isQueuing, setIsQueuing] = useState(false);
   const [connectionQuality, setConnectionQuality] = useState<ConnectionQuality>('good');
   const [rttMs, setRttMs] = useState(0);
-  const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const [reconnectAttempts, _setReconnectAttempts] = useState(0);
   const [isSpectator, setIsSpectator] = useState(false);
 
   // Register network event handlers
@@ -147,6 +147,8 @@ export function useOnlineGame(): OnlineGameHook {
         // Sync phase from game state update (important for reconnection resync)
         if (data.phase === 'playing') setMatchPhase('playing');
         else if (data.phase === 'tile_results') setMatchPhase('tile_results');
+        else if (data.phase === 'pit_stop') setMatchPhase('pit_stop');
+        else if (data.phase === 'intervention') setMatchPhase('intervention');
         else if (data.phase === 'finished') setMatchPhase('finished');
         else if (data.phase === 'lobby') setMatchPhase('lobby');
       },
@@ -234,9 +236,12 @@ export function useOnlineGame(): OnlineGameHook {
       },
 
       onQueueTimeout: (data) => {
-        setIsQueuing(false);
-        setQueueState(null);
-        setError(data.message);
+        // Server keeps the player in the matchmaking queue after the timeout notice;
+        // keep isQueuing=true so UI stays synchronized with server state while showing the message.
+        setQueueState(prev => ({
+          queueSize: prev?.queueSize ?? 1,
+          message: data.message,
+        }));
       },
 
       onTournamentUpdate: (data) => {
@@ -327,10 +332,10 @@ export function useOnlineGame(): OnlineGameHook {
   }, []);
 
   // v5.0: Spectate room
-  const spectateRoom = useCallback(async (roomId: string) => {
+  const spectateRoom = useCallback(async (roomId: string, config?: Partial<RoomConfig>) => {
     setError(null);
     try {
-      await networkService.spectateRoom(roomId);
+      await networkService.spectateRoom(roomId, config);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to spectate room');
     }

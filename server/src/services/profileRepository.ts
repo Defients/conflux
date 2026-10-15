@@ -1,6 +1,50 @@
 ﻿import { db } from '../firebaseAdmin';
 import { PilotProfile } from '../../../shared/types';
+import { MatchSummary } from '../../../shared/matchSummary';
 import { withRetry } from './retry';
+
+/** In-memory LRU-bounded receipt cache so receipts are recoverable even without Firestore. */
+const memoryReceipts = new Map<string, MatchSummary>();
+const MAX_MEMORY_RECEIPTS = 500;
+
+export const saveMatchReceipt = async (userId: string, summary: MatchSummary): Promise<void> => {
+  const key = `${userId}:${summary.matchId}`;
+  memoryReceipts.set(key, summary);
+  if (memoryReceipts.size > MAX_MEMORY_RECEIPTS) {
+    const oldestKey = memoryReceipts.keys().next().value;
+    if (oldestKey) memoryReceipts.delete(oldestKey);
+  }
+  if (!db) return;
+  try {
+    await withRetry(() =>
+      db!.doc(`matchReceipts/${userId}/receipts/${summary.matchId}`).set({
+        ...summary,
+        persistedAt: Date.now(),
+      })
+    );
+  } catch (err) {
+    console.error('Error saving match receipt for user', userId, err);
+  }
+};
+
+export const getMatchReceipt = async (userId: string, matchId: string): Promise<MatchSummary | null> => {
+  const key = `${userId}:${matchId}`;
+  const cached = memoryReceipts.get(key);
+  if (cached) return cached;
+  if (!db) return null;
+  try {
+    return await withRetry(async () => {
+      const snap = await db!.doc(`matchReceipts/${userId}/receipts/${matchId}`).get();
+      if (snap.exists) {
+        return snap.data() as MatchSummary;
+      }
+      return null;
+    });
+  } catch (err) {
+    console.error('Error fetching match receipt for user', userId, err);
+    return null;
+  }
+};
 
 export const getProfile = async (userId: string): Promise<PilotProfile | null> => {
   if (!db) return null;
