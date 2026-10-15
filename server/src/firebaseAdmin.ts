@@ -52,8 +52,22 @@ function resolveCredential(): admin.credential.Credential | undefined {
     }
   }
 
-  // 2 & 3. Application Default Credentials — honors GOOGLE_APPLICATION_CREDENTIALS
-  //        automatically, and works natively on GCP/Cloud Run.
+  // 2. GOOGLE_APPLICATION_CREDENTIALS — read eagerly instead of relying on
+  //    applicationDefault()'s lazy resolution, so a missing/malformed file
+  //    fails fast here rather than surfacing as verifyIdToken errors later.
+  const adcPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (adcPath) {
+    try {
+      const serviceAccount = JSON.parse(fs.readFileSync(adcPath, 'utf8'));
+      authInitReason = `service account at ${adcPath} (GOOGLE_APPLICATION_CREDENTIALS)`;
+      return admin.credential.cert(serviceAccount);
+    } catch (err) {
+      authInitReason = `failed to read GOOGLE_APPLICATION_CREDENTIALS (${adcPath}): ${err instanceof Error ? err.message : String(err)}`;
+      return undefined;
+    }
+  }
+
+  // 3. Application Default Credentials — automatic on GCP/Cloud Run.
   try {
     const cred = admin.credential.applicationDefault();
     authInitReason = 'application default credentials';
@@ -71,8 +85,9 @@ try {
       // Production without credentials and without an explicit bypass is a
       // misconfiguration. Fail fast with an actionable message instead of
       // booting a server that silently rejects every room join.
+      const reason = authInitReason !== 'not initialized' ? ` Reason: ${authInitReason}.` : '';
       throw new Error(
-        '[Firebase] No credentials found in production. Set FIREBASE_SERVICE_ACCOUNT_PATH ' +
+        `[Firebase] No credentials found in production.${reason} Set FIREBASE_SERVICE_ACCOUNT_PATH ` +
         '(path to a service account JSON) or GOOGLE_APPLICATION_CREDENTIALS, or set ' +
         'FIREBASE_AUTH_DISABLED=1 to bypass auth (NOT recommended for production).'
       );
